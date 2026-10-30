@@ -4,15 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Freshly generated Spring Boot skeleton (Spring Initializr). The only source is `ServerApplication` and a context-load test in `com.blinkerleague.server`; `application.yaml` only sets `spring.application.name`. There is no domain code yet, so update this file as architecture emerges.
+Backend for 깜빡이리그 (BlinkerLeague), a car app that scores turn-signal and other safe-driving habits. `plan.md` is the feature-by-feature roadmap (branches `feat/<name>`, P0 due 11.15). The server is written in **Java**, even though the original 기획서 says Kotlin.
+
+Only the common base exists so far (no domain code yet), so update this file as features land:
+
+- `common.error`: `ErrorCode` enum → `BusinessException` → `GlobalExceptionHandler` returns `{ code, message }`. Throw `BusinessException` for domain errors rather than building responses by hand.
+- `common.jpa`: entities extend `BaseTimeEntity` (audited `createdAt`/`updatedAt`).
+- `common.time.TimeConfig`: all day-based logic uses Asia/Seoul. Inject `Clock` instead of calling `now()` directly so tests can pin the time.
+- `security.SecurityConfig`: stateless, no CSRF/form/basic login. Only `POST /api/drivers`, `GET /api/config/**`, `/h2-console/**` are public; everything else returns a 401 JSON. Use `antMatcher(...)` for request matchers, because plain strings fail once the H2 console servlet is registered. Driver token auth is planned for `feat/driver-register`.
+- Domain packages go under `com.blinkerleague.server.<domain>` with `controller/service/repository/domain/dto` subpackages (see `plan.md` §2).
 
 ## Stack
 
 - Spring Boot 3.3.13, Java 17 toolchain, Gradle wrapper 7.6.4 (Groovy DSL), Lombok.
-- Dependencies already declared: Spring MVC (`starter-web`), Data JPA + H2, Data Redis, Spring Session on Redis, Spring Security.
+- Dependencies already declared: Spring MVC (`starter-web`), Bean Validation, Data JPA + H2, Data Redis, Spring Session on Redis, Spring Security.
 - Boot and Gradle are deliberately kept old: the dev machine runs IntelliJ IDEA 2021.3.1, whose Gradle sync breaks on newer Gradle. Do not upgrade Boot (4.x needs Gradle 8.14+) or the wrapper without confirming the IDE is updated.
 - Redis-backed sessions are on the classpath, but the app starts without a running Redis (verified with `bootRun`). Redis connections are lazy, so errors appear only once sessions or Redis are actually used.
-- Security locks all endpoints by default and logs a generated dev password at startup. H2 is in-memory; the console is off unless `spring.h2.console.enabled=true`.
+- Profiles: `local` is the default (`application-local.yaml`: in-memory H2, console at `/h2-console`, `ddl-auto: create`, SQL logging). Tests use `@ActiveProfiles("test")` (`src/test/resources/application-test.yaml`). `UserDetailsServiceAutoConfiguration` is excluded, so no generated password is logged.
+- Redis runs via `docker compose up -d` (see README).
 
 ## Commands
 
