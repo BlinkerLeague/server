@@ -1,0 +1,288 @@
+# 깜빡이리그 서버 개발 계획 (feat별)
+
+기준 문서: 깜빡이리그 개발 기획서 (2026-10-26)
+대상: 이 저장소(백엔드 서버). 차량 앱 작업은 서버와 맞물리는 부분만 적습니다.
+
+> 서버 언어는 **Java 17 + Spring Boot 3.3 + Lombok**으로 확정합니다.
+> 기획서의 "백엔드(Kotlin · Spring Boot)" 표기와 관계없이 서버 코드는 모두 Java로 작성합니다. (차량 앱은 기획서대로 Kotlin)
+
+## 0. 진행 전에 정할 것
+
+| # | 항목 | 현재 상태 | 제안 |
+| --- | --- | --- | --- |
+| D2 | 운전자 인증 | 기획서에 정의 없음. Spring Security가 모든 엔드포인트를 막고 있음 | `POST /api/drivers`에서 `driverId` + 랜덤 토큰 발급, 이후 `Authorization: Bearer <token>` 헤더로 식별 |
+| D3 | 운영 DB | H2 인메모리만 있음 | MVP 시연까지 H2(파일 모드 또는 인메모리), 2차에서 MySQL/PostgreSQL을 docker-compose에 추가 |
+| D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
+| D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | 시즌 내 지역 운전자들의 운행 점수 평균(거리 가중). 2차 착수 전 확정 |
+
+## 1. 브랜치 · 작업 순서
+
+브랜치 규칙은 README를 따릅니다(`develop`에서 `feat/<이름>` 분기 → PR로 `develop` 병합).
+
+```
+[P0 · 11.2 ~ 11.8]
+feat/common-setup
+  ├─ feat/driver-register
+  │    └─ feat/threshold-config
+  │         └─ feat/trip-upload
+  │              └─ feat/trip-score
+  │                   └─ feat/daily-mission
+[P1 · 11.23 ~ 12.2]
+feat/score-full-metrics   (trip-score 이후)
+feat/point-ledger         (daily-mission 이후)
+  └─ feat/streak-badge
+feat/region-league        (point-ledger, score-full-metrics 이후)
+feat/weekly-report        (score-full-metrics, daily-mission 이후)
+[P2]
+feat/reward-exchange      (point-ledger 이후)
+```
+
+| 순서 | 브랜치 | 관련 FR | 단계 | 목표 기간 |
+| --- | --- | --- | --- | --- |
+| 1 | `feat/common-setup` | — | P0 | 11.2 |
+| 2 | `feat/driver-register` | — | P0 | 11.2 ~ 11.3 |
+| 3 | `feat/threshold-config` | 5장 전체 | P0 | 11.3 |
+| 4 | `feat/trip-upload` | FR-01, FR-04 | P0 | 11.4 ~ 11.5 |
+| 5 | `feat/trip-score` | FR-03, FR-05 | P0 | 11.6 |
+| 6 | `feat/daily-mission` | FR-06 | P0 | 11.7 ~ 11.8 |
+| 7 | `feat/score-full-metrics` | FR-08, FR-09, FR-10 | P1 | 11.23 ~ 11.25 |
+| 8 | `feat/point-ledger` | FR-12 | P1 | 11.24 ~ 11.26 |
+| 9 | `feat/streak-badge` | FR-11 | P1 | 11.26 ~ 11.27 |
+| 10 | `feat/region-league` | FR-13 | P1 | 11.27 ~ 11.30 |
+| 11 | `feat/weekly-report` | FR-14 | P1 | 11.30 ~ 12.1 |
+| 12 | `feat/reward-exchange` | FR-15 | P2 | 미정 |
+
+FR-02(회전 감지), FR-07(음성 피드백)은 차량 앱 범위라 서버 브랜치가 없습니다. 서버는 판정이 끝난 이벤트만 받습니다.
+
+## 2. 패키지 구조
+
+```
+com.blinkerleague.server
+├── common      # 공통 응답, 예외 처리, BaseTimeEntity, 시간 유틸
+├── security    # 토큰 인증 필터, SecurityConfig
+├── driver
+├── config      # 측정 기준값 · 가중치 설정 (threshold)
+├── trip        # 운행 · 이벤트 업로드
+├── score       # 점수 엔진 (순수 계산 로직)
+├── mission
+├── point
+├── badge       # 연속 기록 · 배지
+├── league
+└── report
+```
+
+각 도메인 패키지는 `controller / service / repository / domain / dto` 하위 구조를 씁니다.
+
+---
+
+## 3. P0 (1차 제출, 11.15)
+
+### 3.1 `feat/common-setup` — 공통 기반
+
+작업:
+- 위 패키지 구조 생성, `BaseTimeEntity`(`createdAt`, `updatedAt`) + JPA Auditing
+- 공통 에러 응답(`{ code, message }`)과 `@RestControllerAdvice`
+- `SecurityConfig`: CSRF 비활성화, 세션 STATELESS, `/api/drivers`(POST) · `/api/config/**` · H2 콘솔은 허용, 나머지는 인증 필요 (인증 필터 자체는 D2 확정 후 `feat/driver-register`에서 구현)
+- `application.yaml`: JPA `ddl-auto`, 시간대 `Asia/Seoul`, Jackson 날짜를 ISO-8601 오프셋 형식으로
+- 프로필 분리: `local`(H2 + 로컬 Redis), `test`
+
+완료 기준: `./gradlew build` 통과, 허용 경로 외 요청은 401.
+
+### 3.2 `feat/driver-register` — 운전자 등록
+
+API: `POST /api/drivers`
+
+```json
+// 요청
+{ "nickname": "깜빡왕", "regionCode": "11680" }
+// 응답 201
+{ "driverId": 1, "nickname": "깜빡왕", "regionCode": "11680", "token": "..." }
+```
+
+작업:
+- `driver` 테이블: `driver_id`, `nickname`(유니크), `region_code`, `token_hash`, `created_at`. 실명 · 연락처 컬럼은 만들지 않음
+- 토큰은 해시로만 저장, 인증 필터에서 `Authorization: Bearer` → driver 조회 → SecurityContext에 `driverId`
+- 컨트롤러에서 현재 운전자를 꺼내는 `@CurrentDriver` 인자 리졸버
+- 검증: 닉네임 2~12자, 지역 코드 형식(법정동 시군구 5자리로 가정)
+
+테스트: 등록 성공, 닉네임 중복 409, 토큰 없이 보호 API 호출 시 401.
+
+### 3.3 `feat/threshold-config` — 기준값 · 가중치 설정
+
+API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
+
+```json
+{
+  "version": 1,
+  "trip": { "minDistanceKm": 1.0, "parkEndMinutes": 3 },
+  "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
+  "harsh": { "deltaKmhPerSec": 10 },
+  "safetyWarning": { "mergeWindowSec": 10 },
+  "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
+  "point": { "tripMaxKm": 50, "dailyCap": 150 }
+}
+```
+
+작업:
+- `app_config` 테이블(`config_key`, `value`(JSON), `version`, `updated_at`) 또는 키-값 행 구조. 초기값은 `data.sql`(또는 시작 시 시드)로 넣음
+- 서버 내부에서도 같은 값을 쓰도록 `ThresholdProvider` 빈 제공 (캐시 + 변경 시 갱신)
+- 응답에 `version`을 넣어 앱이 바뀐 경우에만 갱신
+
+테스트: 시드 값 조회, 값 변경 후 version 증가.
+
+### 3.4 `feat/trip-upload` — 운행 · 이벤트 업로드 (FR-01, FR-04)
+
+API: `POST /api/trips` (기획서 8.2 요청 형식 그대로)
+
+작업:
+- `trip` 테이블: `trip_id`(클라이언트 UUID, PK), `driver_id`, `started_at`, `ended_at`, `distance_km`, `supported_signals`, `score`(nullable), `status`
+  - `status`: `SCORED`, `NO_TURN`(회전 0회), `EXCLUDED_SHORT`(1km 미만)
+- `trip_event` 테이블: `event_id`(클라이언트 UUID, PK), `trip_id`, `type`, `occurred_at`, `payload`(JSON 문자열)
+  - `type`: `TURN`, `HARSH_ACCEL`, `HARSH_BRAKE`, `SAFETY_WARNING`, `NIGHT_SEGMENT` (P0은 `TURN`만 처리, 나머지는 저장만)
+- **멱등 처리**: 같은 `trip_id`가 이미 있으면 저장하지 않고 기존 결과를 200으로 반환. 동시 요청은 PK 충돌(`DataIntegrityViolationException`)을 잡아 재조회
+- 다른 운전자의 `trip_id`로 재전송하면 409
+- 검증: `endedAt > startedAt`, `distanceKm >= 0`, 이벤트 시각이 운행 구간 안
+- 원시 위치 좌표 필드는 받지 않음(DTO에 없음) — 개인정보 요구사항
+- 업로드 처리 끝에 점수 계산 · 미션 판정을 호출할 확장 지점만 만들어 둠 (다음 브랜치에서 연결)
+
+테스트: 정상 업로드, 같은 `trip_id` 2회 업로드 시 1건만 저장, 1km 미만은 `EXCLUDED_SHORT`.
+
+### 3.5 `feat/trip-score` — 점수 엔진 (FR-03, FR-05)
+
+API: `GET /api/trips/{tripId}/score`, 그리고 `POST /api/trips` 응답에도 점수 포함
+
+```json
+{
+  "tripId": "5f1c...",
+  "status": "SCORED",
+  "score": 75,
+  "metrics": [
+    { "metric": "TURN_SIGNAL", "value": 0.75, "score": 75, "weight": 1.0 }
+  ],
+  "turns": { "total": 4, "success": 3 }
+}
+```
+
+작업:
+- `ScoreCalculator`: 입력(운행 + 이벤트 + 지원 신호 + 설정) → 출력(항목별 점수, 적용 가중치, 총점). DB · 스프링에 의존하지 않는 순수 클래스로 만들어 단위 테스트
+- 깜빡이 항목: `TURN` 이벤트의 `payload.signalOn`이 true인 비율 × 100 (판정 자체는 앱이 수행)
+- **가중치 재분배**: 측정 불가 항목(미지원 신호, 회전 0회 등)을 빼고 남은 가중치를 합이 1이 되도록 비율대로 조정. P0에서는 결과적으로 깜빡이 항목만 가중치 1.0
+- `trip_metric` 테이블: `trip_id`, `metric`, `value`, `score`, `weight`
+- 회전 0회 → `status=NO_TURN`, `score=null` (앱은 "측정할 회전이 없었어요" 표시)
+- 남의 운행 조회 시 404
+
+테스트: 회전 4회 중 3회 성공 → 75점, 회전 0회 → `NO_TURN`, 재분배 계산(가중치 합 1) 단위 테스트. 응답 시간 3초 목표는 통합 테스트에서 대략 확인.
+
+### 3.6 `feat/daily-mission` — 오늘의 미션 (FR-06)
+
+API: `GET /api/missions/today`
+
+```json
+{
+  "missionId": 1,
+  "title": "회전 깜빡이 완벽",
+  "periodKey": "2026-11-03",
+  "status": "IN_PROGRESS",
+  "progress": { "turns": 2, "successTurns": 2, "requiredTurns": 3 }
+}
+```
+
+작업:
+- `mission` 테이블: `mission_id`, `type`, `period`(`DAILY`/`WEEKLY`), `condition`(JSON), `reward_point`, `active_from`, `active_to`. "회전 깜빡이 완벽"(회전 3회 이상, 사용률 100%, 20P) 시드
+- `driver_mission` 테이블: `driver_id`, `mission_id`, `period_key`, `status`(`IN_PROGRESS`/`ACHIEVED`/`FAILED`), `achieved_at`. (`driver_id`, `mission_id`, `period_key`) 유니크
+- 운행 업로드 후 그날(Asia/Seoul) 점수 대상 운행들의 회전을 합산해 판정. 한 번이라도 실패 회전이 있으면 그날은 `FAILED`
+- `EXCLUDED_SHORT` 운행은 집계에서 제외
+- 포인트 지급은 P1(`feat/point-ledger`)에서 연결. 지금은 달성 상태만 기록
+
+테스트: 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 1회 포함 → `FAILED`, 자정 경계 운행의 period_key.
+
+### P0 마무리 (11.9 ~ 11.15)
+- 차량 앱과 실제 연동 확인(에뮬레이터 시나리오: 좌회전 성공 → 우회전 실패 → 운행 종료 점수 · 미션)
+- README에 API 목록 · 실행 방법 갱신
+- `develop` → `main` PR, 제출 버전 태그
+
+---
+
+## 4. P1 (2차 PT, 12.2)
+
+### 4.1 `feat/score-full-metrics` — 급가감속 · 야간 전조등 · 안전 경고 (FR-08 ~ FR-10)
+
+- `ScoreCalculator`에 항목 추가 (기획서 6.1)
+  - 부드러운 가감속: `max(0, 100 − 10 × 10km당 (HARSH_ACCEL + HARSH_BRAKE))`
+  - 안전 경고: `max(0, 100 − 20 × 100km당 SAFETY_WARNING)`
+  - 야간 전조등: `(1 − 꺼짐 비율) × 100`. `NIGHT_SEGMENT.payload`에 `{ durationSec, headlightOffSec, autoLight }`를 받음. 오토라이트면 100점, 야간 구간 없으면 측정 불가
+- `supported`에 없는 신호의 항목은 제외 후 재분배
+- 이벤트 payload 스키마를 앱 팀과 확정(9장 체크리스트 5~7 결과 반영)
+
+테스트: 항목별 경계값, 지원 신호 조합별 재분배.
+
+### 4.2 `feat/point-ledger` — 포인트 원장 (FR-12)
+
+API: `GET /api/points` (잔액 + 최근 원장 20건)
+
+- `point_ledger`: `ledger_id`, `driver_id`, `amount`, `reason`(`TRIP`/`DAILY_MISSION`/`STREAK_7`/`SEASON_LEAGUE`), `ref_id`, `created_at`. (`reason`, `ref_id`) 유니크
+- 잔액 = `SUM(amount)` (잔액 컬럼 따로 두지 않음)
+- 운행 적립: `floor(min(distanceKm, 50) × score ÷ 100)`, `ref_id = tripId`
+- 일간 미션 달성 시 20P, `ref_id = driver_mission` ID
+- **일일 상한 150P**: 그날 합계를 구해 남은 만큼만 적립. 같은 운전자의 동시 적립은 운전자 단위 비관적 락(또는 `driver` 행 `SELECT ... FOR UPDATE`)으로 직렬화
+- P0에서 이미 달성된 미션에 대한 소급 적립 여부 결정
+
+테스트: 같은 운행 재업로드 시 적립 1회, 상한 초과 시 잘림, 동시 업로드 2건에서 상한 유지.
+
+### 4.3 `feat/streak-badge` — 연속 기록 · 배지 (FR-11)
+
+API: `GET /api/streak`
+
+- 연속 기록 = 오늘(또는 어제)부터 거꾸로 `driver_mission.status = ACHIEVED`인 연속 일수. 조회 시 계산하거나 `driver_streak` 캐시 테이블 유지
+- 7일마다 50P (`reason=STREAK_7`, `ref_id = driverId:달성일`)
+- `badge_award`: `driver_id`, `badge_code`, `awarded_at`, (`driver_id`, `badge_code`) 유니크. 배지 목록 · 조건(예: 첫 운행, 연속 7일, 깜빡이 100회)은 착수 시 확정
+
+### 4.4 `feat/region-league` — 지역 리그 (FR-13)
+
+API: `GET /api/leagues/current`
+
+- 시즌 4주. `league_season`: `season_id`, `region_code`, `starts_at`, `ends_at`, `safety_index`
+- 운행 점수 확정 시 Redis ZSET `league:{season}:{region}`에 운전자 시즌 점수 반영(`ZINCRBY` 또는 평균 계산용 합계 · 횟수 별도 키)
+- 순위 조회는 Redis에서(캐시 응답 요구사항). 응답에는 닉네임만, 내 순위 + 상위 N명
+- 시즌 종료 배치(`@Scheduled`): 순위 · 안전지수 RDB 확정, 상위 지역 참여자 100P, 새 시즌 생성
+- 지역 안전지수 계산식(D5), "같은 측정 항목 집단끼리 비교" 여부 착수 전 결정
+- Redis가 이미 docker-compose에 있으므로 추가 인프라 없음
+
+테스트: Testcontainers 또는 임베디드 Redis로 순위 계산, 시즌 확정 배치.
+
+### 4.5 `feat/weekly-report` — 주간 리포트 (FR-14)
+
+API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
+
+- 항목별 주간 평균(깜빡이 사용률, 10km당 급가감속, 100km당 경고, 전조등)과 전주 대비 변화
+- 가장 약한 항목을 골라 다음 주 "맞춤 개선 미션"(주간 미션) 생성
+- 매주 월요일 새벽 배치로 생성 · 저장(`weekly_report`), 조회는 저장본 반환
+- 주간 미션 "안전 경고 없는 주"(50km 이상, 경고 0회)도 여기서 함께 판정
+
+---
+
+## 5. P2
+
+### 5.1 `feat/reward-exchange` — 보상 교환 (FR-15)
+- 제휴 쿠폰 카탈로그, 교환 시 원장에 음수 적립(`reason=EXCHANGE`), 잔액 부족 검증
+- 9장 체크리스트 11번(인앱 구매 API) 결과에 따라 범위 확정
+
+---
+
+## 6. 공통 규칙
+
+- 각 feat 브랜치는 해당 기능의 단위 테스트 + 컨트롤러 통합 테스트(`@SpringBootTest` + MockMvc)를 포함하고 `./gradlew build` 통과 후 PR
+- 엔티티에 원시 위치 좌표 필드를 두지 않음
+- 모든 업로드 · 적립은 클라이언트 ID 또는 (reason, ref_id)로 멱등
+- 기준값 · 가중치 · 포인트 규칙은 코드에 상수로 두지 않고 `ThresholdProvider`에서 읽음
+- API 변경 시 README의 API 표를 같은 PR에서 갱신
+
+## 7. 차량 앱과 맞춰야 할 항목
+
+| 항목 | 필요 시점 |
+| --- | --- |
+| 인증 방식(D2), 토큰 보관 | `feat/driver-register` 전 |
+| `TURN` payload 필드(`direction`, `signalOn`, 필요 시 `uTurn`) | `feat/trip-upload` 전 |
+| 기준값 JSON 형식 | `feat/threshold-config` 전 |
+| `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
+| `supported` 신호 이름 목록 | `feat/trip-upload` 전 |
