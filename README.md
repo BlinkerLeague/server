@@ -23,6 +23,75 @@ BlinkerLeague 백엔드 서버입니다.
 
 Windows에서는 `gradlew.bat`을 사용해도 됩니다.
 
+## Docker 설정 (Redis)
+
+Spring Session이 Redis를 사용하므로 서버 실행 전에 Redis 컨테이너를 먼저 띄웁니다.
+설정은 프로젝트 루트의 `docker-compose.yml`에 있습니다.
+
+| 항목 | 값 |
+| --- | --- |
+| 이미지 | `redis:7-alpine` |
+| 컨테이너 이름 | `blinkerleague-redis` |
+| 포트 | `6379` (호스트 `localhost:6379`) |
+| 데이터 볼륨 | `redis-data` (컨테이너를 지워도 유지) |
+| 헬스체크 | `redis-cli ping` (5초 간격) |
+
+서버의 접속 설정은 `application.yaml`의 `spring.data.redis.host/port`(`localhost:6379`)이며 compose 설정과 일치합니다.
+
+### Windows
+
+1. [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)를 설치합니다. (WSL 2 백엔드 권장, Windows 10/11 64bit)
+2. 설치 후 Docker Desktop을 실행하고 왼쪽 아래 상태가 `Engine running`이 될 때까지 기다립니다.
+3. PowerShell 또는 Git Bash에서 프로젝트 루트로 이동해 실행합니다.
+
+```powershell
+docker --version              # 설치 확인
+docker compose up -d          # Redis 시작
+docker compose ps             # STATUS가 healthy인지 확인
+docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
+.\gradlew.bat bootRun         # 서버 실행
+```
+
+주의:
+
+- `docker` 명령이 `daemon is not running` 오류를 내면 Docker Desktop이 아직 실행되지 않은 것입니다.
+- 6379 포트를 이미 쓰는 프로세스(로컬에 설치한 Redis 등)가 있으면 컨테이너가 뜨지 않습니다. `netstat -ano | findstr :6379`로 확인하세요.
+
+### macOS
+
+1. [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)(Apple Silicon / Intel 중 맞는 버전)을 설치하거나 Homebrew를 사용합니다.
+
+```bash
+brew install --cask docker    # Docker Desktop 설치
+```
+
+2. `Docker` 앱을 한 번 실행해 데몬을 시작합니다. (메뉴바 고래 아이콘이 안정되면 준비 완료)
+3. 터미널에서 프로젝트 루트로 이동해 실행합니다.
+
+```bash
+docker --version              # 설치 확인
+docker compose up -d          # Redis 시작
+docker compose ps             # STATUS가 healthy인지 확인
+docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
+./gradlew bootRun             # 서버 실행
+```
+
+주의:
+
+- `redis:7-alpine` 이미지는 Apple Silicon(arm64)과 Intel(amd64)을 모두 지원해 별도 설정이 필요 없습니다.
+- 6379 포트 사용 여부는 `lsof -i :6379`로 확인합니다. Homebrew로 설치한 Redis가 떠 있다면 `brew services stop redis`로 먼저 멈추세요.
+
+### 자주 쓰는 명령 (공통)
+
+```bash
+docker compose up -d              # 시작 (백그라운드)
+docker compose stop               # 중지 (컨테이너 유지)
+docker compose down               # 중지 + 컨테이너 삭제 (볼륨 유지)
+docker compose down -v            # 컨테이너 + 데이터 볼륨까지 삭제
+docker compose logs -f redis      # 로그 보기
+docker exec -it blinkerleague-redis redis-cli   # Redis CLI 접속
+```
+
 ## 브랜치 규칙
 
 | 브랜치 | 용도 | 분기 기준 | 병합 대상 |
