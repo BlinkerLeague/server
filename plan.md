@@ -92,6 +92,8 @@ com.blinkerleague.server
 
 ### 3.2 `feat/driver-register` — 운전자 등록
 
+상태: 완료. 응답은 `{ driverId, nickname, regionCode, accessToken, refreshToken }`(201). 로그인이 없으므로 토큰을 잃으면 재등록한다(P0 결정, 복구 방식은 P1에서 결정 · 7장). 동시 등록으로 생기는 닉네임 중복은 DB 유니크 제약이 막고 409로 응답한다.
+
 > 인증은 8장(JWT, Refresh는 Redis)을 따른다. 아래 `token_hash` 컬럼은 만들지 않고, 응답의 `token`은 `accessToken` · `refreshToken`으로 나눈다.
 
 API: `POST /api/drivers`
@@ -285,7 +287,8 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 
 | 항목 | 필요 시점 |
 | --- | --- |
-| 인증 방식(D2), 토큰 보관 | `feat/driver-register` 전 |
+| 인증 방식(D2), 토큰 보관 | `feat/driver-register` 전 (결정: Access 1시간 + Refresh 30일, 앱은 Keystore 등 안전한 저장소에 보관) |
+| 토큰 분실 시 복구(앱 삭제 · 기기 변경) | P1 착수 전. P0는 재등록, 후보는 기기 인증 정보 · 소셜 로그인 |
 | `TURN` payload 필드(`direction`, `signalOn`, 필요 시 `uTurn`) | `feat/trip-upload` 전 |
 | 기준값 JSON 형식 | `feat/threshold-config` 전 |
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
