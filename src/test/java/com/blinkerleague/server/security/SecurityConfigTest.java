@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,16 @@ class SecurityConfigTest {
 
 		mockMvc.perform(get("/api/trips/some-trip/score")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(forger, Clock.systemUTC())))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+	}
+
+	@Test
+	void 만료된_토큰이면_401_INVALID_TOKEN을_반환한다() throws Exception {
+		Clock twoHoursAgo = Clock.fixed(Instant.now().minus(Duration.ofHours(2)), ZoneOffset.UTC);
+
+		mockMvc.perform(get("/api/trips/some-trip/score")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(JWT, twoHoursAgo)))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
 	}
