@@ -13,3 +13,7 @@ spring:
       hibernate:
         format_sql: true
     show-sql: true
+
+jwt:
+  # 로컬 개발 전용 기본값. 운영 secret을 여기에 두지 않는다.
+  secret: ${JWT_SECRET:local-development-only-secret-key-32bytes!}

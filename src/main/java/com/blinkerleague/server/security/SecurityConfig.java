@@ -5,6 +5,7 @@ import static org.springframework.security.web.util.matcher.AntPathRequestMatche
 import java.io.IOException;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.config.Customizer;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -22,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 차량 앱 전용 API 서버라 세션 · CSRF · 폼 로그인을 쓰지 않는다.
- * 운전자 토큰 인증 필터는 feat/driver-register에서 추가한다.
+ * 운전자 인증은 Bearer Access 토큰(JWT)을 resource server로 검증한다.
  */
 @Configuration
 @RequiredArgsConstructor
@@ -46,6 +47,9 @@ public class SecurityConfig {
 				.requestMatchers(antMatcher("/h2-console/**")).permitAll()
 				.requestMatchers(antMatcher("/error")).permitAll()
 				.anyRequest().authenticated())
+			.oauth2ResourceServer(oauth -> oauth
+				.jwt(Customizer.withDefaults())
+				.authenticationEntryPoint((request, response, e) -> writeError(response, ErrorCode.UNAUTHORIZED)))
 			.exceptionHandling(handling -> handling
 				.authenticationEntryPoint((request, response, e) -> writeError(response, ErrorCode.UNAUTHORIZED))
 				.accessDeniedHandler((request, response, e) -> writeError(response, ErrorCode.FORBIDDEN)));

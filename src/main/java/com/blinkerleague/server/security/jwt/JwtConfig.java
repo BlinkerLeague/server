@@ -7,6 +7,9 @@ import java.time.Duration;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -17,14 +20,18 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 /** HS256 JWT 인코더 · 디코더. 디코더의 만료 검사는 주입한 {@link Clock}을 기준으로 한다. */
+@Configuration
+@EnableConfigurationProperties(JwtProperties.class)
 public class JwtConfig {
 
 	private static final int MIN_SECRET_BYTES = 32;
 
+	@Bean
 	public JwtEncoder jwtEncoder(JwtProperties properties) {
 		return new NimbusJwtEncoder(new ImmutableSecret<>(secretKey(properties)));
 	}
 
+	@Bean
 	public JwtDecoder jwtDecoder(JwtProperties properties, Clock clock) {
 		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey(properties))
 			.macAlgorithm(MacAlgorithm.HS256)
