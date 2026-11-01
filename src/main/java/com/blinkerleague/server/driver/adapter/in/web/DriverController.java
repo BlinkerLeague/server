@@ -11,6 +11,8 @@ import com.blinkerleague.server.driver.application.service.RegisterDriverService
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
@@ -32,7 +34,8 @@ public class DriverController {
 
 	public record RegisterDriverRequest(
 		@NotBlank @Size(min = 2, max = 12) String nickname,
-		String regionCode) {
+		// 법정동 코드 앞 5자리(시군구)로 가정한다(plan.md 3.2).
+		@NotNull @Pattern(regexp = "\\d{5}") String regionCode) {
 	}
 
 	public record RegisterDriverResponse(Long driverId, String nickname, String regionCode, String accessToken,
