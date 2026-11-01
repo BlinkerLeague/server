@@ -13,7 +13,7 @@ import com.blinkerleague.server.driver.domain.Driver;
 class RegisterDriverServiceTest {
 
 	private final InMemoryDriverRepository drivers = new InMemoryDriverRepository();
-	private final RegisterDriverService service = new RegisterDriverService(drivers,
+	private final RegisterDriverService service = new RegisterDriverService(drivers, drivers,
 		driverId -> new DriverTokens("access-for-" + driverId, "refresh-for-" + driverId));
 
 	@Test
