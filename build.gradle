@@ -31,6 +31,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
+	testImplementation 'org.testcontainers:junit-jupiter'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
@@ -38,4 +39,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// Boot 3.3의 Testcontainers(1.19.x)는 기본 Docker API 1.32를 쓰는데, Docker Engine 29부터는 1.40 미만을 거부한다.
+	systemProperty 'api.version', '1.44'
+	// Ryuk 컨테이너가 마운트할 Docker VM 안의 소켓 경로. colima · Docker Desktop · Linux 기본값은 모두 이 경로다.
+	environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', System.getenv('TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE') ?: '/var/run/docker.sock'
 }
