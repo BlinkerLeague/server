@@ -80,4 +80,12 @@ class RedisRefreshTokenStoreTest {
 
 		assertThat(store.consume("hash-1")).isEmpty();
 	}
+
+	@Test
+	void 사용한_토큰으로_기록하면_그_토큰의_주인을_찾을_수_있다() {
+		store.markUsed("used-hash", 7L, TTL);
+
+		assertThat(store.findUsedOwner("used-hash")).contains(7L);
+		assertThat(store.findUsedOwner("other-hash")).isEmpty();
+	}
 }
