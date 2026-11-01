@@ -10,7 +10,7 @@
 
 | # | 항목 | 현재 상태 | 제안 |
 | --- | --- | --- | --- |
-| D2 | 운전자 인증 | 기획서에 정의 없음. Spring Security가 모든 엔드포인트를 막고 있음 | `POST /api/drivers`에서 `driverId` + 랜덤 토큰 발급, 이후 `Authorization: Bearer <token>` 헤더로 식별 |
+| D2 | 운전자 인증 | 기획서에 정의 없음. Spring Security가 모든 엔드포인트를 막고 있음 | **JWT(Access + Refresh)로 전환 검토 중 → 8장.** 기존 제안: `POST /api/drivers`에서 `driverId` + 랜덤 토큰 발급, 이후 `Authorization: Bearer <token>` 헤더로 식별 |
 | D3 | 운영 DB | H2 인메모리만 있음 | MVP 시연까지 H2(파일 모드 또는 인메모리), 2차에서 MySQL/PostgreSQL을 docker-compose에 추가 |
 | D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
 | D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | 시즌 내 지역 운전자들의 운행 점수 평균(거리 가중). 2차 착수 전 확정 |
@@ -88,7 +88,11 @@ com.blinkerleague.server
 
 완료 기준: `./gradlew build` 통과, 허용 경로 외 요청은 401.
 
+상태: 완료 (PR #5). 남은 항목: `BaseTimeEntity`가 `LocalDateTime`이라 Jackson 출력에 오프셋(`+09:00`)이 없음. `OffsetDateTime` 전환 여부는 후속 결정.
+
 ### 3.2 `feat/driver-register` — 운전자 등록
+
+> 인증 방식은 8장(JWT 전환 검토)이 확정되면 아래 토큰 관련 작업과 응답 형식을 그에 맞게 바꾼다.
 
 API: `POST /api/drivers`
 
@@ -286,3 +290,50 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 | 기준값 JSON 형식 | `feat/threshold-config` 전 |
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
 | `supported` 신호 이름 목록 | `feat/trip-upload` 전 |
+
+## 8. 다음 단계: 운전자 인증 JWT 전환 검토 (D2)
+
+common-setup 이후 첫 작업. `feat/driver-register`(또는 인증만 분리한 `feat/jwt-auth`)에서 진행한다.
+
+### 8.1 결정한 것: Access + Refresh 방식
+
+아이디 · 비밀번호 로그인 없이 운전자 등록 때 한 번 토큰을 받는 구조이므로, JWT가 만료되면 다시 받을 수단이 필요하다.
+
+| 방식 | 내용 | 비고 |
+| --- | --- | --- |
+| **A. Access + Refresh (채택)** | Access JWT는 짧게(예: 1시간), Refresh는 랜덤 값을 DB에 해시로만 저장. `POST /api/auth/refresh`로 재발급 | 유출 시 피해 시간이 짧고 Refresh 삭제로 강제 로그아웃 가능 |
+| B. 장기 JWT 1개 | 예: 1년짜리 JWT 하나 | 단순하지만 유출되면 막을 수 없음 |
+
+### 8.2 미정: 구현 라이브러리
+
+| | `spring-boot-starter-oauth2-resource-server` (Spring 내장, Nimbus) | jjwt (0.12.x) |
+| --- | --- | --- |
+| 의미 | 이름과 달리 OAuth 로그인이 아니라 Bearer JWT 검증 모듈. 토큰은 우리 서버가 직접 발급 | JWT 생성 · 파싱 라이브러리 |
+| 검증 필터 | Spring 제공(`BearerTokenAuthenticationFilter`), 직접 작성하지 않음 | `OncePerRequestFilter` 직접 작성 |
+| 발급 | `JwtEncoder.encode(...)` | `Jwts.builder()...signWith(key).compact()` |
+| 실패 처리 | entry point만 지정 | 필터에서 `ExpiredJwtException` 등 직접 처리 |
+| 장점 | 코드가 적고 Spring 공식 방식, 외부 인증 서버 전환이 쉬움 | 흐름이 코드에 그대로 보이고 국내 자료가 많음 |
+| 주의 | `oauth2ResourceServer`에도 `authenticationEntryPoint`를 지정해야 401이 `{ code, message }` JSON으로 나감 | 0.12에서 API 변경. 예전 `parserBuilder()`, `parseClaimsJws()`는 deprecated → `Jwts.parser().verifyWith(key).build().parseSignedClaims(...)` |
+
+제안은 resource server. 팀이 jjwt에 더 익숙하면 jjwt도 기능상 차이 없음. 착수 전에 확정한다.
+
+### 8.3 작업 (resource server 기준)
+
+- 의존성: `spring-boot-starter-oauth2-resource-server`
+- 설정: `jwt.secret`(256bit 이상, 환경변수 `JWT_SECRET`으로 주입, 저장소에 커밋하지 않음), `jwt.access-ttl: 1h`, `jwt.refresh-ttl: 30d`. 테스트 설정에만 고정 secret
+- `security/jwt/`
+  - `JwtProperties`: 위 설정을 담는 `@ConfigurationProperties` 레코드
+  - `JwtConfig`: HS256 `JwtEncoder` · `JwtDecoder` Bean. 디코더 만료 검사에 기존 `Clock`을 연결해 테스트에서 시각 고정
+  - `JwtTokenProvider`: `issueAccessToken(driverId)`, `sub` = driverId, `iat`/`exp`는 `Clock` 기준
+- `SecurityConfig`: `.oauth2ResourceServer(o -> o.jwt(...).authenticationEntryPoint(...))` 추가, `POST /api/auth/refresh` 허용
+- `@CurrentDriver`: `JwtAuthenticationToken`의 `sub`를 `Long driverId`로 넘기는 인자 리졸버, `WebMvcConfigurer`에 등록
+- `ErrorCode`: `INVALID_TOKEN`(401) 추가, 앱이 재발급 시점을 구분해야 하면 `EXPIRED_TOKEN`도 추가
+- Refresh: `driver.refresh_token_hash`(또는 별도 테이블). 재발급 시 새 Access + 새 Refresh를 주고 이전 Refresh는 무효화(rotation)
+- 3.2 등록 응답의 `token`을 `accessToken` · `refreshToken`으로 분리, README API 표와 7장(차량 앱 토큰 보관) 갱신
+- 정리: STATELESS JWT 구조에서는 `spring-session-data-redis`를 쓰지 않으므로 제거 검토
+
+### 8.4 테스트 (red-green 순서)
+
+1. `JwtTokenProviderTest`(단위): 발급 토큰의 `sub`가 driverId, 고정 `Clock`을 만료 시각 이후로 옮기면 거부
+2. `SecurityConfigTest`(통합): 유효 토큰은 인증 통과(컨트롤러가 없으면 404), 토큰 없음 · 위조 · 만료는 401 + `INVALID_TOKEN` JSON
+3. Refresh: 정상 재발급, 이미 사용한 Refresh 재사용 시 401, 등록 응답에 두 토큰 포함
