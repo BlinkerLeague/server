@@ -15,6 +15,6 @@ public class AuthDriverTokensAdapter implements IssueDriverTokensPort {
 
 	@Override
 	public DriverTokens issue(Long driverId) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		return new DriverTokens(accessTokenIssuer.issueAccessToken(driverId), refreshTokenService.issue(driverId));
 	}
 }
