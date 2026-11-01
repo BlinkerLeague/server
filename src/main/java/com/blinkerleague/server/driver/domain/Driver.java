@@ -24,7 +24,7 @@ public class Driver extends BaseTimeEntity {
 	@Column(name = "driver_id")
 	private Long id;
 
-	@Column(nullable = false, length = 12)
+	@Column(nullable = false, length = 12, unique = true)
 	private String nickname;
 
 	@Column(name = "region_code", nullable = false, length = 5)
