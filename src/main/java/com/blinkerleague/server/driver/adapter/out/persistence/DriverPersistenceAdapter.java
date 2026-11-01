@@ -16,11 +16,11 @@ public class DriverPersistenceAdapter implements SaveDriverPort, LoadDriverPort 
 
 	@Override
 	public Driver save(Driver driver) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		return repository.save(driver);
 	}
 
 	@Override
 	public boolean existsByNickname(String nickname) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		return repository.existsByNickname(nickname);
 	}
 }
