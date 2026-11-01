@@ -44,9 +44,13 @@ public class JwtConfig {
 	}
 
 	private static SecretKey secretKey(JwtProperties properties) {
+		if (properties.secret() == null || properties.secret().isBlank()) {
+			throw new IllegalArgumentException("JWT secret이 없습니다. 환경변수 JWT_SECRET을 설정하세요.");
+		}
 		byte[] secret = properties.secret().getBytes(StandardCharsets.UTF_8);
 		if (secret.length < MIN_SECRET_BYTES) {
-			throw new IllegalArgumentException("JWT secret은 " + MIN_SECRET_BYTES + "바이트 이상이어야 합니다.");
+			throw new IllegalArgumentException(
+				"JWT secret은 " + MIN_SECRET_BYTES + "바이트 이상이어야 합니다. 환경변수 JWT_SECRET을 확인하세요.");
 		}
 		return new SecretKeySpec(secret, "HmacSHA256");
 	}
