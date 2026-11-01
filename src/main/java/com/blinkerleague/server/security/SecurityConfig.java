@@ -5,12 +5,14 @@ import static org.springframework.security.web.util.matcher.AntPathRequestMatche
 import java.io.IOException;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.config.Customizer;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.blinkerleague.server.common.error.ErrorCode;
@@ -22,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 차량 앱 전용 API 서버라 세션 · CSRF · 폼 로그인을 쓰지 않는다.
- * 운전자 토큰 인증 필터는 feat/driver-register에서 추가한다.
+ * 운전자 인증은 Bearer Access 토큰(JWT)을 resource server로 검증한다.
  */
 @Configuration
 @RequiredArgsConstructor
@@ -42,10 +44,15 @@ public class SecurityConfig {
 			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(antMatcher(HttpMethod.POST, "/api/drivers")).permitAll()
+				.requestMatchers(antMatcher(HttpMethod.POST, "/api/auth/refresh")).permitAll()
 				.requestMatchers(antMatcher(HttpMethod.GET, "/api/config/**")).permitAll()
 				.requestMatchers(antMatcher("/h2-console/**")).permitAll()
 				.requestMatchers(antMatcher("/error")).permitAll()
 				.anyRequest().authenticated())
+			.oauth2ResourceServer(oauth -> oauth
+				.jwt(Customizer.withDefaults())
+				.authenticationEntryPoint((request, response, e) -> writeError(response,
+					e instanceof InvalidBearerTokenException ? ErrorCode.INVALID_TOKEN : ErrorCode.UNAUTHORIZED)))
 			.exceptionHandling(handling -> handling
 				.authenticationEntryPoint((request, response, e) -> writeError(response, ErrorCode.UNAUTHORIZED))
 				.accessDeniedHandler((request, response, e) -> writeError(response, ErrorCode.FORBIDDEN)));

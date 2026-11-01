@@ -291,7 +291,9 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
 | `supported` 신호 이름 목록 | `feat/trip-upload` 전 |
 
-## 8. 다음 단계: 운전자 인증 JWT 전환 (D2)
+## 8. 운전자 인증 JWT 전환 (D2)
+
+상태: `feat/jwt-auth`에서 완료. Access JWT 검증, `INVALID_TOKEN` 구분, `@CurrentDriver`, Redis Refresh 저장소, `POST /api/auth/refresh`, secret fail-fast 검증. 남은 항목: 등록 시 토큰 발급은 3.2 `feat/driver-register`, 운영 secret의 Vault 이전은 배포 준비 단계.
 
 common-setup 이후 첫 작업. `feat/jwt-auth` 브랜치에서 인증 기반을 먼저 만들고, `feat/driver-register`에서 등록 API에 연결한다.
 

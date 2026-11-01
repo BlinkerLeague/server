@@ -15,13 +15,34 @@ BlinkerLeague 백엔드 서버입니다.
 
 ## 실행 방법
 
+JDK 17이 필요합니다. (IntelliJ: Settings → Build Tools → Gradle → Gradle JVM을 17로)
+
+1. 로컬 secret 파일을 만듭니다. `.env`는 git에 올라가지 않습니다.
+
+```bash
+cp .env.example .env
+openssl rand -base64 48       # 출력값을 .env의 JWT_SECRET= 뒤에 붙여 넣기
+```
+
+2. Redis를 띄우고(아래 Docker 설정) 서버를 실행합니다.
+
 ```bash
 ./gradlew bootRun      # 서버 실행 (기본 포트 8080)
-./gradlew build        # 빌드 + 테스트
+./gradlew build        # 빌드 + 테스트 (Testcontainers 테스트가 있어 Docker 엔진이 실행 중이어야 함)
 ./gradlew test         # 테스트만 실행
 ```
 
-Windows에서는 `gradlew.bat`을 사용해도 됩니다.
+Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거나 32바이트보다 짧으면 서버가 시작되지 않습니다.
+
+운영 secret은 저장소에 두지 않고 환경변수(추후 Vault)로 주입합니다.
+
+## API
+
+| 메서드 | 경로 | 인증 | 설명 |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/refresh` | 없음 | `{ "refreshToken": "..." }` → `{ "accessToken", "refreshToken" }`. 사용한 Refresh 토큰은 무효, 재사용하면 그 운전자의 토큰 전체 무효 |
+
+보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.
 
 ## Docker 설정 (Redis)
 
@@ -63,6 +84,17 @@ docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
 
 ```bash
 brew install --cask docker    # Docker Desktop 설치
+```
+
+Docker Desktop 대신 화면 없는 colima를 써도 됩니다.
+
+```bash
+brew install colima docker docker-compose
+colima start
+# docker compose 플러그인 경로를 ~/.docker/config.json에 추가
+#   "cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]
+# Testcontainers용: ~/.testcontainers.properties
+#   docker.host=unix:///Users/<사용자>/.colima/default/docker.sock
 ```
 
 2. `Docker` 앱을 한 번 실행해 데몬을 시작합니다. (메뉴바 고래 아이콘이 안정되면 준비 완료)
