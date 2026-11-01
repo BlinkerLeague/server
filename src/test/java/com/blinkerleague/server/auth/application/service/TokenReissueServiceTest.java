@@ -6,6 +6,8 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+import com.blinkerleague.server.support.InMemoryRefreshTokenStore;
+
 class TokenReissueServiceTest {
 
 	private final RefreshTokenService refreshTokenService =

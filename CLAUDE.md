@@ -39,7 +39,7 @@ We use a pragmatic version to keep pace with the P0 deadline:
 - **The domain may carry JPA annotations.** A domain class may be the JPA entity (and extend `BaseTimeEntity`), so no separate entity and mapper are needed. It must not depend on web, Redis, or security classes. Pure logic such as score calculation stays free of Spring entirely.
 - Shared, cross-domain code (`common.*`, `security.SecurityConfig`, framework config such as JWT encoder/decoder beans) stays outside the domain packages.
 
-Testing follows the ports. Unit-test services with in-memory fakes of their out-ports, as `InMemoryRefreshTokenStore` does for `RefreshTokenStore`. Test adapters against the real technology: MockMvc for web, H2 for JPA, Testcontainers for Redis.
+Testing follows the ports. Unit-test services with in-memory fakes of their out-ports, as `support.InMemoryRefreshTokenStore` does for `RefreshTokenStore`. Test adapters against the real technology: MockMvc for web, H2 for JPA, Testcontainers for Redis.
 
 `HexagonalArchitectureTest` (ArchUnit) enforces the dependency rules in the build: `application` must not depend on `adapter`, `domain` must not depend on `application` or `adapter`, and `application` must not use Spring Web, Redis, OAuth2/JWT, servlet, or `com.blinkerleague.server.security` classes directly. Pass framework-free values (for example a `Duration` instead of `JwtProperties`) into services.
 
