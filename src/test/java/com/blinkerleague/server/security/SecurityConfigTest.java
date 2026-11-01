@@ -18,18 +18,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.blinkerleague.server.auth.adapter.out.jwt.JwtAccessTokenIssuer;
-import com.blinkerleague.server.security.jwt.JwtConfig;
 import com.blinkerleague.server.security.jwt.JwtProperties;
+import com.blinkerleague.server.support.TestTokens;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityConfigTest {
-
-	// application-test.yaml의 jwt 설정과 같은 값
-	private static final JwtProperties JWT = new JwtProperties(
-		"blinkerleague-test-secret-key-32bytes-or-more!", Duration.ofHours(1), Duration.ofDays(30));
 
 	@Autowired
 	MockMvc mockMvc;
@@ -38,7 +33,7 @@ class SecurityConfigTest {
 	void 유효한_액세스_토큰이면_인증을_통과한다() throws Exception {
 		// 컨트롤러가 아직 없으므로 인증을 통과해 404가 나오면 성공이다.
 		mockMvc.perform(get("/api/trips/some-trip/score")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(JWT, Clock.systemUTC())))
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(1L)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
 	}
@@ -49,7 +44,7 @@ class SecurityConfigTest {
 			"attacker-secret-key-that-is-also-32bytes-long!", Duration.ofHours(1), Duration.ofDays(30));
 
 		mockMvc.perform(get("/api/trips/some-trip/score")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(forger, Clock.systemUTC())))
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(forger, 1L, Clock.systemUTC())))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
 	}
@@ -59,7 +54,7 @@ class SecurityConfigTest {
 		Clock twoHoursAgo = Clock.fixed(Instant.now().minus(Duration.ofHours(2)), ZoneOffset.UTC);
 
 		mockMvc.perform(get("/api/trips/some-trip/score")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(JWT, twoHoursAgo)))
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(TestTokens.JWT, 1L, twoHoursAgo)))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
 	}
@@ -83,9 +78,5 @@ class SecurityConfigTest {
 	void 설정_조회는_인증없이_통과한다() throws Exception {
 		mockMvc.perform(get("/api/config/thresholds"))
 			.andExpect(status().isNotFound());
-	}
-
-	private static String accessToken(JwtProperties properties, Clock clock) {
-		return new JwtAccessTokenIssuer(new JwtConfig().jwtEncoder(properties), properties, clock).issueAccessToken(1L);
 	}
 }
