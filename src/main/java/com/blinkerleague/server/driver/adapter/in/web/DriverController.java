@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.blinkerleague.server.driver.application.service.RegisterDriverService;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -20,14 +23,16 @@ public class DriverController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public RegisterDriverResponse register(@RequestBody RegisterDriverRequest request) {
+	public RegisterDriverResponse register(@Valid @RequestBody RegisterDriverRequest request) {
 		RegisterDriverService.Result result = registerDriverService.register(
 			new RegisterDriverService.Command(request.nickname(), request.regionCode()));
 		return new RegisterDriverResponse(result.driverId(), result.nickname(), result.regionCode(),
 			result.accessToken(), result.refreshToken());
 	}
 
-	public record RegisterDriverRequest(String nickname, String regionCode) {
+	public record RegisterDriverRequest(
+		@NotBlank @Size(min = 2, max = 12) String nickname,
+		String regionCode) {
 	}
 
 	public record RegisterDriverResponse(Long driverId, String nickname, String regionCode, String accessToken,
