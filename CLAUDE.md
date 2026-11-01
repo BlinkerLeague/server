@@ -11,9 +11,9 @@ Only the common base exists so far (no domain code yet), so update this file as 
 - `common.error`: `ErrorCode` enum → `BusinessException` → `GlobalExceptionHandler` returns `{ code, message }`. Throw `BusinessException` for domain errors rather than building responses by hand.
 - `common.jpa`: entities extend `BaseTimeEntity` (audited `createdAt`/`updatedAt`).
 - `common.time.TimeConfig`: all day-based logic uses Asia/Seoul. Inject `Clock` instead of calling `now()` directly so tests can pin the time.
-- `security.SecurityConfig`: stateless, no CSRF/form/basic login. Only `POST /api/drivers`, `GET /api/config/**`, `/h2-console/**` are public; everything else returns a 401 JSON. Use `antMatcher(...)` for request matchers, because plain strings fail once the H2 console servlet is registered. Driver token auth is planned for `feat/driver-register`.
-- `security.jwt`: `JwtProperties` and `JwtConfig` (HS256 `JwtEncoder`/`JwtDecoder`, secret of 32+ bytes, expiry checked against the injected `Clock` with zero skew). Not registered as beans or wired into `SecurityConfig` yet.
-- `auth`: driver tokens, in the hexagonal layout. `application.port.out` has `AccessTokenIssuer` and `RefreshTokenStore`. `application.service.RefreshTokenService` issues and rotates refresh tokens (stores SHA-256 hashes only, a reused token revokes the driver's current token). `adapter.out.jwt.JwtAccessTokenIssuer` issues access JWTs (`sub` = driverId). The Redis store, `/api/auth/refresh`, and bean wiring are still to do (`plan.md` §8).
+- `security.SecurityConfig`: stateless, no CSRF/form/basic login. Drivers authenticate with `Authorization: Bearer <access JWT>`, verified by Spring's OAuth2 resource server. Only `POST /api/drivers`, `POST /api/auth/refresh`, `GET /api/config/**`, `/h2-console/**` are public. A missing token returns 401 `UNAUTHORIZED`, and an invalid, forged, or expired token returns 401 `INVALID_TOKEN`, both as `{ code, message }` JSON. Use `antMatcher(...)` for request matchers, because plain strings fail once the H2 console servlet is registered.
+- `security.jwt`: `JwtProperties` (`jwt.secret`, `jwt.access-ttl` 1h, `jwt.refresh-ttl` 30d) and `JwtConfig` (HS256 `JwtEncoder`/`JwtDecoder` beans, expiry checked against the injected `Clock` with zero skew). Startup fails if the secret is missing, an unresolved `${...}` placeholder, or shorter than 32 bytes.
+- `auth`: driver tokens, in the hexagonal layout. `application.port.out` has `AccessTokenIssuer` and `RefreshTokenStore`. `application.service.RefreshTokenService` issues and rotates refresh tokens (stores SHA-256 hashes only, a reused token revokes the driver's current token). `application.service.TokenReissueService` returns a new access + refresh pair. Adapters: `adapter.out.jwt.JwtAccessTokenIssuer` (access JWT, `sub` = driverId), `adapter.out.redis.RedisRefreshTokenStore` (keys `auth:refresh:{hash}`, `auth:refresh:driver:{id}`, `auth:refresh:used:{hash}`, all with TTL, `GETDEL` on consume), `adapter.in.web.AuthController` (`POST /api/auth/refresh`), and `@CurrentDriver Long driverId` for controllers. `auth.config.AuthBeanConfig` wires ports to adapters. Issuing tokens at driver registration is left for `feat/driver-register`.
 - Domain packages go under `com.blinkerleague.server.<domain>` and follow the hexagonal layout below. This replaces the `controller/service/repository/domain/dto` layout in `plan.md` §2.
 
 ## Architecture: hexagonal (ports and adapters) first
@@ -46,11 +46,22 @@ Testing follows the ports. Unit-test services with in-memory fakes of their out-
 ## Stack
 
 - Spring Boot 3.3.13, Java 17 toolchain, Gradle wrapper 7.6.4 (Groovy DSL), Lombok.
-- Dependencies already declared: Spring MVC (`starter-web`), Bean Validation, Data JPA + H2, Data Redis, Spring Session on Redis, Spring Security.
+- Dependencies already declared: Spring MVC (`starter-web`), Bean Validation, Data JPA + H2, Data Redis, Spring Security + OAuth2 resource server (JWT). Tests use ArchUnit and Testcontainers.
 - Boot and Gradle are deliberately kept old: the dev machine runs IntelliJ IDEA 2021.3.1, whose Gradle sync breaks on newer Gradle. Do not upgrade Boot (4.x needs Gradle 8.14+) or the wrapper without confirming the IDE is updated.
 - Redis-backed sessions are on the classpath, but the app starts without a running Redis (verified with `bootRun`). Redis connections are lazy, so errors appear only once sessions or Redis are actually used.
 - Profiles: `local` is the default (`application-local.yaml`: in-memory H2, console at `/h2-console`, `ddl-auto: create`, SQL logging). Tests use `@ActiveProfiles("test")` (`src/test/resources/application-test.yaml`). `UserDetailsServiceAutoConfiguration` is excluded, so no generated password is logged.
 - Redis runs via `docker compose up -d` (see README).
+
+## Security rules: secrets and tokens
+
+Build defensively. Treat every secret as if the repository were public.
+
+- **No real secret in the repository, ever.** Real values come from environment variables now and from Vault later (Spring Cloud Vault via `spring.config.import` in the deployed profile). The only secret-like values committed are the test-profile values in `src/test/resources/application-test.yaml`, which protect nothing, and empty placeholders in `.env.example`.
+- **No default values for secrets in YAML.** Never write `${JWT_SECRET:some-default}`. A missing secret must stop startup, not fall back to a value everyone can read in git.
+- **Local secrets live in `.env`** (gitignored, `chmod 600`), loaded only by the `local` profile through `spring.config.import: optional:file:.env[.properties]`. Copy `.env.example` and generate values with `openssl rand -base64 48`.
+- **Validate at startup.** Every new secret setting gets fail-fast validation (missing, unresolved `${...}`, too short) with a message naming the environment variable, plus a red-green test for it, as `JwtConfigTest` does.
+- **Tokens:** store refresh tokens only as SHA-256 hashes, keep JWT claims to `sub`/`iat`/`exp` (no personal data), and never log tokens, secrets, or `Authorization` headers.
+- **Before committing,** check `git diff --cached` for secrets. If a real secret is ever committed or pushed, treat it as leaked: rotate it, do not just delete the line.
 
 ## Commands
 
@@ -63,6 +74,8 @@ Use the wrapper (`gradlew.bat` on Windows, `./gradlew` in Git Bash):
 - Single method: `./gradlew test --tests "com.blinkerleague.server.ServerApplicationTests.contextLoads"`
 
 No lint/format plugin is configured.
+
+Local setup: copy `.env.example` to `.env` and fill `JWT_SECRET`, then start Redis with `docker compose up -d`. Tests that use Testcontainers (`RedisRefreshTokenStoreTest`, `AuthControllerTest`) need a running Docker engine but not the compose Redis.
 
 ## Development workflow: red-green TDD
 
@@ -90,3 +103,5 @@ Conventions:
 ## Environment gotcha
 
 IntelliJ IDEA 2021.3.1's Gradle sync (via its bundled Android plugin, which injects `AndroidStudioToolingPlugin`) fails with `NoClassDefFoundError: org/gradle/util/VersionNumber` on newer Gradle (seen on 9.8.2). It is unrelated to the Korean characters in the user path. Hence the pinned Gradle 7.6.4 / Boot 3.3.x. The IDE sync was not re-verified after the downgrade; the CLI wrapper build works.
+
+Docker on this Mac is colima (`brew install colima docker docker-compose`, `colima start`), not Docker Desktop. `~/.testcontainers.properties` points `docker.host` at `~/.colima/default/docker.sock`. Boot 3.3 pins Testcontainers 1.19.x, which defaults to Docker API 1.32 and is rejected by Docker Engine 29+, so `build.gradle` sets the test system property `api.version=1.44` and `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock` for Ryuk. Both are safe for Docker Desktop and Linux.
