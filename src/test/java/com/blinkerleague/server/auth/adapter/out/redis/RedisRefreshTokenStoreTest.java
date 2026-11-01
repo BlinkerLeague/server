@@ -53,4 +53,13 @@ class RedisRefreshTokenStoreTest {
 
 		assertThat(store.consume("hash-1")).contains(7L);
 	}
+
+	@Test
+	void 같은_토큰은_한_번만_꺼낼_수_있다() {
+		store.save("hash-1", 7L, TTL);
+
+		store.consume("hash-1");
+
+		assertThat(store.consume("hash-1")).isEmpty();
+	}
 }
