@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,5 +36,15 @@ class DriverControllerTest extends RedisContainerTest {
 			.andExpect(jsonPath("$.regionCode").value("11680"))
 			.andExpect(jsonPath("$.accessToken").isNotEmpty())
 			.andExpect(jsonPath("$.refreshToken").isNotEmpty());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "깜", "가가가가가가가가가가가가가"})
+	void 닉네임이_2자에서_12자가_아니면_400_INVALID_INPUT을_반환한다(String nickname) throws Exception {
+		mockMvc.perform(post("/api/drivers")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"nickname\":\"" + nickname + "\",\"regionCode\":\"11680\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
 }
