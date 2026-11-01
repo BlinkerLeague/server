@@ -24,7 +24,8 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
 
 	@Override
 	public Optional<Long> consume(String tokenHash) {
-		return Optional.ofNullable(redis.opsForValue().get(TOKEN_KEY + tokenHash)).map(Long::valueOf);
+		// GETDEL: 꺼내면서 지우므로 같은 토큰으로 동시에 요청해도 한 번만 성공한다.
+		return Optional.ofNullable(redis.opsForValue().getAndDelete(TOKEN_KEY + tokenHash)).map(Long::valueOf);
 	}
 
 	@Override
