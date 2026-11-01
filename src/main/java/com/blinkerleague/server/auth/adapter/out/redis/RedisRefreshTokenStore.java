@@ -15,6 +15,7 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
 
 	private static final String TOKEN_KEY = "auth:refresh:";
 	private static final String DRIVER_KEY = "auth:refresh:driver:";
+	private static final String USED_KEY = "auth:refresh:used:";
 
 	private final StringRedisTemplate redis;
 
@@ -32,12 +33,12 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
 
 	@Override
 	public void markUsed(String tokenHash, Long driverId, Duration ttl) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		redis.opsForValue().set(USED_KEY + tokenHash, String.valueOf(driverId), ttl);
 	}
 
 	@Override
 	public Optional<Long> findUsedOwner(String tokenHash) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		return Optional.ofNullable(redis.opsForValue().get(USED_KEY + tokenHash)).map(Long::valueOf);
 	}
 
 	@Override
