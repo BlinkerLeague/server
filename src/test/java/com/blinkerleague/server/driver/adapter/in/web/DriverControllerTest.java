@@ -1,5 +1,6 @@
 package com.blinkerleague.server.driver.adapter.in.web;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,11 +11,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.blinkerleague.server.support.RedisContainerTest;
+import com.jayway.jsonpath.JsonPath;
 
 /** 실제 Redis(Testcontainers)를 쓰는 운전자 등록 API 통합 테스트. Docker가 필요하다. */
 @SpringBootTest
@@ -67,5 +70,24 @@ class DriverControllerTest extends RedisContainerTest {
 		mockMvc.perform(post("/api/drivers").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("CONFLICT"));
+	}
+
+	@Test
+	void 등록으로_받은_액세스_토큰으로_보호_API를_통과하고_리프레시_토큰으로_재발급할_수_있다() throws Exception {
+		String response = mockMvc.perform(post("/api/drivers")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"nickname\":\"흐름검증\",\"regionCode\":\"11680\"}"))
+			.andExpect(status().isCreated())
+			.andReturn().getResponse().getContentAsString();
+		String accessToken = JsonPath.read(response, "$.accessToken");
+		String refreshToken = JsonPath.read(response, "$.refreshToken");
+
+		// 해당 컨트롤러가 아직 없으므로 인증을 통과해 404가 나오면 성공이다.
+		mockMvc.perform(get("/api/trips/some-trip/score").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+			.andExpect(status().isNotFound());
+		mockMvc.perform(post("/api/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+			.andExpect(status().isOk());
 	}
 }
