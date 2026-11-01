@@ -10,7 +10,7 @@
 
 | # | 항목 | 현재 상태 | 제안 |
 | --- | --- | --- | --- |
-| D2 | 운전자 인증 | 기획서에 정의 없음. Spring Security가 모든 엔드포인트를 막고 있음 | `POST /api/drivers`에서 `driverId` + 랜덤 토큰 발급, 이후 `Authorization: Bearer <token>` 헤더로 식별 |
+| D2 | 운전자 인증 | 기획서에 정의 없음. Spring Security가 모든 엔드포인트를 막고 있음 | **JWT(Access + Refresh, Refresh는 Redis)로 결정 → 8장.** 기존 제안: `POST /api/drivers`에서 `driverId` + 랜덤 토큰 발급, 이후 `Authorization: Bearer <token>` 헤더로 식별 |
 | D3 | 운영 DB | H2 인메모리만 있음 | MVP 시연까지 H2(파일 모드 또는 인메모리), 2차에서 MySQL/PostgreSQL을 docker-compose에 추가 |
 | D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
 | D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | 시즌 내 지역 운전자들의 운행 점수 평균(거리 가중). 2차 착수 전 확정 |
@@ -88,7 +88,11 @@ com.blinkerleague.server
 
 완료 기준: `./gradlew build` 통과, 허용 경로 외 요청은 401.
 
+상태: 완료 (PR #5). 남은 항목: `BaseTimeEntity`가 `LocalDateTime`이라 Jackson 출력에 오프셋(`+09:00`)이 없음. `OffsetDateTime` 전환 여부는 후속 결정.
+
 ### 3.2 `feat/driver-register` — 운전자 등록
+
+> 인증은 8장(JWT, Refresh는 Redis)을 따른다. 아래 `token_hash` 컬럼은 만들지 않고, 응답의 `token`은 `accessToken` · `refreshToken`으로 나눈다.
 
 API: `POST /api/drivers`
 
@@ -286,3 +290,90 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 | 기준값 JSON 형식 | `feat/threshold-config` 전 |
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
 | `supported` 신호 이름 목록 | `feat/trip-upload` 전 |
+
+## 8. 다음 단계: 운전자 인증 JWT 전환 (D2)
+
+common-setup 이후 첫 작업. `feat/jwt-auth` 브랜치에서 인증 기반을 먼저 만들고, `feat/driver-register`에서 등록 API에 연결한다.
+
+### 8.1 결정: Access + Refresh 방식
+
+아이디 · 비밀번호 로그인 없이 운전자 등록 때 한 번 토큰을 받는 구조이므로, JWT가 만료되면 다시 받을 수단이 필요하다.
+
+| 방식 | 내용 | 비고 |
+| --- | --- | --- |
+| **A. Access + Refresh (채택)** | Access JWT는 짧게(1시간), Refresh는 랜덤 값을 Redis에 해시로만 저장(30일). `POST /api/auth/refresh`로 재발급 | 도난 시 악용 시간이 최대 1시간, Refresh 삭제로 강제 로그아웃 가능 |
+| B. 장기 JWT 1개 | 1년짜리 JWT 하나 | 단순하지만 도난 시 1년간 막을 수 없고 만료 후 재발급 수단이 없음 |
+
+흐름:
+
+```
+1. 등록      POST /api/drivers        → { accessToken, refreshToken }
+2. API 호출  Authorization: Bearer <accessToken>
+3. 만료      API 호출                  → 401 INVALID_TOKEN
+4. 재발급    POST /api/auth/refresh { refreshToken }
+             → 새 accessToken + 새 refreshToken (이전 refresh는 무효)
+```
+
+### 8.2 결정: 구현 라이브러리는 resource server
+
+OAuth 2.0의 역할 구분에서 차량 앱은 Client, 토큰을 발급하는 우리 서버는 Authorization server, 토큰을 검증하고 데이터를 내주는 우리 서버는 **Resource server**다. `spring-boot-starter-oauth2-resource-server`는 이 중 Resource server 역할(Bearer JWT 꺼내기 → 서명 · 만료 검증 → `SecurityContext` 설정, 실패 시 401)을 Spring이 대신 해 주는 모듈이다. 이름과 달리 OAuth 로그인(구글 · 카카오)과는 관계없고 토큰은 우리 서버가 직접 발급한다.
+
+| | resource server (채택) | jjwt (0.12.x) |
+| --- | --- | --- |
+| 검증 필터 | Spring 제공(`BearerTokenAuthenticationFilter`) | `OncePerRequestFilter` 직접 작성 |
+| 발급 | `JwtEncoder.encode(...)` | `Jwts.builder()...signWith(key).compact()` |
+| 실패 처리 | entry point만 지정 | 필터에서 예외 직접 처리 |
+| 주의 | `oauth2ResourceServer`에도 `authenticationEntryPoint`를 지정해야 401이 `{ code, message }` JSON으로 나감 | 0.12에서 API 변경(`parserBuilder()`, `parseClaimsJws()` deprecated) |
+
+### 8.3 Refresh 토큰은 Redis로 관리
+
+DB에 컬럼을 두지 않고 Redis에 저장한다. TTL로 자동 만료되고, 이미 docker-compose에 Redis가 있다.
+
+키 설계 (원문은 저장하지 않고 SHA-256 해시만 저장):
+
+```
+auth:refresh:{hash}              → driverId      TTL 30일    # 토큰으로 운전자 찾기
+auth:refresh:driver:{driverId}   → hash          TTL 30일    # 운전자의 현재 토큰 (강제 로그아웃용)
+auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 쓴 토큰 (탈취 감지용)
+```
+
+재발급(`POST /api/auth/refresh`):
+
+1. 받은 토큰을 해시해 `GETDEL auth:refresh:{hash}`로 꺼내면서 지운다. 같은 토큰으로 동시에 요청해도 한 번만 성공한다.
+2. 값이 있으면 그 driverId로 새 Access + 새 Refresh를 발급하고, 이전 해시는 `used`로 기록한다.
+3. 값이 없고 `used`에 있으면 탈취로 보고 그 운전자의 현재 Refresh를 지운 뒤 401.
+4. 둘 다 없으면 401 (만료 또는 위조).
+
+강제 로그아웃: `driver:{id}`로 현재 해시를 찾아 관련 키를 지운다. 남은 Access는 최대 1시간 안에 만료된다.
+
+주의: 비밀번호 로그인이 없으므로 Redis 데이터가 사라지면 운전자는 재등록해야 한다.
+
+- `docker-compose.yml`의 Redis를 `redis-server --appendonly yes`로 실행해 AOF 영구 저장을 켠다.
+- 기기 ID 기반 재발급 같은 복구 경로는 차량 앱과 논의한다(7장).
+
+### 8.4 작업
+
+- 의존성: `spring-boot-starter-oauth2-resource-server` 추가, 쓰지 않는 `spring-session-data-redis` 제거
+- 설정: `jwt.secret`(256bit 이상, 환경변수 `JWT_SECRET`, 저장소에 커밋하지 않음), `jwt.access-ttl: 1h`, `jwt.refresh-ttl: 30d`. 테스트 설정에만 고정 secret
+- `security/jwt/`
+  - `JwtProperties`: 위 설정 레코드(`@ConfigurationProperties`)
+  - `JwtConfig`: HS256 `JwtEncoder` · `JwtDecoder` Bean. 디코더 만료 검사에 기존 `Clock` 연결
+  - `JwtTokenProvider`: `issueAccessToken(driverId)`, `sub` = driverId, `iat`/`exp`는 `Clock` 기준
+  - `RefreshTokenStore`: 저장소 인터페이스. 운영은 `RedisRefreshTokenStore`, 단위 테스트는 메모리 구현
+  - `RefreshTokenService`: 발급 · 재발급(rotation) · 탈취 감지 · 강제 로그아웃
+- `SecurityConfig`: `.oauth2ResourceServer(o -> o.jwt(...).authenticationEntryPoint(...))`, `POST /api/auth/refresh` 허용
+- `@CurrentDriver`: `JwtAuthenticationToken`의 `sub`를 `Long driverId`로 넘기는 인자 리졸버
+- `ErrorCode.INVALID_TOKEN`(401) 추가
+- 3.2 등록 응답의 `token`을 `accessToken` · `refreshToken`으로 분리하고 `driver.token_hash` 컬럼은 만들지 않음. README API 표와 7장 갱신
+
+### 8.5 테스트 (red-green 순서)
+
+단위 (스프링 없이):
+
+1. `JwtTokenProviderTest`: 발급 토큰의 `sub`가 driverId, 만료 시각 = 발급 시각 + TTL, 만료 후 디코딩 실패, 다른 secret으로 서명한 토큰 거부
+2. `RefreshTokenServiceTest`: 해시로만 저장, 재발급 시 새 토큰 발급, 사용한 토큰 재사용 시 `INVALID_TOKEN` + 운전자 토큰 무효화, 없는 토큰 거부, 강제 로그아웃 후 재발급 불가
+
+통합:
+
+3. `SecurityConfigTest`: 유효 토큰은 인증 통과(컨트롤러가 없으면 404), 토큰 없음 · 위조 · 만료는 401 + `INVALID_TOKEN`
+4. `RedisRefreshTokenStore`: Testcontainers로 실제 Redis에서 저장 · `GETDEL` · TTL 확인
