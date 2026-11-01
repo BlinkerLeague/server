@@ -62,4 +62,22 @@ class AuthControllerTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
+
+	@Test
+	void 이미_사용한_리프레시_토큰으로_다시_요청하면_401이고_그사이_받은_새_토큰도_무효가_된다() throws Exception {
+		String stolen = refreshTokenService.issue(8L);
+		String rotated = refreshTokenService.rotate(stolen).refreshToken();
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"refreshToken\":\"" + stolen + "\"}"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"refreshToken\":\"" + rotated + "\"}"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+	}
 }
