@@ -1,8 +1,13 @@
 package com.blinkerleague.server.security.jwt;
 
 import java.time.Clock;
+import java.time.Instant;
 
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,6 +20,13 @@ public class JwtTokenProvider {
 	private final Clock clock;
 
 	public String issueAccessToken(Long driverId) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		Instant now = clock.instant();
+		JwtClaimsSet claims = JwtClaimsSet.builder()
+			.subject(String.valueOf(driverId))
+			.issuedAt(now)
+			.expiresAt(now.plus(properties.accessTtl()))
+			.build();
+		JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+		return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
 	}
 }

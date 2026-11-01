@@ -1,18 +1,46 @@
 package com.blinkerleague.server.security.jwt;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Duration;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 /** HS256 JWT 인코더 · 디코더. 디코더의 만료 검사는 주입한 {@link Clock}을 기준으로 한다. */
 public class JwtConfig {
 
+	private static final int MIN_SECRET_BYTES = 32;
+
 	public JwtEncoder jwtEncoder(JwtProperties properties) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		return new NimbusJwtEncoder(new ImmutableSecret<>(secretKey(properties)));
 	}
 
 	public JwtDecoder jwtDecoder(JwtProperties properties, Clock clock) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey(properties))
+			.macAlgorithm(MacAlgorithm.HS256)
+			.build();
+		// 기본 허용 오차(60초) 없이 만료 시각을 그대로 적용한다.
+		JwtTimestampValidator timestampValidator = new JwtTimestampValidator(Duration.ZERO);
+		timestampValidator.setClock(clock);
+		decoder.setJwtValidator(timestampValidator);
+		return decoder;
+	}
+
+	private static SecretKey secretKey(JwtProperties properties) {
+		byte[] secret = properties.secret().getBytes(StandardCharsets.UTF_8);
+		if (secret.length < MIN_SECRET_BYTES) {
+			throw new IllegalArgumentException("JWT secret은 " + MIN_SECRET_BYTES + "바이트 이상이어야 합니다.");
+		}
+		return new SecretKeySpec(secret, "HmacSHA256");
 	}
 }
