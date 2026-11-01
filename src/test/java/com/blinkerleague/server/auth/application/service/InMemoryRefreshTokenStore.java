@@ -1,10 +1,12 @@
-package com.blinkerleague.server.security.jwt;
+package com.blinkerleague.server.auth.application.service;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import com.blinkerleague.server.auth.application.port.out.RefreshTokenStore;
 
 /** 단위 테스트용 저장소. TTL은 다루지 않는다. */
 class InMemoryRefreshTokenStore implements RefreshTokenStore {
