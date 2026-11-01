@@ -44,6 +44,7 @@ public class SecurityConfig {
 			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(antMatcher(HttpMethod.POST, "/api/drivers")).permitAll()
+				.requestMatchers(antMatcher(HttpMethod.POST, "/api/auth/refresh")).permitAll()
 				.requestMatchers(antMatcher(HttpMethod.GET, "/api/config/**")).permitAll()
 				.requestMatchers(antMatcher("/h2-console/**")).permitAll()
 				.requestMatchers(antMatcher("/error")).permitAll()
