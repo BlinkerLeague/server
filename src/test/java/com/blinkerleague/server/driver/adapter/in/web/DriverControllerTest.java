@@ -57,4 +57,15 @@ class DriverControllerTest extends RedisContainerTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
+
+	@Test
+	void 이미_사용_중인_닉네임으로_등록하면_409_CONFLICT를_반환한다() throws Exception {
+		String body = "{\"nickname\":\"중복닉네임\",\"regionCode\":\"11680\"}";
+		mockMvc.perform(post("/api/drivers").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isCreated());
+
+		mockMvc.perform(post("/api/drivers").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("CONFLICT"));
+	}
 }
