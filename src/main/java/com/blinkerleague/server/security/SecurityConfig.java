@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.blinkerleague.server.common.error.ErrorCode;
@@ -49,7 +50,8 @@ public class SecurityConfig {
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(oauth -> oauth
 				.jwt(Customizer.withDefaults())
-				.authenticationEntryPoint((request, response, e) -> writeError(response, ErrorCode.UNAUTHORIZED)))
+				.authenticationEntryPoint((request, response, e) -> writeError(response,
+					e instanceof InvalidBearerTokenException ? ErrorCode.INVALID_TOKEN : ErrorCode.UNAUTHORIZED)))
 			.exceptionHandling(handling -> handling
 				.authenticationEntryPoint((request, response, e) -> writeError(response, ErrorCode.UNAUTHORIZED))
 				.accessDeniedHandler((request, response, e) -> writeError(response, ErrorCode.FORBIDDEN)));
