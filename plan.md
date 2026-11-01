@@ -14,6 +14,30 @@
 | D3 | 운영 DB | H2 인메모리만 있음 | MVP 시연까지 H2(파일 모드 또는 인메모리), 2차에서 MySQL/PostgreSQL을 docker-compose에 추가 |
 | D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
 | D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | 시즌 내 지역 운전자들의 운행 점수 평균(거리 가중). 2차 착수 전 확정 |
+| D6 | 홈(SCR-01) 연승 표시 | 화면은 P0 홈에 "5일 연승"을 보여주지만 연승 계산은 P1 `feat/streak-badge` | **미정.** A) P0 `feat/daily-mission` 응답에 `streakDays` 추가 / B) P0 동안 화면에서 연승 카드를 숨김(plan 변경 없음) |
+| D7 | 주간 리포트(SCR-07) "퀘스트 수락" 버튼 | plan은 맞춤 미션을 배치로 자동 생성 | **미정.** A) 수락 API와 미수락 상태 추가 / B) 화면을 "다음 주 퀘스트로 등록됨" 안내로 변경(plan 변경 없음) |
+| D8 | 설정(SCR-08) "리그 순위 공개" 토글 | 개발 기획서 · plan 어디에도 없음 | **미정.** A) `driver`에 공개 여부 컬럼과 리그 집계 제외 로직 추가 / B) 화면에서 제거(plan 변경 없음) |
+| D9 | "측정 누락 구간" 예외 상태 | 서버는 누락 구간을 알 수 없음 | **미정.** A) 업로드 요청에 누락 구간 필드 추가 / B) 앱에서만 표시하는 문구로 둠(plan 변경 없음) |
+
+### 화면 기획서 반영 (2026-11-01)
+
+화면 기획서를 작성하면서 화면을 그릴 데이터가 없던 부분을 각 브랜치에 반영했다. 결정이 필요한 항목은 위 D6 ~ D9.
+
+| 브랜치 | 반영 내용 | 화면 |
+| --- | --- | --- |
+| `feat/threshold-config` | 등급 기준, 항목별 팁 문구를 설정에 포함 | SCR-02 등급, SCR-02b 팁 |
+| `feat/trip-score` | 응답에 `grade`, `summary`(득점 · 실점 · 반칙), `plays`(이벤트 목록), 그날 미션 판정 결과 | SCR-02, SCR-02a, VOC-02 |
+| `feat/trip-score` | 최근 경기 목록 `GET /api/trips?limit=2` 신설 | SCR-01 최근 경기 |
+| `feat/trip-upload` | `POST /api/trips` 응답을 점수 API와 같은 구조로 통일 | VOC-02 (업로드 직후 음성 문구 생성) |
+| `feat/daily-mission` | 응답에 `rewardPoint`, 조건별 진행도(회전 수, 사용률) | SCR-01 진행 링, SCR-03 |
+| `feat/score-full-metrics` | 측정 제외 항목도 `status`(`UNSUPPORTED`/`NOT_APPLICABLE`)와 사유로 반환, 항목별 근거 수치 `detail` | SCR-02 회색 항목, SCR-02b |
+| `feat/score-full-metrics` | 회전 0회는 운행 상태가 아니라 깜빡이 항목의 제외 사유. 나머지 항목으로 평점 | SCR-02, 예외 상태 |
+| `feat/point-ledger` | `GET /api/points`에 `todayEarned`, `dailyCap`, 원장 항목별 설명(거리 × 평점). 원장에 적립 시점 거리 · 점수 저장 | SCR-06 |
+| `feat/streak-badge` | 획득 배지뿐 아니라 전체 배지 카탈로그(잠금 상태 + 조건) 반환 | SCR-05 진열장 |
+| `feat/region-league` | 시즌 내 지역별 안전지수 목록과 시즌 종료일 `endsAt` | SCR-04 월드맵, D-12 표시 |
+| `feat/weekly-report` | 항목별 전주 대비 변화와 가장 약한 항목을 응답에 명시 | SCR-07 |
+
+**P0 시연에 직접 걸리는 것은 위쪽 다섯 줄(`threshold-config` ~ `daily-mission`)이다. 11.8 전에 반영해야 1차 시연의 경기 결과 · 홈 · 퀘스트 화면이 서버 데이터로 그려진다.**
 
 ## 1. 브랜치 · 작업 순서
 
@@ -123,16 +147,31 @@ API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
   "harsh": { "deltaKmhPerSec": 10 },
   "safetyWarning": { "mergeWindowSec": 10 },
   "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
-  "point": { "tripMaxKm": 50, "dailyCap": 150 }
+  "point": { "tripMaxKm": 50, "dailyCap": 150 },
+  "grades": [
+    { "grade": "S", "minScore": 95 },
+    { "grade": "A", "minScore": 85 },
+    { "grade": "B", "minScore": 70 },
+    { "grade": "C", "minScore": 50 }
+  ],
+  "tips": {
+    "TURN_SIGNAL": "회전 5초 전에 깜빡이를 켜 보세요.",
+    "SMOOTH_DRIVING": "...",
+    "SAFETY_WARNING": "...",
+    "NIGHT_HEADLIGHT": "..."
+  }
 }
 ```
+
+- `grades`: 점수 → 등급 기준(SCR-02). 높은 기준부터 비교해 처음 만족하는 등급. 50점 미만의 등급 표기는 화면 기획서와 확정
+- `tips`: 항목별 개선 팁 문구(SCR-02b). 문구는 코드가 아니라 설정에 둔다(6장 규칙)
 
 작업:
 - `app_config` 테이블(`config_key`, `value`(JSON), `version`, `updated_at`) 또는 키-값 행 구조. 초기값은 `data.sql`(또는 시작 시 시드)로 넣음
 - 서버 내부에서도 같은 값을 쓰도록 `ThresholdProvider` 빈 제공 (캐시 + 변경 시 갱신)
 - 응답에 `version`을 넣어 앱이 바뀐 경우에만 갱신
 
-테스트: 시드 값 조회, 값 변경 후 version 증가.
+테스트: 시드 값 조회, 값 변경 후 version 증가, 경계 점수별 등급(95 → S, 94 → A, 50 → C), 항목별 팁 문구 포함.
 
 ### 3.4 `feat/trip-upload` — 운행 · 이벤트 업로드 (FR-01, FR-04)
 
@@ -148,34 +187,48 @@ API: `POST /api/trips` (기획서 8.2 요청 형식 그대로)
 - 검증: `endedAt > startedAt`, `distanceKm >= 0`, 이벤트 시각이 운행 구간 안
 - 원시 위치 좌표 필드는 받지 않음(DTO에 없음) — 개인정보 요구사항
 - 업로드 처리 끝에 점수 계산 · 미션 판정을 호출할 확장 지점만 만들어 둠 (다음 브랜치에서 연결)
+- **응답은 3.5 점수 응답과 같은 구조**(`TripResult`)로 통일한다. 앱이 업로드 직후 이 응답만으로 음성 문구(VOC-02)를 만들 수 있어야 한다. 이 브랜치에서는 `tripId` · `status` 등 업로드 결과만 채우고, 점수 관련 필드는 `feat/trip-score`, 미션 필드는 `feat/daily-mission`에서 채운다
 
 테스트: 정상 업로드, 같은 `trip_id` 2회 업로드 시 1건만 저장, 1km 미만은 `EXCLUDED_SHORT`.
 
 ### 3.5 `feat/trip-score` — 점수 엔진 (FR-03, FR-05)
 
-API: `GET /api/trips/{tripId}/score`, 그리고 `POST /api/trips` 응답에도 점수 포함
+API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 구조(`TripResult`)
 
 ```json
 {
   "tripId": "5f1c...",
   "status": "SCORED",
   "score": 75,
+  "grade": "B",
   "metrics": [
     { "metric": "TURN_SIGNAL", "value": 0.75, "score": 75, "weight": 1.0 }
   ],
-  "turns": { "total": 4, "success": 3 }
+  "turns": { "total": 4, "success": 3 },
+  "summary": { "goals": 3, "conceded": 1, "fouls": 0 },
+  "plays": [
+    { "occurredAt": "2026-11-03T08:12:30+09:00", "type": "TURN", "result": "GOAL" },
+    { "occurredAt": "2026-11-03T08:15:02+09:00", "type": "TURN", "result": "CONCEDED" }
+  ],
+  "mission": { "missionId": 1, "status": "IN_PROGRESS" }
 }
 ```
+
+- `grade`: 3.3 `grades` 기준으로 점수에서 계산(SCR-02). 점수가 없으면 `null`
+- `summary`: 경기 비유 집계(SCR-02a). 제안: 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0). 정의는 화면 기획서와 확정
+- `plays`: 운행 중 이벤트를 시각순으로(SCR-02a). `result`는 `summary`와 같은 정의
+- `mission`: 이 운행을 반영한 그날 미션 판정 결과(SCR-02, VOC-02). `feat/daily-mission` 전까지는 `null`
 
 작업:
 - `ScoreCalculator`: 입력(운행 + 이벤트 + 지원 신호 + 설정) → 출력(항목별 점수, 적용 가중치, 총점). DB · 스프링에 의존하지 않는 순수 클래스로 만들어 단위 테스트
 - 깜빡이 항목: `TURN` 이벤트의 `payload.signalOn`이 true인 비율 × 100 (판정 자체는 앱이 수행)
 - **가중치 재분배**: 측정 불가 항목(미지원 신호, 회전 0회 등)을 빼고 남은 가중치를 합이 1이 되도록 비율대로 조정. P0에서는 결과적으로 깜빡이 항목만 가중치 1.0
 - `trip_metric` 테이블: `trip_id`, `metric`, `value`, `score`, `weight`
-- 회전 0회 → `status=NO_TURN`, `score=null` (앱은 "측정할 회전이 없었어요" 표시)
+- 회전 0회 → `status=NO_TURN`, `score=null` (앱은 "측정할 회전이 없었어요" 표시). P0은 측정 항목이 깜빡이뿐이라 이렇게 두고, 4.1에서 깜빡이 항목의 제외 사유로 바꾼다
 - 남의 운행 조회 시 404
+- **최근 경기 목록** `GET /api/trips?limit=2`(SCR-01): 내 운행을 종료 시각 최신순으로. 항목은 `tripId`, `endedAt`, `distanceKm`, `status`, `score`, `grade`. `limit` 기본 · 최댓값은 착수 시 확정
 
-테스트: 회전 4회 중 3회 성공 → 75점, 회전 0회 → `NO_TURN`, 재분배 계산(가중치 합 1) 단위 테스트. 응답 시간 3초 목표는 통합 테스트에서 대략 확인.
+테스트: 회전 4회 중 3회 성공 → 75점, 회전 0회 → `NO_TURN`, 재분배 계산(가중치 합 1) 단위 테스트, 점수별 `grade`, `summary` · `plays` 집계, 최근 경기 목록 정렬 · `limit` · 남의 운행 제외. 응답 시간 3초 목표는 통합 테스트에서 대략 확인.
 
 ### 3.6 `feat/daily-mission` — 오늘의 미션 (FR-06)
 
@@ -187,9 +240,18 @@ API: `GET /api/missions/today`
   "title": "회전 깜빡이 완벽",
   "periodKey": "2026-11-03",
   "status": "IN_PROGRESS",
-  "progress": { "turns": 2, "successTurns": 2, "requiredTurns": 3 }
+  "rewardPoint": 20,
+  "progress": { "turns": 2, "successTurns": 2, "requiredTurns": 3 },
+  "conditions": [
+    { "type": "TURN_COUNT", "current": 2, "target": 3 },
+    { "type": "SIGNAL_RATE", "current": 100, "target": 100 }
+  ]
 }
 ```
+
+- `rewardPoint`: 달성 시 지급 포인트(SCR-03). 실제 지급은 `feat/point-ledger`
+- `conditions`: 조건별 진행도(SCR-01 진행 링, SCR-03). 회전 수와 깜빡이 사용률(%)
+- 홈 연승 표시(`streakDays`)를 여기에 넣을지는 D6 결정에 따름
 
 작업:
 - `mission` 테이블: `mission_id`, `type`, `period`(`DAILY`/`WEEKLY`), `condition`(JSON), `reward_point`, `active_from`, `active_to`. "회전 깜빡이 완벽"(회전 3회 이상, 사용률 100%, 20P) 시드
@@ -198,7 +260,7 @@ API: `GET /api/missions/today`
 - `EXCLUDED_SHORT` 운행은 집계에서 제외
 - 포인트 지급은 P1(`feat/point-ledger`)에서 연결. 지금은 달성 상태만 기록
 
-테스트: 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 1회 포함 → `FAILED`, 자정 경계 운행의 period_key.
+테스트: 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 1회 포함 → `FAILED`, 자정 경계 운행의 period_key, 조건별 진행도(회전 수 · 사용률)와 `rewardPoint` 응답.
 
 ### P0 마무리 (11.9 ~ 11.15)
 - 차량 앱과 실제 연동 확인(에뮬레이터 시나리오: 좌회전 성공 → 우회전 실패 → 운행 종료 점수 · 미션)
@@ -217,21 +279,46 @@ API: `GET /api/missions/today`
   - 야간 전조등: `(1 − 꺼짐 비율) × 100`. `NIGHT_SEGMENT.payload`에 `{ durationSec, headlightOffSec, autoLight }`를 받음. 오토라이트면 100점, 야간 구간 없으면 측정 불가
 - `supported`에 없는 신호의 항목은 제외 후 재분배
 - 이벤트 payload 스키마를 앱 팀과 확정(9장 체크리스트 5~7 결과 반영)
+- **측정 제외 항목도 `metrics`에 담아 반환**(SCR-02 회색 항목): `status`는 `SCORED` / `UNSUPPORTED`(차량이 신호를 지원하지 않음) / `NOT_APPLICABLE`(측정할 상황이 없음), 제외면 `reason`과 함께 `score` · `weight`는 `null`
+- **항목별 근거 수치 `detail`**(SCR-02b): 예) 급가감속 `{ "count": 1, "per10Km": 1.4 }`, 깜빡이 `{ "turns": 4, "signalOn": 3 }`. 화면 문구("급가속 1회", "10km당 1.4회")는 앱이 만든다
+- **회전 0회는 운행 상태가 아니라 깜빡이 항목의 제외 사유**: `TURN_SIGNAL`을 `NOT_APPLICABLE`(`reason: NO_TURN`)로 두고 나머지 항목으로 재분배해 평점(화면: "나머지 항목으로 평점"). 운행 `status=NO_TURN`은 이 브랜치에서 없앤다. 모든 항목이 제외된 경우의 상태 이름은 착수 시 확정
 
-테스트: 항목별 경계값, 지원 신호 조합별 재분배.
+```json
+"metrics": [
+  { "metric": "TURN_SIGNAL", "status": "NOT_APPLICABLE", "reason": "NO_TURN", "score": null, "weight": null },
+  { "metric": "SMOOTH_DRIVING", "status": "SCORED", "score": 86, "weight": 0.6, "detail": { "count": 1, "per10Km": 1.4 } },
+  { "metric": "NIGHT_HEADLIGHT", "status": "UNSUPPORTED", "reason": "SIGNAL_NOT_SUPPORTED", "score": null, "weight": null }
+]
+```
+
+테스트: 항목별 경계값, 지원 신호 조합별 재분배, 제외 항목의 `status` · `reason`, `detail` 수치, 회전 0회일 때 깜빡이 제외 후 나머지로 평점.
 
 ### 4.2 `feat/point-ledger` — 포인트 원장 (FR-12)
 
 API: `GET /api/points` (잔액 + 최근 원장 20건)
 
-- `point_ledger`: `ledger_id`, `driver_id`, `amount`, `reason`(`TRIP`/`DAILY_MISSION`/`STREAK_7`/`SEASON_LEAGUE`), `ref_id`, `created_at`. (`reason`, `ref_id`) 유니크
+```json
+{
+  "balance": 1240,
+  "todayEarned": 62,
+  "dailyCap": 150,
+  "entries": [
+    { "amount": 42, "reason": "TRIP", "description": { "distanceKm": 12.3, "score": 86 }, "createdAt": "2026-11-03T08:40:00+09:00" },
+    { "amount": 20, "reason": "DAILY_MISSION", "description": null, "createdAt": "2026-11-03T08:40:00+09:00" }
+  ]
+}
+```
+
+- `todayEarned` · `dailyCap`: 오늘(Asia/Seoul) 적립 합계와 일일 상한(SCR-06)
+- 원장 항목별 설명(거리 × 평점, SCR-06): 적립 시점 값을 보여줘야 하므로 원장에 남긴다(운행을 다시 조회해 계산하지 않음)
+- `point_ledger`: `ledger_id`, `driver_id`, `amount`, `reason`(`TRIP`/`DAILY_MISSION`/`STREAK_7`/`SEASON_LEAGUE`), `ref_id`, `distance_km`(nullable), `score`(nullable), `created_at`. (`reason`, `ref_id`) 유니크. `distance_km` · `score`는 `TRIP` 적립 시점 값
 - 잔액 = `SUM(amount)` (잔액 컬럼 따로 두지 않음)
 - 운행 적립: `floor(min(distanceKm, 50) × score ÷ 100)`, `ref_id = tripId`
 - 일간 미션 달성 시 20P, `ref_id = driver_mission` ID
 - **일일 상한 150P**: 그날 합계를 구해 남은 만큼만 적립. 같은 운전자의 동시 적립은 운전자 단위 비관적 락(또는 `driver` 행 `SELECT ... FOR UPDATE`)으로 직렬화
 - P0에서 이미 달성된 미션에 대한 소급 적립 여부 결정
 
-테스트: 같은 운행 재업로드 시 적립 1회, 상한 초과 시 잘림, 동시 업로드 2건에서 상한 유지.
+테스트: 같은 운행 재업로드 시 적립 1회, 상한 초과 시 잘림, 동시 업로드 2건에서 상한 유지, `todayEarned` 자정 경계, 원장 설명에 적립 시점 거리 · 점수.
 
 ### 4.3 `feat/streak-badge` — 연속 기록 · 배지 (FR-11)
 
@@ -240,6 +327,7 @@ API: `GET /api/streak`
 - 연속 기록 = 오늘(또는 어제)부터 거꾸로 `driver_mission.status = ACHIEVED`인 연속 일수. 조회 시 계산하거나 `driver_streak` 캐시 테이블 유지
 - 7일마다 50P (`reason=STREAK_7`, `ref_id = driverId:달성일`)
 - `badge_award`: `driver_id`, `badge_code`, `awarded_at`, (`driver_id`, `badge_code`) 유니크. 배지 목록 · 조건(예: 첫 운행, 연속 7일, 깜빡이 100회)은 착수 시 확정
+- **전체 배지 카탈로그 반환**(SCR-05 진열장): `GET /api/badges`에서 획득한 배지만이 아니라 전체 배지를 잠금 상태 · 조건과 함께. 예) `{ "code": "STREAK_7", "name": "...", "condition": "7일 연속 미션 달성", "earned": false, "awardedAt": null }`. 배지 정의(이름 · 조건 문구)는 `badge` 카탈로그(시드)에 둔다
 
 ### 4.4 `feat/region-league` — 지역 리그 (FR-13)
 
@@ -250,6 +338,7 @@ API: `GET /api/leagues/current`
 - 순위 조회는 Redis에서(캐시 응답 요구사항). 응답에는 닉네임만, 내 순위 + 상위 N명
 - 시즌 종료 배치(`@Scheduled`): 순위 · 안전지수 RDB 확정, 상위 지역 참여자 100P, 새 시즌 생성
 - 지역 안전지수 계산식(D5), "같은 측정 항목 집단끼리 비교" 여부 착수 전 결정
+- **응답에 시즌 내 지역별 안전지수 목록과 시즌 종료일**(SCR-04 월드맵, "D-12" 표시): `season: { seasonId, startsAt, endsAt }`, `regions: [{ regionCode, safetyIndex, rank }]`. 시즌 중에는 현재까지의 값(Redis 집계), 종료 후에는 확정값. D-day는 앱이 `endsAt`으로 계산
 - Redis가 이미 docker-compose에 있으므로 추가 인프라 없음
 
 테스트: Testcontainers 또는 임베디드 Redis로 순위 계산, 시즌 확정 배치.
@@ -262,6 +351,19 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 - 가장 약한 항목을 골라 다음 주 "맞춤 개선 미션"(주간 미션) 생성
 - 매주 월요일 새벽 배치로 생성 · 저장(`weekly_report`), 조회는 저장본 반환
 - 주간 미션 "안전 경고 없는 주"(50km 이상, 경고 0회)도 여기서 함께 판정
+- **응답 형식**(SCR-07): 항목별 이번 주 · 지난주 값과 변화, 가장 약한 항목, 생성된 맞춤 미션. "퀘스트 수락" 버튼 유지 여부는 D7 결정에 따름
+
+```json
+{
+  "week": "2026-W45",
+  "metrics": [
+    { "metric": "TURN_SIGNAL", "thisWeek": 0.82, "lastWeek": 0.75, "change": 0.07 },
+    { "metric": "SAFETY_WARNING", "thisWeek": 1.9, "lastWeek": 1.2, "change": 0.7 }
+  ],
+  "weakestMetric": "SAFETY_WARNING",
+  "nextMission": { "missionId": 12, "title": "안전 경고 없는 주" }
+}
+```
 
 ---
 
