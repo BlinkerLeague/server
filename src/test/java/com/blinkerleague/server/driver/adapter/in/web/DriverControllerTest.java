@@ -47,4 +47,14 @@ class DriverControllerTest extends RedisContainerTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "1168", "116800", "1168a"})
+	void 지역_코드가_5자리_숫자가_아니면_400_INVALID_INPUT을_반환한다(String regionCode) throws Exception {
+		mockMvc.perform(post("/api/drivers")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"nickname\":\"지역검증\",\"regionCode\":\"" + regionCode + "\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
 }
