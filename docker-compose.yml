@@ -2,6 +2,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: blinkerleague-redis
+    # Refresh 토큰을 저장하므로 재시작해도 남도록 AOF 영구 저장을 켠다.
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
     volumes:

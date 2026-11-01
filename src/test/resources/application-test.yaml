@@ -6,3 +6,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+jwt:
+  secret: blinkerleague-test-secret-key-32bytes-or-more!

@@ -1,4 +1,7 @@
 spring:
+  config:
+    # 로컬 secret은 저장소 밖의 .env(gitignore)에서 읽는다. 형식은 .env.example 참고.
+    import: optional:file:.env[.properties]
   datasource:
     url: jdbc:h2:mem:blinkerleague;MODE=MySQL
     username: sa
