@@ -73,6 +73,13 @@ No lint/format plugin is configured.
 3. **Refactor**: Clean up the code and the test while keeping them green. Do not add behavior that has no test yet.
 4. Repeat for the next behavior. Do not write production code before a failing test for it exists.
 
+Keep the cycles small and separate:
+
+- **One failing test per cycle.** Do not write a batch of red tests and then implement them all at once. Write one test, make it pass with the minimum code, refactor, then write the next one. Each line of production code should be traceable to the test that required it.
+- **No new tests in the refactor step.** Refactoring changes structure only, and the existing tests are the safety net. New tests, including architecture rules such as ArchUnit, go into their own commit or the next red step.
+- **Commit per step.** Commit red (`test: ...`) and green (`feat: ...`/`fix: ...`) separately, and refactor (`refactor: ...`) when there is one, so the history shows the TDD order. Red commits stay local. Push only once the branch is green again.
+- A red step may add the minimum skeleton (empty classes, method stubs that throw `UnsupportedOperationException`, a new `ErrorCode`, a dependency) so that the test compiles and fails for the right reason.
+
 Conventions:
 
 - Test names are Korean sentences that describe the behavior, e.g. `인증없이_보호된_API를_호출하면_401_JSON을_반환한다`.
