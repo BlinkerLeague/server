@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.blinkerleague.server.common.error.BusinessException;
@@ -41,5 +42,13 @@ class DriverPersistenceAdapterTest {
 			.isInstanceOf(BusinessException.class)
 			.extracting(e -> ((BusinessException) e).getErrorCode())
 			.isEqualTo(ErrorCode.CONFLICT);
+	}
+
+	@Test
+	void 유니크_제약이_아닌_무결성_오류는_CONFLICT로_바꾸지_않고_그대로_올린다() {
+		// API 검증을 거치지 않아 컬럼 길이(12자)를 넘긴 경우
+		Driver tooLong = Driver.register("가가가가가가가가가가가가가", "11680");
+
+		assertThatThrownBy(() -> adapter.save(tooLong)).isInstanceOf(DataIntegrityViolationException.class);
 	}
 }
