@@ -13,16 +13,18 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RedisRefreshTokenStore implements RefreshTokenStore {
 
+	private static final String TOKEN_KEY = "auth:refresh:";
+
 	private final StringRedisTemplate redis;
 
 	@Override
 	public void save(String tokenHash, Long driverId, Duration ttl) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		redis.opsForValue().set(TOKEN_KEY + tokenHash, String.valueOf(driverId));
 	}
 
 	@Override
 	public Optional<Long> consume(String tokenHash) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		return Optional.ofNullable(redis.opsForValue().get(TOKEN_KEY + tokenHash)).map(Long::valueOf);
 	}
 
 	@Override
