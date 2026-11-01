@@ -19,7 +19,7 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
 
 	@Override
 	public void save(String tokenHash, Long driverId, Duration ttl) {
-		redis.opsForValue().set(TOKEN_KEY + tokenHash, String.valueOf(driverId));
+		redis.opsForValue().set(TOKEN_KEY + tokenHash, String.valueOf(driverId), ttl);
 	}
 
 	@Override
