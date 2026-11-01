@@ -12,7 +12,34 @@ Only the common base exists so far (no domain code yet), so update this file as 
 - `common.jpa`: entities extend `BaseTimeEntity` (audited `createdAt`/`updatedAt`).
 - `common.time.TimeConfig`: all day-based logic uses Asia/Seoul. Inject `Clock` instead of calling `now()` directly so tests can pin the time.
 - `security.SecurityConfig`: stateless, no CSRF/form/basic login. Only `POST /api/drivers`, `GET /api/config/**`, `/h2-console/**` are public; everything else returns a 401 JSON. Use `antMatcher(...)` for request matchers, because plain strings fail once the H2 console servlet is registered. Driver token auth is planned for `feat/driver-register`.
-- Domain packages go under `com.blinkerleague.server.<domain>` with `controller/service/repository/domain/dto` subpackages (see `plan.md` §2).
+- Domain packages go under `com.blinkerleague.server.<domain>` and follow the hexagonal layout below. This replaces the `controller/service/repository/domain/dto` layout in `plan.md` §2.
+
+## Architecture: hexagonal (ports and adapters) first
+
+Build every new feature in the hexagonal layout. The domain and use cases sit in the middle, and outside technology (web, JPA, Redis, JWT) connects only through ports. Dependencies always point inward: `adapter → application → domain`.
+
+```
+com.blinkerleague.server.<domain>
+├── domain/                  # domain model and rules
+├── application/
+│   ├── port/in/             # use case interfaces (optional, see below)
+│   ├── port/out/            # interfaces for outside technology: SaveXxxPort, LoadXxxPort, XxxStore
+│   └── service/             # use case implementations, depend only on domain and port/out
+└── adapter/
+    ├── in/web/              # controllers, request/response DTOs
+    └── out/<tech>/          # port/out implementations: persistence (JPA), redis, jwt, ...
+```
+
+We use a pragmatic version to keep pace with the P0 deadline:
+
+- **Out-ports are required.** A service never touches a JPA repository, `RedisTemplate`, or `JwtEncoder` directly. It calls a `port/out` interface, and an adapter in `adapter/out/<tech>` implements it.
+- **In-ports are optional.** A controller may call a service class directly. Add a `port/in` interface when a use case has more than one caller or needs to be swapped.
+- **The domain may carry JPA annotations.** A domain class may be the JPA entity (and extend `BaseTimeEntity`), so no separate entity and mapper are needed. It must not depend on web, Redis, or security classes. Pure logic such as score calculation stays free of Spring entirely.
+- Shared, cross-domain code (`common.*`, `security.SecurityConfig`, framework config such as JWT encoder/decoder beans) stays outside the domain packages.
+
+Testing follows the ports. Unit-test services with in-memory fakes of their out-ports, as `InMemoryRefreshTokenStore` does for `RefreshTokenStore`. Test adapters against the real technology: MockMvc for web, H2 for JPA, Testcontainers for Redis.
+
+Code written before this rule, such as `security.jwt` on `feat/jwt-auth`, gets moved into this layout (for example `auth/application/...` and `auth/adapter/out/redis`) before or while its feature is finished.
 
 ## Stack
 
