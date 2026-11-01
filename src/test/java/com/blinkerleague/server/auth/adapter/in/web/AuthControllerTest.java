@@ -53,4 +53,13 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.accessToken").isNotEmpty())
 			.andExpect(jsonPath("$.refreshToken").value(not(refreshToken)));
 	}
+
+	@Test
+	void 리프레시_토큰_없이_요청하면_400_INVALID_INPUT을_반환한다() throws Exception {
+		mockMvc.perform(post("/api/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
 }
