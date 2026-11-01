@@ -12,7 +12,8 @@ public class TokenReissueService {
 	private final AccessTokenIssuer accessTokenIssuer;
 
 	public TokenPair reissue(String refreshToken) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		RefreshTokenService.Rotation rotation = refreshTokenService.rotate(refreshToken);
+		return new TokenPair(accessTokenIssuer.issueAccessToken(rotation.driverId()), rotation.refreshToken());
 	}
 
 	public record TokenPair(String accessToken, String refreshToken) {
