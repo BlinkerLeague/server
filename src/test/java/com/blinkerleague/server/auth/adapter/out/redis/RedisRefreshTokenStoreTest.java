@@ -71,4 +71,13 @@ class RedisRefreshTokenStoreTest {
 
 		assertThat(ttlSeconds).isBetween(TTL.getSeconds() - 5, TTL.getSeconds());
 	}
+
+	@Test
+	void 강제_로그아웃하면_그_운전자의_현재_토큰을_꺼낼_수_없다() {
+		store.save("hash-1", 7L, TTL);
+
+		store.revokeAll(7L);
+
+		assertThat(store.consume("hash-1")).isEmpty();
+	}
 }
