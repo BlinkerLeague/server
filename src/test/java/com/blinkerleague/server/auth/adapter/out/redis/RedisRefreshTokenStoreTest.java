@@ -62,4 +62,13 @@ class RedisRefreshTokenStoreTest {
 
 		assertThat(store.consume("hash-1")).isEmpty();
 	}
+
+	@Test
+	void 저장한_토큰은_TTL이_지나면_사라지도록_만료_시간이_걸린다() {
+		store.save("hash-1", 7L, TTL);
+
+		Long ttlSeconds = redis.getExpire("auth:refresh:hash-1");
+
+		assertThat(ttlSeconds).isBetween(TTL.getSeconds() - 5, TTL.getSeconds());
+	}
 }
