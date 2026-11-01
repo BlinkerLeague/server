@@ -1,7 +1,9 @@
 package com.blinkerleague.server.driver.application.service;
 
 import com.blinkerleague.server.driver.application.port.out.IssueDriverTokensPort;
+import com.blinkerleague.server.driver.application.port.out.IssueDriverTokensPort.DriverTokens;
 import com.blinkerleague.server.driver.application.port.out.SaveDriverPort;
+import com.blinkerleague.server.driver.domain.Driver;
 
 import lombok.RequiredArgsConstructor;
 
@@ -13,7 +15,10 @@ public class RegisterDriverService {
 	private final IssueDriverTokensPort issueDriverTokensPort;
 
 	public Result register(Command command) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		Driver driver = saveDriverPort.save(Driver.register(command.nickname(), command.regionCode()));
+		DriverTokens tokens = issueDriverTokensPort.issue(driver.getId());
+		return new Result(driver.getId(), driver.getNickname(), driver.getRegionCode(), tokens.accessToken(),
+			tokens.refreshToken());
 	}
 
 	public record Command(String nickname, String regionCode) {
