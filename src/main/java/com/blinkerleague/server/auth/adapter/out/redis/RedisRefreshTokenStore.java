@@ -14,12 +14,14 @@ import lombok.RequiredArgsConstructor;
 public class RedisRefreshTokenStore implements RefreshTokenStore {
 
 	private static final String TOKEN_KEY = "auth:refresh:";
+	private static final String DRIVER_KEY = "auth:refresh:driver:";
 
 	private final StringRedisTemplate redis;
 
 	@Override
 	public void save(String tokenHash, Long driverId, Duration ttl) {
 		redis.opsForValue().set(TOKEN_KEY + tokenHash, String.valueOf(driverId), ttl);
+		redis.opsForValue().set(DRIVER_KEY + driverId, tokenHash, ttl);
 	}
 
 	@Override
@@ -40,6 +42,9 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
 
 	@Override
 	public void revokeAll(Long driverId) {
-		throw new UnsupportedOperationException("아직 구현되지 않음");
+		String currentHash = redis.opsForValue().getAndDelete(DRIVER_KEY + driverId);
+		if (currentHash != null) {
+			redis.delete(TOKEN_KEY + currentHash);
+		}
 	}
 }
