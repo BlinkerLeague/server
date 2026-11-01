@@ -1,4 +1,4 @@
-package com.blinkerleague.server.security.jwt;
+package com.blinkerleague.server.auth.application.port.out;
 
 import java.time.Duration;
 import java.util.Optional;

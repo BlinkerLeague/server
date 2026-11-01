@@ -1,13 +1,15 @@
-package com.blinkerleague.server.security.jwt;
+package com.blinkerleague.server.auth.application.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
 
+import com.blinkerleague.server.auth.application.port.out.RefreshTokenStore;
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
 
@@ -24,12 +26,12 @@ public class RefreshTokenService {
 	private static final SecureRandom RANDOM = new SecureRandom();
 
 	private final RefreshTokenStore store;
-	private final JwtProperties properties;
+	private final Duration refreshTtl;
 
 	/** 새 Refresh 토큰을 만들어 저장하고 원문을 돌려준다. */
 	public String issue(Long driverId) {
 		String token = newToken();
-		store.save(hash(token), driverId, properties.refreshTtl());
+		store.save(hash(token), driverId, refreshTtl);
 		return token;
 	}
 
@@ -46,7 +48,7 @@ public class RefreshTokenService {
 			throw new BusinessException(ErrorCode.INVALID_TOKEN);
 		}
 		Long driverId = owner.get();
-		store.markUsed(tokenHash, driverId, properties.refreshTtl());
+		store.markUsed(tokenHash, driverId, refreshTtl);
 		return new Rotation(driverId, issue(driverId));
 	}
 

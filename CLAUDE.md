@@ -12,6 +12,8 @@ Only the common base exists so far (no domain code yet), so update this file as 
 - `common.jpa`: entities extend `BaseTimeEntity` (audited `createdAt`/`updatedAt`).
 - `common.time.TimeConfig`: all day-based logic uses Asia/Seoul. Inject `Clock` instead of calling `now()` directly so tests can pin the time.
 - `security.SecurityConfig`: stateless, no CSRF/form/basic login. Only `POST /api/drivers`, `GET /api/config/**`, `/h2-console/**` are public; everything else returns a 401 JSON. Use `antMatcher(...)` for request matchers, because plain strings fail once the H2 console servlet is registered. Driver token auth is planned for `feat/driver-register`.
+- `security.jwt`: `JwtProperties` and `JwtConfig` (HS256 `JwtEncoder`/`JwtDecoder`, secret of 32+ bytes, expiry checked against the injected `Clock` with zero skew). Not registered as beans or wired into `SecurityConfig` yet.
+- `auth`: driver tokens, in the hexagonal layout. `application.port.out` has `AccessTokenIssuer` and `RefreshTokenStore`. `application.service.RefreshTokenService` issues and rotates refresh tokens (stores SHA-256 hashes only, a reused token revokes the driver's current token). `adapter.out.jwt.JwtAccessTokenIssuer` issues access JWTs (`sub` = driverId). The Redis store, `/api/auth/refresh`, and bean wiring are still to do (`plan.md` §8).
 - Domain packages go under `com.blinkerleague.server.<domain>` and follow the hexagonal layout below. This replaces the `controller/service/repository/domain/dto` layout in `plan.md` §2.
 
 ## Architecture: hexagonal (ports and adapters) first
@@ -39,7 +41,7 @@ We use a pragmatic version to keep pace with the P0 deadline:
 
 Testing follows the ports. Unit-test services with in-memory fakes of their out-ports, as `InMemoryRefreshTokenStore` does for `RefreshTokenStore`. Test adapters against the real technology: MockMvc for web, H2 for JPA, Testcontainers for Redis.
 
-Code written before this rule, such as `security.jwt` on `feat/jwt-auth`, gets moved into this layout (for example `auth/application/...` and `auth/adapter/out/redis`) before or while its feature is finished.
+`HexagonalArchitectureTest` (ArchUnit) enforces the dependency rules in the build: `application` must not depend on `adapter`, `domain` must not depend on `application` or `adapter`, and `application` must not use Spring Web, Redis, OAuth2/JWT, servlet, or `com.blinkerleague.server.security` classes directly. Pass framework-free values (for example a `Duration` instead of `JwtProperties`) into services.
 
 ## Stack
 

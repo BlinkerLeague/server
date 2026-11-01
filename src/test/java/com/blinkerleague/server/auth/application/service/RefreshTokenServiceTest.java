@@ -1,4 +1,4 @@
-package com.blinkerleague.server.security.jwt;
+package com.blinkerleague.server.auth.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,8 +17,7 @@ import com.blinkerleague.server.common.error.ErrorCode;
 class RefreshTokenServiceTest {
 
 	private final InMemoryRefreshTokenStore store = new InMemoryRefreshTokenStore();
-	private final RefreshTokenService service = new RefreshTokenService(store,
-		new JwtProperties("blinkerleague-test-secret-key-32bytes-or-more!", Duration.ofHours(1), Duration.ofDays(30)));
+	private final RefreshTokenService service = new RefreshTokenService(store, Duration.ofDays(30));
 
 	@Test
 	void 발급한_리프레시_토큰은_원문이_아닌_SHA256_해시로_저장한다() {

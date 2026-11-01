@@ -1,4 +1,4 @@
-package com.blinkerleague.server.security.jwt;
+package com.blinkerleague.server.auth.adapter.out.jwt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,8 +14,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 
 import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.security.jwt.JwtConfig;
+import com.blinkerleague.server.security.jwt.JwtProperties;
 
-class JwtTokenProviderTest {
+class JwtAccessTokenIssuerTest {
 
 	private static final String SECRET = "blinkerleague-test-secret-key-32bytes-or-more!";
 	private static final Instant ISSUED_AT = Instant.parse("2026-11-01T01:00:00Z");
@@ -25,7 +27,7 @@ class JwtTokenProviderTest {
 
 	@Test
 	void 발급한_액세스_토큰의_subject는_driverId다() {
-		String token = providerAt(ISSUED_AT, properties).issueAccessToken(1L);
+		String token = issuerAt(ISSUED_AT, properties).issueAccessToken(1L);
 
 		Jwt jwt = decoderAt(ISSUED_AT).decode(token);
 
@@ -34,7 +36,7 @@ class JwtTokenProviderTest {
 
 	@Test
 	void 액세스_토큰의_만료_시각은_발급_시각에_TTL을_더한_값이다() {
-		String token = providerAt(ISSUED_AT, properties).issueAccessToken(1L);
+		String token = issuerAt(ISSUED_AT, properties).issueAccessToken(1L);
 
 		Jwt jwt = decoderAt(ISSUED_AT).decode(token);
 
@@ -44,7 +46,7 @@ class JwtTokenProviderTest {
 
 	@Test
 	void 만료_시각이_지난_토큰은_거부한다() {
-		String token = providerAt(ISSUED_AT, properties).issueAccessToken(1L);
+		String token = issuerAt(ISSUED_AT, properties).issueAccessToken(1L);
 		JwtDecoder decoder = decoderAt(ISSUED_AT.plus(Duration.ofHours(1)).plusSeconds(1));
 
 		assertThatThrownBy(() -> decoder.decode(token)).isInstanceOf(JwtValidationException.class);
@@ -54,7 +56,7 @@ class JwtTokenProviderTest {
 	void 다른_secret으로_서명한_토큰은_거부한다() {
 		JwtProperties other = new JwtProperties("another-secret-key-that-is-also-32bytes-long!!", Duration.ofHours(1),
 			Duration.ofDays(30));
-		String forged = providerAt(ISSUED_AT, other).issueAccessToken(1L);
+		String forged = issuerAt(ISSUED_AT, other).issueAccessToken(1L);
 		JwtDecoder decoder = decoderAt(ISSUED_AT);
 
 		assertThatThrownBy(() -> decoder.decode(forged)).isInstanceOf(BadJwtException.class);
@@ -67,8 +69,8 @@ class JwtTokenProviderTest {
 		assertThatThrownBy(() -> jwtConfig.jwtEncoder(weak)).isInstanceOf(IllegalArgumentException.class);
 	}
 
-	private JwtTokenProvider providerAt(Instant now, JwtProperties props) {
-		return new JwtTokenProvider(jwtConfig.jwtEncoder(props), props, Clock.fixed(now, TimeConfig.ZONE));
+	private JwtAccessTokenIssuer issuerAt(Instant now, JwtProperties props) {
+		return new JwtAccessTokenIssuer(jwtConfig.jwtEncoder(props), props, Clock.fixed(now, TimeConfig.ZONE));
 	}
 
 	private JwtDecoder decoderAt(Instant now) {
