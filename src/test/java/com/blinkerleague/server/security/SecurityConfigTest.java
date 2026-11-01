@@ -42,6 +42,17 @@ class SecurityConfigTest {
 	}
 
 	@Test
+	void 다른_secret으로_서명한_토큰이면_401_INVALID_TOKEN을_반환한다() throws Exception {
+		JwtProperties forger = new JwtProperties(
+			"attacker-secret-key-that-is-also-32bytes-long!", Duration.ofHours(1), Duration.ofDays(30));
+
+		mockMvc.perform(get("/api/trips/some-trip/score")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(forger, Clock.systemUTC())))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+	}
+
+	@Test
 	void 인증없이_보호된_API를_호출하면_401_JSON을_반환한다() throws Exception {
 		mockMvc.perform(get("/api/trips/some-trip/score"))
 			.andExpect(status().isUnauthorized())
