@@ -44,7 +44,8 @@ public class JwtConfig {
 	}
 
 	private static SecretKey secretKey(JwtProperties properties) {
-		if (properties.secret() == null || properties.secret().isBlank()) {
+		// 환경변수가 없으면 "${JWT_SECRET}" 같은 글자가 그대로 넘어오므로 미설정으로 본다.
+		if (properties.secret() == null || properties.secret().isBlank() || properties.secret().startsWith("${")) {
 			throw new IllegalArgumentException("JWT secret이 없습니다. 환경변수 JWT_SECRET을 설정하세요.");
 		}
 		byte[] secret = properties.secret().getBytes(StandardCharsets.UTF_8);
