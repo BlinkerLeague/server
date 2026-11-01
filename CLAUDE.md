@@ -26,6 +26,22 @@ Use the wrapper (`gradlew.bat` on Windows, `./gradlew` in Git Bash):
 
 No lint/format plugin is configured.
 
+## Development workflow: red-green TDD
+
+`feat/common-setup` (the first feat) is done. Build every feat after it test-first, in red → green → refactor cycles:
+
+1. **Red**: Pick one behavior, usually one of the "테스트:" cases listed for the feat in `plan.md`. Write a failing test for it, then run that test alone and confirm it fails for the expected reason (assertion failure, missing endpoint, wrong status). A compile error or a mistyped URL is not a valid red.
+2. **Green**: Write the minimum production code that makes the test pass. Run that test again, then `./gradlew test` to make sure nothing else broke.
+3. **Refactor**: Clean up the code and the test while keeping them green. Do not add behavior that has no test yet.
+4. Repeat for the next behavior. Do not write production code before a failing test for it exists.
+
+Conventions:
+
+- Test names are Korean sentences that describe the behavior, e.g. `인증없이_보호된_API를_호출하면_401_JSON을_반환한다`.
+- Pure domain logic (e.g. `ScoreCalculator`) gets plain JUnit unit tests without Spring. API behavior gets `@SpringBootTest` + `@AutoConfigureMockMvc` + `@ActiveProfiles("test")` tests that assert status and `$.code` (see `SecurityConfigTest`, `GlobalExceptionHandlerTest`).
+- Pin time by injecting a fixed `Clock` in tests and never depend on the real date.
+- When reporting progress, show the red run (failing output) and the green run for each cycle. A feat PR is ready only when every `plan.md` test case for it exists and `./gradlew build` passes.
+
 ## Environment gotcha
 
 IntelliJ IDEA 2021.3.1's Gradle sync (via its bundled Android plugin, which injects `AndroidStudioToolingPlugin`) fails with `NoClassDefFoundError: org/gradle/util/VersionNumber` on newer Gradle (seen on 9.8.2). It is unrelated to the Korean characters in the user path. Hence the pinned Gradle 7.6.4 / Boot 3.3.x. The IDE sync was not re-verified after the downgrade; the CLI wrapper build works.
