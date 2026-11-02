@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
@@ -26,6 +28,9 @@ public class UploadTripService {
 	public Result upload(Long driverId, Command command) {
 		Optional<Trip> existing = loadTripPort.findById(command.tripId());
 		if (existing.isPresent()) {
+			if (!existing.get().getDriverId().equals(driverId)) {
+				throw new BusinessException(ErrorCode.CONFLICT, "이미 다른 운전자가 사용한 운행 ID입니다.");
+			}
 			return new Result(existing.get().getId(), existing.get().getStatus(), false);
 		}
 		double minDistanceKm = thresholdProvider.current().thresholds().trip().minDistanceKm();
