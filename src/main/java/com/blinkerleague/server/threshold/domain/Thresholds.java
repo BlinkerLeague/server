@@ -1,5 +1,6 @@
 package com.blinkerleague.server.threshold.domain;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,9 +19,13 @@ public record Thresholds(
 	List<GradeRule> grades,
 	Map<ScoreItem, String> tips) {
 
-	/** 점수에 해당하는 등급. */
+	/** 높은 기준부터 비교해 처음 만족하는 등급. 최저 기준 미만이면 등급이 없다(표기는 화면 기획서와 확정). */
 	public Optional<String> gradeOf(int score) {
-		throw new UnsupportedOperationException();
+		return grades.stream()
+			.sorted(Comparator.comparingInt(GradeRule::minScore).reversed())
+			.filter(rule -> score >= rule.minScore())
+			.map(GradeRule::grade)
+			.findFirst();
 	}
 
 	public record Trip(double minDistanceKm, int parkEndMinutes) {
