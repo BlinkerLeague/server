@@ -70,7 +70,7 @@ public class Trip extends BaseTimeEntity {
 		trip.endedAt = endedAt;
 		trip.distanceKm = distanceKm;
 		trip.supportedSignals.addAll(supportedSignals);
-		trip.status = TripStatus.UPLOADED;
+		trip.status = distanceKm < minDistanceKm ? TripStatus.EXCLUDED_SHORT : TripStatus.UPLOADED;
 		events.forEach(event -> trip.events.add(new TripEvent(trip, event)));
 		return trip;
 	}
