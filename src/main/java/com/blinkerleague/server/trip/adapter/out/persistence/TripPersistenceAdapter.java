@@ -18,11 +18,11 @@ public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort {
 
 	@Override
 	public Optional<Trip> findById(String tripId) {
-		throw new UnsupportedOperationException();
+		return repository.findById(tripId);
 	}
 
 	@Override
 	public void saveNew(Trip trip) {
-		throw new UnsupportedOperationException();
+		repository.saveAndFlush(trip);
 	}
 }
