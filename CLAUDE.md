@@ -18,6 +18,18 @@ Implemented so far: the common base, driver authentication (`auth`), driver regi
 - `threshold`: judging thresholds, score weights, point rules, grades, and tips, in the hexagonal layout. `domain.Thresholds` is a pure record matching the `GET /api/config/thresholds` JSON (`gradeOf(score)` compares the highest `minScore` first and is empty below the lowest). `application.port.in.ThresholdProvider` is how other domains read the current `VersionedThresholds`; never hard-code these values (`plan.md` §6). `application.service.ThresholdService` implements it with an in-memory cache, `seedIfAbsent` (version 1, never overwrites a stored value), and `update` (version + 1, no admin API yet). `adapter.out.persistence.ThresholdPersistenceAdapter` stores the JSON in `app_config` (`config_key` = `thresholds`, `config_value`, `version`). `adapter.in.startup.DefaultThresholdsSeeder` seeds `src/main/resources/thresholds/default-thresholds.json` before the web server takes requests. `adapter.in.web.ThresholdController` serves the API.
 - Domain packages go under `com.blinkerleague.server.<domain>` and follow the hexagonal layout below. This replaces the `controller/service/repository/domain/dto` layout in `plan.md` §2.
 
+## Policy decisions (plan.md §0, D10–D15, decided 2026-11-03)
+
+These are product rules the code must follow. Do not change them without the user's decision, and keep `plan.md` §0 in sync.
+
+- **Trip participation (D10):** a trip shorter than 3km is `EXCLUDED_SHORT`. Read the limit from `ThresholdProvider` (`trip.minDistanceKm`, default 3.0), never hard-code it. There is no minimum turn count: a trip with 0 turns still participates, only the turn-signal item is unmeasured (`NO_TURN`).
+- **Trip status:** `feat/trip-upload` stores `EXCLUDED_SHORT` or `UPLOADED`; `feat/trip-score` turns `UPLOADED` into `SCORED` or `NO_TURN`.
+- **League unit (D11):** keep storing the 5-digit 시군구 `region_code`, and group it into leagues through a `시군구 → 리그 권역` mapping table (start coarse, e.g. Seoul's 5 생활권; split as users grow). Never key leagues directly by `region_code`. A league with fewer than 10 participants does not publish rankings.
+- **League membership (D12):** the driver's registered home region, fixed per season. A region change applies from the next season. No location data is used.
+- **League ranking eligibility (D13):** at least 50km or 10 trips in the season. Anti-gaming lives here (plus distance-weighted averages), not in per-trip limits. Keep the values in the threshold config.
+- **Lane changes (D14):** P0 scores turns only. `POST /api/trips` accepts and stores `LANE_CHANGE` events without scoring them; scoring waits for the car-app team to confirm detection is feasible (P1).
+- **Upload request format (D15):** the proposed format in `plan.md` §3.4 (`tripId`, `startedAt`, `endedAt`, `distanceKm`, `supported`, `events[{eventId, type, occurredAt, payload}]`). The server stores `payload` as raw JSON. Adjust only the DTO if the 기획서 8.2 format turns out different.
+
 ## Architecture: hexagonal (ports and adapters) first
 
 Build every new feature in the hexagonal layout. The domain and use cases sit in the middle, and outside technology (web, JPA, Redis, JWT) connects only through ports. Dependencies always point inward: `adapter → application → domain`.
