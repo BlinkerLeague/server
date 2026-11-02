@@ -65,14 +65,7 @@ public class Trip extends BaseTimeEntity {
 	/** 업로드된 운행을 만든다. 최소 거리는 기준값 설정에서 받는다(D10). */
 	public static Trip upload(String tripId, Long driverId, Instant startedAt, Instant endedAt, double distanceKm,
 		Set<ScoreItem> supportedSignals, List<RecordedEvent> events, double minDistanceKm) {
-		if (!endedAt.isAfter(startedAt)) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT, "종료 시각은 시작 시각보다 뒤여야 합니다.");
-		}
-		boolean outOfTrip = events.stream().map(RecordedEvent::occurredAt)
-			.anyMatch(at -> at.isBefore(startedAt) || at.isAfter(endedAt));
-		if (outOfTrip) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT, "이벤트 시각은 운행 구간 안이어야 합니다.");
-		}
+		validateTimes(startedAt, endedAt, events);
 		Trip trip = new Trip();
 		trip.id = tripId;
 		trip.driverId = driverId;
@@ -83,5 +76,17 @@ public class Trip extends BaseTimeEntity {
 		trip.status = distanceKm < minDistanceKm ? TripStatus.EXCLUDED_SHORT : TripStatus.UPLOADED;
 		events.forEach(event -> trip.events.add(new TripEvent(trip, event)));
 		return trip;
+	}
+
+	// 이벤트는 시작 · 종료 시각을 포함한 운행 구간 안에 있어야 한다.
+	private static void validateTimes(Instant startedAt, Instant endedAt, List<RecordedEvent> events) {
+		if (!endedAt.isAfter(startedAt)) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "종료 시각은 시작 시각보다 뒤여야 합니다.");
+		}
+		boolean outOfTrip = events.stream().map(RecordedEvent::occurredAt)
+			.anyMatch(at -> at.isBefore(startedAt) || at.isAfter(endedAt));
+		if (outOfTrip) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "이벤트 시각은 운행 구간 안이어야 합니다.");
+		}
 	}
 }
