@@ -54,6 +54,18 @@ class UploadTripServiceTest {
 		assertThat(trips.findById("trip-1").orElseThrow().getStatus()).isEqualTo(expected);
 	}
 
+	@Test
+	void 같은_tripId를_다시_올리면_저장하지_않고_처음_저장한_결과를_돌려준다() {
+		service.upload(1L, command("trip-1", 12.3));
+
+		// 재전송 중 내용이 달라져도 처음 저장한 운행이 기준이다.
+		UploadTripService.Result retried = service.upload(1L, command("trip-1", 1.0));
+
+		assertThat(retried).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.UPLOADED, false));
+		assertThat(trips.findAll()).singleElement()
+			.satisfies(trip -> assertThat(trip.getDistanceKm()).isEqualTo(12.3));
+	}
+
 	private static UploadTripService.Command command(String tripId, double distanceKm, RecordedEvent... events) {
 		return new UploadTripService.Command(tripId, STARTED_AT, ENDED_AT, distanceKm, Set.of(ScoreItem.TURN_SIGNAL),
 			List.of(events));
