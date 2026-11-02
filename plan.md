@@ -18,6 +18,12 @@
 | D7 | 주간 리포트(SCR-07) "퀘스트 수락" 버튼 | plan은 맞춤 미션을 배치로 자동 생성 | **미정.** A) 수락 API와 미수락 상태 추가 / B) 화면을 "다음 주 퀘스트로 등록됨" 안내로 변경(plan 변경 없음) |
 | D8 | 설정(SCR-08) "리그 순위 공개" 토글 | 개발 기획서 · plan 어디에도 없음 | **미정.** A) `driver`에 공개 여부 컬럼과 리그 집계 제외 로직 추가 / B) 화면에서 제거(plan 변경 없음) |
 | D9 | "측정 누락 구간" 예외 상태 | 서버는 누락 구간을 알 수 없음 | **미정.** A) 업로드 요청에 누락 구간 필드 추가 / B) 앱에서만 표시하는 문구로 둠(plan 변경 없음) |
+| D10 | 운행 한 건의 참여 조건 | 1km 미만 제외만 있음. 짧은 운행이 고득점에 유리하다는 우려 | **결정(11.3): 최소 거리 3km**(`trip.minDistanceKm`, 기준값 설정). **최소 회전 수는 두지 않음**: 회전 0회 운행도 참여로 인정하고 깜빡이 항목만 미측정(`NO_TURN`). 고득점 악용은 운행 한 건이 아니라 리그 순위 자격(D13)과 거리 가중 평균으로 막는다 |
+| D11 | 리그 단위 | `region_code`(시군구 5자리)를 그대로 쓰면 마포구처럼 작은 리그가 생겨 초기 사용자가 적을 때 비어 버림 | **결정(11.3): 리그 권역 매핑표.** 저장은 시군구 코드 그대로, `시군구 → 리그 권역` 매핑표로 묶는다. 처음에는 크게 묶고(예: 서울은 생활권 5개, 마포는 은평 · 서대문과 서북권) 사용자가 늘면 나눈다. 매핑만 바꾸면 되므로 데이터 이전 없음. 참여자 10명 미만 리그는 순위를 공개하지 않는다 |
+| D12 | 리그 소속 기준 | — | **결정(11.3): 등록한 거주 지역.** 위치 정보가 필요 없음(개인정보 요구사항). 시즌 중 지역을 바꾸면 다음 시즌부터 반영해 리그 이동을 막는다 |
+| D13 | 리그 순위 자격 | — | **결정(11.3): 시즌 누적 50km 이상 또는 운행 10회 이상**인 운전자만 순위에 오른다(값은 기준값 설정으로 두고 조정). 짧은 고득점 운행 몇 번으로 순위를 올리지 못하게 한다 |
+| D14 | 차선 변경 깜빡이 | 회전(방향 60° 이상 변화)만 판정. 차선 변경은 방향 변화가 작아 커브와 구분이 어렵고 GPS로는 차선을 알 수 없음 | **결정(11.3): P0은 회전만.** `feat/trip-upload`에서 `LANE_CHANGE` 이벤트를 받아 저장만 한다. 차량 앱 팀이 조향각 · 자이로 등으로 감지 가능성을 확인한 뒤 P1에서 깜빡이 항목에 반영 |
+| D15 | 업로드 요청 형식 | plan은 "기획서 8.2 형식 그대로"인데 기획서가 저장소에 없음 | **결정(11.3): 3.4의 제안 형식으로 구현.** 기획서 8.2와 다르면 DTO만 맞춘다 |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -144,7 +150,7 @@ API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
 ```json
 {
   "version": 1,
-  "trip": { "minDistanceKm": 1.0, "parkEndMinutes": 3 },
+  "trip": { "minDistanceKm": 3.0, "parkEndMinutes": 3 },
   "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
   "harsh": { "deltaKmhPerSec": 10 },
   "safetyWarning": { "mergeWindowSec": 10 },
@@ -177,13 +183,32 @@ API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
 
 ### 3.4 `feat/trip-upload` — 운행 · 이벤트 업로드 (FR-01, FR-04)
 
-API: `POST /api/trips` (기획서 8.2 요청 형식 그대로)
+API: `POST /api/trips` (인증 필요. 요청 형식은 아래 제안 형식, D15)
+
+```json
+{
+  "tripId": "5f1c...",
+  "startedAt": "2026-11-03T08:00:00+09:00",
+  "endedAt": "2026-11-03T08:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "a1b2...", "type": "TURN", "occurredAt": "2026-11-03T08:12:30+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } }
+  ]
+}
+```
+
+- `supported`: 차량이 측정할 수 있는 점수 항목 이름(`ScoreItem`: `TURN_SIGNAL`, `SMOOTH_DRIVING`, `SAFETY_WARNING`, `NIGHT_HEADLIGHT`)
+- `payload`: 서버는 해석하지 않고 JSON 그대로 저장한다. `TURN`의 `signalOn` 해석은 `feat/trip-score`에서
 
 작업:
 - `trip` 테이블: `trip_id`(클라이언트 UUID, PK), `driver_id`, `started_at`, `ended_at`, `distance_km`, `supported_signals`, `score`(nullable), `status`
-  - `status`: `SCORED`, `NO_TURN`(회전 0회), `EXCLUDED_SHORT`(1km 미만)
+  - `status`: `UPLOADED`(업로드됨, 점수 계산 전), `SCORED`, `NO_TURN`(회전 0회), `EXCLUDED_SHORT`(최소 거리 3km 미만, D10)
+  - 이 브랜치에서는 최소 거리 미만이면 `EXCLUDED_SHORT`, 나머지는 `UPLOADED`로 저장한다. `feat/trip-score`에서 점수를 계산해 `SCORED` 또는 `NO_TURN`으로 바꾼다
+  - 최소 거리는 상수가 아니라 `ThresholdProvider`의 `trip.minDistanceKm`에서 읽는다
 - `trip_event` 테이블: `event_id`(클라이언트 UUID, PK), `trip_id`, `type`, `occurred_at`, `payload`(JSON 문자열)
-  - `type`: `TURN`, `HARSH_ACCEL`, `HARSH_BRAKE`, `SAFETY_WARNING`, `NIGHT_SEGMENT` (P0은 `TURN`만 처리, 나머지는 저장만)
+  - `type`: `TURN`, `LANE_CHANGE`, `HARSH_ACCEL`, `HARSH_BRAKE`, `SAFETY_WARNING`, `NIGHT_SEGMENT` (P0은 `TURN`만 점수에 쓰고, 나머지는 저장만. `LANE_CHANGE`는 D14)
 - **멱등 처리**: 같은 `trip_id`가 이미 있으면 저장하지 않고 기존 결과를 200으로 반환. 동시 요청은 PK 충돌(`DataIntegrityViolationException`)을 잡아 재조회
 - 다른 운전자의 `trip_id`로 재전송하면 409
 - 검증: `endedAt > startedAt`, `distanceKm >= 0`, 이벤트 시각이 운행 구간 안
@@ -191,7 +216,7 @@ API: `POST /api/trips` (기획서 8.2 요청 형식 그대로)
 - 업로드 처리 끝에 점수 계산 · 미션 판정을 호출할 확장 지점만 만들어 둠 (다음 브랜치에서 연결)
 - **응답은 3.5 점수 응답과 같은 구조**(`TripResult`)로 통일한다. 앱이 업로드 직후 이 응답만으로 음성 문구(VOC-02)를 만들 수 있어야 한다. 이 브랜치에서는 `tripId` · `status` 등 업로드 결과만 채우고, 점수 관련 필드는 `feat/trip-score`, 미션 필드는 `feat/daily-mission`에서 채운다
 
-테스트: 정상 업로드, 같은 `trip_id` 2회 업로드 시 1건만 저장, 1km 미만은 `EXCLUDED_SHORT`.
+테스트: 정상 업로드(`UPLOADED`), 같은 `trip_id` 2회 업로드 시 1건만 저장, 최소 거리(3km) 미만은 `EXCLUDED_SHORT`, 다른 운전자의 `trip_id`는 409, 검증 실패는 400.
 
 ### 3.5 `feat/trip-score` — 점수 엔진 (FR-03, FR-05)
 
@@ -340,6 +365,9 @@ API: `GET /api/leagues/current`
 - 순위 조회는 Redis에서(캐시 응답 요구사항). 응답에는 닉네임만, 내 순위 + 상위 N명
 - 시즌 종료 배치(`@Scheduled`): 순위 · 안전지수 RDB 확정, 상위 지역 참여자 100P, 새 시즌 생성
 - 지역 안전지수 계산식(D5), "같은 측정 항목 집단끼리 비교" 여부 착수 전 결정
+- **리그 권역(D11)**: `league_region_mapping`(`region_code` 시군구 → `league_region`) 매핑표로 묶는다. 위의 `region`은 시군구가 아니라 리그 권역이다. 초기 매핑(서울 생활권 5개 등)은 착수 시 확정
+- **소속(D12)**: 운전자의 등록 지역 기준. 시즌 중 지역 변경은 다음 시즌부터 반영(시즌 시작 시 소속 권역을 고정해 기록)
+- **순위 자격(D13)**: 시즌 누적 50km 이상 또는 운행 10회 이상인 운전자만 순위에 포함. 리그 참여자가 10명 미만이면 순위 비공개(D11). 두 값 모두 기준값 설정에 둔다
 - **응답에 시즌 내 지역별 안전지수 목록과 시즌 종료일**(SCR-04 월드맵, "D-12" 표시): `season: { seasonId, startsAt, endsAt }`, `regions: [{ regionCode, safetyIndex, rank }]`. 시즌 중에는 현재까지의 값(Redis 집계), 종료 후에는 확정값. D-day는 앱이 `endsAt`으로 계산
 - Redis가 이미 docker-compose에 있으므로 추가 인프라 없음
 
@@ -391,10 +419,11 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 | --- | --- |
 | 인증 방식(D2), 토큰 보관 | `feat/driver-register` 전 (결정: Access 1시간 + Refresh 30일, 앱은 Keystore 등 안전한 저장소에 보관) |
 | 토큰 분실 시 복구(앱 삭제 · 기기 변경) | P1 착수 전. P0는 재등록, 후보는 기기 인증 정보 · 소셜 로그인 |
-| `TURN` payload 필드(`direction`, `signalOn`, 필요 시 `uTurn`) | `feat/trip-upload` 전 |
+| `TURN` payload 필드(`direction`, `signalOn`, 필요 시 `uTurn`) | `feat/trip-upload` 전. 서버는 payload를 그대로 저장하므로 업로드는 먼저 진행, 확정은 `feat/trip-score` 전 |
 | 기준값 JSON 형식 | `feat/threshold-config` 전 |
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
-| `supported` 신호 이름 목록 | `feat/trip-upload` 전 |
+| `supported` 신호 이름 목록 | 제안: `ScoreItem` 이름(`TURN_SIGNAL` 등) 사용(D15). 앱 팀 확인 필요 |
+| 차선 변경 감지 가능성(조향각 · 자이로 신호 제공 여부, 커브 오탐) | P1 착수 전 (D14) |
 
 ## 8. 운전자 인증 JWT 전환 (D2)
 
