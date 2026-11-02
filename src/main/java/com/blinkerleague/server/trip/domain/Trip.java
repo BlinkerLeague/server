@@ -6,6 +6,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.common.jpa.BaseTimeEntity;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 
@@ -63,6 +65,9 @@ public class Trip extends BaseTimeEntity {
 	/** 업로드된 운행을 만든다. 최소 거리는 기준값 설정에서 받는다(D10). */
 	public static Trip upload(String tripId, Long driverId, Instant startedAt, Instant endedAt, double distanceKm,
 		Set<ScoreItem> supportedSignals, List<RecordedEvent> events, double minDistanceKm) {
+		if (!endedAt.isAfter(startedAt)) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "종료 시각은 시작 시각보다 뒤여야 합니다.");
+		}
 		Trip trip = new Trip();
 		trip.id = tripId;
 		trip.driverId = driverId;
