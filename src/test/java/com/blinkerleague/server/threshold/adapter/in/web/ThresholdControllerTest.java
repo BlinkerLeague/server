@@ -38,4 +38,14 @@ class ThresholdControllerTest {
 			.andExpect(jsonPath("$.grades[3].grade").value("C"))
 			.andExpect(jsonPath("$.grades[3].minScore").value(50));
 	}
+
+	@Test
+	void 기준값에_점수_항목별_개선_팁_문구가_모두_포함된다() throws Exception {
+		mockMvc.perform(get("/api/config/thresholds"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.tips.TURN_SIGNAL").value("회전 5초 전에 깜빡이를 켜 보세요."))
+			.andExpect(jsonPath("$.tips.SMOOTH_DRIVING").isNotEmpty())
+			.andExpect(jsonPath("$.tips.SAFETY_WARNING").isNotEmpty())
+			.andExpect(jsonPath("$.tips.NIGHT_HEADLIGHT").isNotEmpty());
+	}
 }
