@@ -137,6 +137,8 @@ API: `POST /api/drivers`
 
 ### 3.3 `feat/threshold-config` — 기준값 · 가중치 설정
 
+상태: 완료. 기본값은 `src/main/resources/thresholds/default-thresholds.json`이고, 서버 시작 시 저장된 값이 없을 때만 version 1로 시드한다(재시작해도 바꾼 값을 덮어쓰지 않음). `app_config` 테이블의 `thresholds` 행에 JSON으로 저장하며, `value`가 H2 예약어라 컬럼 이름은 `config_value`다. 서버 내부는 `ThresholdProvider`(메모리 캐시, 변경 시 갱신)로 읽는다. 남은 항목: 값 변경용 관리자 API(지금은 `ThresholdService.update`만 있음) · 변경 값 검증(가중치 합 1 등), 50점 미만 등급 표기(지금은 등급 없음), `TURN_SIGNAL` 외 팁 문구 확정, 서버를 여러 대로 늘릴 때 캐시 갱신 전파.
+
 API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
 
 ```json

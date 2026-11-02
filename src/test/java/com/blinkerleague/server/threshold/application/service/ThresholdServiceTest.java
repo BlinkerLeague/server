@@ -1,0 +1,62 @@
+package com.blinkerleague.server.threshold.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+
+import com.blinkerleague.server.threshold.ThresholdsFixture;
+import com.blinkerleague.server.threshold.domain.Thresholds;
+import com.blinkerleague.server.threshold.domain.VersionedThresholds;
+
+class ThresholdServiceTest {
+
+	private final InMemoryThresholdStore store = new InMemoryThresholdStore();
+	private final ThresholdService service = new ThresholdService(store, store);
+
+	@Test
+	void 저장된_기준값이_없으면_기본값을_version_1로_저장하고_현재값으로_돌려준다() {
+		Thresholds defaults = ThresholdsFixture.planExample();
+
+		service.seedIfAbsent(defaults);
+
+		VersionedThresholds expected = new VersionedThresholds(1, defaults);
+		assertThat(store.stored()).contains(expected);
+		assertThat(service.current()).isEqualTo(expected);
+	}
+
+	@Test
+	void 이미_저장된_기준값이_있으면_재시작해도_기본값으로_덮어쓰지_않는다() {
+		VersionedThresholds changed = new VersionedThresholds(3, ThresholdsFixture.withMinDistanceKm(2.0));
+		store.save(changed);
+
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+
+		assertThat(store.stored()).contains(changed);
+		assertThat(service.current()).isEqualTo(changed);
+	}
+
+	@Test
+	void 기준값을_바꾸면_version이_1_증가하고_현재값이_바뀐_값이_된다() {
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+		Thresholds changed = ThresholdsFixture.withMinDistanceKm(2.0);
+
+		VersionedThresholds updated = service.update(changed);
+
+		VersionedThresholds expected = new VersionedThresholds(2, changed);
+		assertThat(updated).isEqualTo(expected);
+		assertThat(store.stored()).contains(expected);
+		assertThat(service.current()).isEqualTo(expected);
+	}
+
+	@Test
+	void 현재값은_캐시에서_읽어_조회할_때마다_저장소를_읽지_않는다() {
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+		int loadsAfterSeed = store.loadCount();
+
+		service.current();
+		service.current();
+		service.current();
+
+		assertThat(store.loadCount()).isEqualTo(loadsAfterSeed);
+	}
+}

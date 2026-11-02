@@ -1,0 +1,20 @@
+{
+  "trip": { "minDistanceKm": 1.0, "parkEndMinutes": 3 },
+  "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
+  "harsh": { "deltaKmhPerSec": 10 },
+  "safetyWarning": { "mergeWindowSec": 10 },
+  "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
+  "point": { "tripMaxKm": 50, "dailyCap": 150 },
+  "grades": [
+    { "grade": "S", "minScore": 95 },
+    { "grade": "A", "minScore": 85 },
+    { "grade": "B", "minScore": 70 },
+    { "grade": "C", "minScore": 50 }
+  ],
+  "tips": {
+    "TURN_SIGNAL": "회전 5초 전에 깜빡이를 켜 보세요.",
+    "SMOOTH_DRIVING": "출발은 부드럽게, 정지는 미리 천천히 해 보세요.",
+    "SAFETY_WARNING": "앞차와 거리를 넉넉히 두고 주변을 살펴 보세요.",
+    "NIGHT_HEADLIGHT": "해가 지면 전조등을 꼭 켜 주세요."
+  }
+}
