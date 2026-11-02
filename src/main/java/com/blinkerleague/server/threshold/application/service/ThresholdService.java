@@ -17,6 +17,9 @@ public class ThresholdService implements ThresholdProvider {
 
 	/** 저장된 기준값이 없으면 기본값을 version 1로 저장한다. */
 	public void seedIfAbsent(Thresholds defaults) {
+		if (loadThresholdsPort.load().isPresent()) {
+			return;
+		}
 		saveThresholdsPort.save(new VersionedThresholds(1, defaults));
 	}
 
