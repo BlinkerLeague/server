@@ -1,5 +1,5 @@
 {
-  "trip": { "minDistanceKm": 1.0, "parkEndMinutes": 3 },
+  "trip": { "minDistanceKm": 3.0, "parkEndMinutes": 3 },
   "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
   "harsh": { "deltaKmhPerSec": 10 },
   "safetyWarning": { "mergeWindowSec": 10 },
