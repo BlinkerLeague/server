@@ -68,6 +68,11 @@ public class Trip extends BaseTimeEntity {
 		if (!endedAt.isAfter(startedAt)) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT, "종료 시각은 시작 시각보다 뒤여야 합니다.");
 		}
+		boolean outOfTrip = events.stream().map(RecordedEvent::occurredAt)
+			.anyMatch(at -> at.isBefore(startedAt) || at.isAfter(endedAt));
+		if (outOfTrip) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "이벤트 시각은 운행 구간 안이어야 합니다.");
+		}
 		Trip trip = new Trip();
 		trip.id = tripId;
 		trip.driverId = driverId;
