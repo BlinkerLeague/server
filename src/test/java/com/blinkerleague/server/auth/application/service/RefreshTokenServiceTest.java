@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
+import com.blinkerleague.server.support.InMemoryRefreshTokenStore;
 
 class RefreshTokenServiceTest {
 

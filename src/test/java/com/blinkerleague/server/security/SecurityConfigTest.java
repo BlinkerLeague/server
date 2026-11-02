@@ -68,10 +68,10 @@ class SecurityConfigTest {
 
 	@Test
 	void 운전자_등록은_인증없이_통과한다() throws Exception {
-		// 컨트롤러가 아직 없으므로 인증을 통과해 404가 나오면 허용된 것이다.
+		// 토큰 없이 본문 없는 요청을 보내 401이 아니라 요청 검증(400)까지 도달하면 허용된 것이다.
 		mockMvc.perform(post("/api/drivers"))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
 
 	@Test

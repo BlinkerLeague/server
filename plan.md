@@ -116,7 +116,7 @@ com.blinkerleague.server
 
 ### 3.2 `feat/driver-register` — 운전자 등록
 
-> 인증은 8장(JWT, Refresh는 Redis)을 따른다. 아래 `token_hash` 컬럼은 만들지 않고, 응답의 `token`은 `accessToken` · `refreshToken`으로 나눈다.
+상태: 완료. 로그인이 없으므로 토큰을 잃으면 재등록한다(P0 결정, 복구 방식은 P1에서 결정 · 7장). 인증은 8장(JWT, Refresh는 Redis)을 따른다.
 
 API: `POST /api/drivers`
 
@@ -124,16 +124,16 @@ API: `POST /api/drivers`
 // 요청
 { "nickname": "깜빡왕", "regionCode": "11680" }
 // 응답 201
-{ "driverId": 1, "nickname": "깜빡왕", "regionCode": "11680", "token": "..." }
+{ "driverId": 1, "nickname": "깜빡왕", "regionCode": "11680", "accessToken": "...", "refreshToken": "..." }
 ```
 
-작업:
-- `driver` 테이블: `driver_id`, `nickname`(유니크), `region_code`, `token_hash`, `created_at`. 실명 · 연락처 컬럼은 만들지 않음
-- 토큰은 해시로만 저장, 인증 필터에서 `Authorization: Bearer` → driver 조회 → SecurityContext에 `driverId`
-- 컨트롤러에서 현재 운전자를 꺼내는 `@CurrentDriver` 인자 리졸버
-- 검증: 닉네임 2~12자, 지역 코드 형식(법정동 시군구 5자리로 가정)
+구현:
+- `driver` 테이블: `driver_id`, `nickname`(유니크, 최대 12자), `region_code`(5자리), `created_at`, `updated_at`. 토큰은 DB에 저장하지 않음(Refresh 해시는 Redis, 8장). 실명 · 연락처 컬럼은 만들지 않음
+- 등록 시 Access JWT + Refresh 토큰 발급(`auth` 기능 재사용). 보호 API는 `Authorization: Bearer <access JWT>`로 인증하고, 컨트롤러는 `@CurrentDriver`로 `driverId`를 받음(8장에서 구현)
+- 닉네임 중복은 409(`CONFLICT`). 동시 등록으로 생기는 중복은 DB 유니크 제약이 막고 같은 409로 응답하며, 유니크 제약이 아닌 무결성 오류는 409로 바꾸지 않음
+- 검증: 닉네임 2~12자, 지역 코드 숫자 5자리(법정동 시군구 코드로 가정). 위반 시 400
 
-테스트: 등록 성공, 닉네임 중복 409, 토큰 없이 보호 API 호출 시 401.
+테스트: 등록 성공(201 + 토큰), 닉네임 중복 409(순차 · 동시), 입력 검증 400, 토큰 없이 보호 API 호출 시 401, 등록 토큰으로 보호 API 통과 후 Refresh 재발급까지 전체 흐름.
 
 ### 3.3 `feat/threshold-config` — 기준값 · 가중치 설정
 
@@ -387,7 +387,8 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 
 | 항목 | 필요 시점 |
 | --- | --- |
-| 인증 방식(D2), 토큰 보관 | `feat/driver-register` 전 |
+| 인증 방식(D2), 토큰 보관 | `feat/driver-register` 전 (결정: Access 1시간 + Refresh 30일, 앱은 Keystore 등 안전한 저장소에 보관) |
+| 토큰 분실 시 복구(앱 삭제 · 기기 변경) | P1 착수 전. P0는 재등록, 후보는 기기 인증 정보 · 소셜 로그인 |
 | `TURN` payload 필드(`direction`, `signalOn`, 필요 시 `uTurn`) | `feat/trip-upload` 전 |
 | 기준값 JSON 형식 | `feat/threshold-config` 전 |
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |

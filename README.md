@@ -40,6 +40,7 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 
 | 메서드 | 경로 | 인증 | 설명 |
 | --- | --- | --- | --- |
+| `POST` | `/api/drivers` | 없음 | `{ "nickname": "깜빡왕", "regionCode": "11680" }` → 201 `{ "driverId", "nickname", "regionCode", "accessToken", "refreshToken" }`. 닉네임 2~12자 · 중복 시 409 `CONFLICT`, 지역 코드는 시군구 5자리 숫자 |
 | `POST` | `/api/auth/refresh` | 없음 | `{ "refreshToken": "..." }` → `{ "accessToken", "refreshToken" }`. 사용한 Refresh 토큰은 무효, 재사용하면 그 운전자의 토큰 전체 무효 |
 
 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.

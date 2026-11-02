@@ -1,4 +1,4 @@
-package com.blinkerleague.server.auth.application.service;
+package com.blinkerleague.server.support;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -9,7 +9,7 @@ import java.util.Set;
 import com.blinkerleague.server.auth.application.port.out.RefreshTokenStore;
 
 /** 단위 테스트용 저장소. TTL은 다루지 않는다. */
-class InMemoryRefreshTokenStore implements RefreshTokenStore {
+public class InMemoryRefreshTokenStore implements RefreshTokenStore {
 
 	private final Map<String, Long> tokens = new HashMap<>();
 	private final Map<Long, String> currentByDriver = new HashMap<>();
@@ -44,7 +44,7 @@ class InMemoryRefreshTokenStore implements RefreshTokenStore {
 		}
 	}
 
-	Set<String> storedHashes() {
+	public Set<String> storedHashes() {
 		return tokens.keySet();
 	}
 }
