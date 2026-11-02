@@ -15,12 +15,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.blinkerleague.server.support.TestTokens;
-import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -37,7 +37,7 @@ class TripControllerTest {
 	ObjectMapper objectMapper;
 
 	@Autowired
-	LoadTripPort tripRepository;
+	JdbcTemplate jdbcTemplate;
 
 	@Test
 	void 운행을_업로드하면_201과_tripId_UPLOADED_상태를_돌려준다() throws Exception {
@@ -68,9 +68,8 @@ class TripControllerTest {
 
 		upload(1L, body.toString()).andExpect(status().isCreated());
 
-		assertThat(tripRepository.findById(tripId)).get()
-			.satisfies(trip -> assertThat(trip.getEvents()).extracting(event -> event.getType().name())
-				.containsExactly("LANE_CHANGE"));
+		assertThat(jdbcTemplate.queryForList("select type from trip_event where trip_id = ?", String.class, tripId))
+			.containsExactly("LANE_CHANGE");
 	}
 
 	@ParameterizedTest(name = "{0}")
