@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.blinkerleague.server.threshold.ThresholdsFixture;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
@@ -41,6 +43,15 @@ class UploadTripServiceTest {
 			assertThat(event.getType()).isEqualTo(TripEventType.TURN);
 			assertThat(event.getPayload()).isEqualTo("{\"direction\":\"LEFT\",\"signalOn\":true}");
 		});
+	}
+
+	@ParameterizedTest(name = "{0}km → {1}")
+	@CsvSource({"0.0, EXCLUDED_SHORT", "2.9, EXCLUDED_SHORT", "3.0, UPLOADED", "3.1, UPLOADED"})
+	void 기준값의_최소_거리_미만_운행은_EXCLUDED_SHORT로_저장한다(double distanceKm, TripStatus expected) {
+		UploadTripService.Result result = service.upload(1L, command("trip-1", distanceKm));
+
+		assertThat(result.status()).isEqualTo(expected);
+		assertThat(trips.findById("trip-1").orElseThrow().getStatus()).isEqualTo(expected);
 	}
 
 	private static UploadTripService.Command command(String tripId, double distanceKm, RecordedEvent... events) {
