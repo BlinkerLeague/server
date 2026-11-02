@@ -25,7 +25,9 @@ public class ThresholdService implements ThresholdProvider {
 
 	/** 기준값을 바꾸고 version을 1 올린다. 바뀐 값을 돌려준다. */
 	public VersionedThresholds update(Thresholds thresholds) {
-		throw new UnsupportedOperationException();
+		VersionedThresholds updated = new VersionedThresholds(current().version() + 1, thresholds);
+		saveThresholdsPort.save(updated);
+		return updated;
 	}
 
 	@Override
