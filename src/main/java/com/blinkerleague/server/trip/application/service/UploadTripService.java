@@ -11,6 +11,7 @@ import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
+import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlreadyExistsException;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripStatus;
@@ -28,16 +29,26 @@ public class UploadTripService {
 	public Result upload(Long driverId, Command command) {
 		Optional<Trip> existing = loadTripPort.findById(command.tripId());
 		if (existing.isPresent()) {
-			if (!existing.get().getDriverId().equals(driverId)) {
-				throw new BusinessException(ErrorCode.CONFLICT, "이미 다른 운전자가 사용한 운행 ID입니다.");
-			}
-			return new Result(existing.get().getId(), existing.get().getStatus(), false);
+			return alreadyUploaded(existing.get(), driverId);
 		}
 		double minDistanceKm = thresholdProvider.current().thresholds().trip().minDistanceKm();
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), minDistanceKm);
-		saveTripPort.saveNew(trip);
+		try {
+			saveTripPort.saveNew(trip);
+		} catch (TripAlreadyExistsException e) {
+			// 확인과 저장 사이에 같은 tripId가 먼저 저장된 동시 업로드. 먼저 저장된 운행이 기준이다.
+			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId);
+		}
 		return new Result(trip.getId(), trip.getStatus(), true);
+	}
+
+	// 재전송은 처음 저장한 결과를 돌려주고, 남의 운행이면 결과를 알려주지 않고 거부한다.
+	private static Result alreadyUploaded(Trip existing, Long driverId) {
+		if (!existing.getDriverId().equals(driverId)) {
+			throw new BusinessException(ErrorCode.CONFLICT, "이미 다른 운전자가 사용한 운행 ID입니다.");
+		}
+		return new Result(existing.getId(), existing.getStatus(), false);
 	}
 
 	public record Command(String tripId, Instant startedAt, Instant endedAt, double distanceKm,
