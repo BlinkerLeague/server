@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +19,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.blinkerleague.server.support.TestTokens;
+import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -25,6 +30,9 @@ class TripControllerTest {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Autowired
+	ObjectMapper objectMapper;
 
 	@Test
 	void 운행을_업로드하면_201과_tripId_UPLOADED_상태를_돌려준다() throws Exception {
@@ -45,6 +53,30 @@ class TripControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.tripId").value(tripId))
 			.andExpect(jsonPath("$.status").value("UPLOADED"));
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@CsvSource(delimiter = '|', value = {
+		"tripId 빈 문자열            | /tripId              | \"\"",
+		"tripId 36자 초과            | /tripId              | \"0123456789-0123456789-0123456789-0123\"",
+		"startedAt 누락              | /startedAt           | null",
+		"distanceKm 누락             | /distanceKm          | null",
+		"distanceKm 음수             | /distanceKm          | -0.1",
+		"supported 누락              | /supported           | null",
+		"events 누락                 | /events              | null",
+		"이벤트 eventId 누락         | /events/0/eventId    | null",
+		"이벤트 occurredAt 누락      | /events/0/occurredAt | null",
+		"이벤트 type 알 수 없는 값   | /events/0/type       | \"UNKNOWN\""})
+	void 요청_값이_빠지거나_잘못되면_400_INVALID_INPUT을_돌려준다(String caseName, String pointer, String value)
+		throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 12.3));
+		JsonPointer field = JsonPointer.compile(pointer);
+		ObjectNode parent = (ObjectNode)body.at(field.head());
+		parent.set(field.last().getMatchingProperty(), objectMapper.readTree(value));
+
+		upload(1L, body.toString())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
 
 	private ResultActions upload(Long driverId, String body) throws Exception {
