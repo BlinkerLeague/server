@@ -10,5 +10,11 @@
     { "grade": "A", "minScore": 85 },
     { "grade": "B", "minScore": 70 },
     { "grade": "C", "minScore": 50 }
-  ]
+  ],
+  "tips": {
+    "TURN_SIGNAL": "회전 5초 전에 깜빡이를 켜 보세요.",
+    "SMOOTH_DRIVING": "출발은 부드럽게, 정지는 미리 천천히 해 보세요.",
+    "SAFETY_WARNING": "앞차와 거리를 넉넉히 두고 주변을 살펴 보세요.",
+    "NIGHT_HEADLIGHT": "해가 지면 전조등을 꼭 켜 주세요."
+  }
 }
