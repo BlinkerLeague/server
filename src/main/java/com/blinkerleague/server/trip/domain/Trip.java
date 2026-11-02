@@ -63,6 +63,15 @@ public class Trip extends BaseTimeEntity {
 	/** 업로드된 운행을 만든다. 최소 거리는 기준값 설정에서 받는다(D10). */
 	public static Trip upload(String tripId, Long driverId, Instant startedAt, Instant endedAt, double distanceKm,
 		Set<ScoreItem> supportedSignals, List<RecordedEvent> events, double minDistanceKm) {
-		throw new UnsupportedOperationException();
+		Trip trip = new Trip();
+		trip.id = tripId;
+		trip.driverId = driverId;
+		trip.startedAt = startedAt;
+		trip.endedAt = endedAt;
+		trip.distanceKm = distanceKm;
+		trip.supportedSignals.addAll(supportedSignals);
+		trip.status = TripStatus.UPLOADED;
+		events.forEach(event -> trip.events.add(new TripEvent(trip, event)));
+		return trip;
 	}
 }

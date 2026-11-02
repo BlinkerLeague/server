@@ -9,6 +9,7 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
+import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripStatus;
 
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,11 @@ public class UploadTripService {
 	private final ThresholdProvider thresholdProvider;
 
 	public Result upload(Long driverId, Command command) {
-		throw new UnsupportedOperationException();
+		double minDistanceKm = thresholdProvider.current().thresholds().trip().minDistanceKm();
+		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
+			command.distanceKm(), command.supportedSignals(), command.events(), minDistanceKm);
+		saveTripPort.saveNew(trip);
+		return new Result(trip.getId(), trip.getStatus(), true);
 	}
 
 	public record Command(String tripId, Instant startedAt, Instant endedAt, double distanceKm,
