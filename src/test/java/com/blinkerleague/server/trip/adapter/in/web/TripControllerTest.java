@@ -36,6 +36,17 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.status").value("UPLOADED"));
 	}
 
+	@Test
+	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
+
+		upload(1L, tripBody(tripId, 1.0))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.tripId").value(tripId))
+			.andExpect(jsonPath("$.status").value("UPLOADED"));
+	}
+
 	private ResultActions upload(Long driverId, String body) throws Exception {
 		return mockMvc.perform(post("/api/trips")
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId))
