@@ -77,6 +77,6 @@ class SecurityConfigTest {
 	@Test
 	void 설정_조회는_인증없이_통과한다() throws Exception {
 		mockMvc.perform(get("/api/config/thresholds"))
-			.andExpect(status().isNotFound());
+			.andExpect(status().isOk());
 	}
 }

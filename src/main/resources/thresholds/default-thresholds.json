@@ -1,0 +1,14 @@
+{
+  "trip": { "minDistanceKm": 1.0, "parkEndMinutes": 3 },
+  "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
+  "harsh": { "deltaKmhPerSec": 10 },
+  "safetyWarning": { "mergeWindowSec": 10 },
+  "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
+  "point": { "tripMaxKm": 50, "dailyCap": 150 },
+  "grades": [
+    { "grade": "S", "minScore": 95 },
+    { "grade": "A", "minScore": 85 },
+    { "grade": "B", "minScore": 70 },
+    { "grade": "C", "minScore": 50 }
+  ]
+}
