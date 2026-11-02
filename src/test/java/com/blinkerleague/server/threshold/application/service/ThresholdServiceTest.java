@@ -47,4 +47,16 @@ class ThresholdServiceTest {
 		assertThat(store.stored()).contains(expected);
 		assertThat(service.current()).isEqualTo(expected);
 	}
+
+	@Test
+	void 현재값은_캐시에서_읽어_조회할_때마다_저장소를_읽지_않는다() {
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+		int loadsAfterSeed = store.loadCount();
+
+		service.current();
+		service.current();
+		service.current();
+
+		assertThat(store.loadCount()).isEqualTo(loadsAfterSeed);
+	}
 }
