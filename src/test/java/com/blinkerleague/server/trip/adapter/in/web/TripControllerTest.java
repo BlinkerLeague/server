@@ -61,6 +61,13 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 기본_기준값의_최소_거리_3km_미만_운행은_EXCLUDED_SHORT로_저장한다() throws Exception {
+		upload(1L, tripBody(UUID.randomUUID().toString(), 2.9))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.status").value("EXCLUDED_SHORT"));
+	}
+
+	@Test
 	void 차선_변경_이벤트도_받아서_저장한다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(tripId, 12.3));
