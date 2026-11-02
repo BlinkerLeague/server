@@ -34,4 +34,17 @@ class ThresholdServiceTest {
 		assertThat(store.stored()).contains(changed);
 		assertThat(service.current()).isEqualTo(changed);
 	}
+
+	@Test
+	void 기준값을_바꾸면_version이_1_증가하고_현재값이_바뀐_값이_된다() {
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+		Thresholds changed = ThresholdsFixture.withMinDistanceKm(2.0);
+
+		VersionedThresholds updated = service.update(changed);
+
+		VersionedThresholds expected = new VersionedThresholds(2, changed);
+		assertThat(updated).isEqualTo(expected);
+		assertThat(store.stored()).contains(expected);
+		assertThat(service.current()).isEqualTo(expected);
+	}
 }

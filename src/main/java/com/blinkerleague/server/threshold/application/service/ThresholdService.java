@@ -23,6 +23,11 @@ public class ThresholdService implements ThresholdProvider {
 		saveThresholdsPort.save(new VersionedThresholds(1, defaults));
 	}
 
+	/** 기준값을 바꾸고 version을 1 올린다. 바뀐 값을 돌려준다. */
+	public VersionedThresholds update(Thresholds thresholds) {
+		throw new UnsupportedOperationException();
+	}
+
 	@Override
 	public VersionedThresholds current() {
 		return loadThresholdsPort.load().orElseThrow();
