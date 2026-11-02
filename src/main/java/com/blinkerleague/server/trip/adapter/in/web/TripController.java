@@ -19,6 +19,11 @@ import com.blinkerleague.server.trip.domain.TripEventType;
 import com.blinkerleague.server.trip.domain.TripStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -30,7 +35,8 @@ public class TripController {
 
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
 	@PostMapping
-	public ResponseEntity<TripResult> upload(@CurrentDriver Long driverId, @RequestBody UploadTripRequest request) {
+	public ResponseEntity<TripResult> upload(@CurrentDriver Long driverId,
+		@Valid @RequestBody UploadTripRequest request) {
 		UploadTripService.Result result = uploadTripService.upload(driverId, request.toCommand());
 		return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
 			.body(new TripResult(result.tripId(), result.status()));
@@ -38,12 +44,12 @@ public class TripController {
 
 	/** 원시 위치 좌표 필드는 두지 않는다(개인정보 요구사항). */
 	public record UploadTripRequest(
-		String tripId,
-		OffsetDateTime startedAt,
-		OffsetDateTime endedAt,
-		Double distanceKm,
-		Set<ScoreItem> supported,
-		List<EventRequest> events) {
+		@NotBlank @Size(max = 36) String tripId,
+		@NotNull OffsetDateTime startedAt,
+		@NotNull OffsetDateTime endedAt,
+		@NotNull @PositiveOrZero Double distanceKm,
+		@NotNull Set<ScoreItem> supported,
+		@NotNull List<@Valid @NotNull EventRequest> events) {
 
 		UploadTripService.Command toCommand() {
 			List<RecordedEvent> recorded = events.stream().map(EventRequest::toRecordedEvent).toList();
@@ -53,7 +59,11 @@ public class TripController {
 	}
 
 	/** payload는 해석하지 않고 JSON 문자열 그대로 저장한다. */
-	public record EventRequest(String eventId, TripEventType type, OffsetDateTime occurredAt, JsonNode payload) {
+	public record EventRequest(
+		@NotBlank @Size(max = 36) String eventId,
+		@NotNull TripEventType type,
+		@NotNull OffsetDateTime occurredAt,
+		JsonNode payload) {
 
 		RecordedEvent toRecordedEvent() {
 			return new RecordedEvent(eventId, type, occurredAt.toInstant(), payload == null ? null : payload.toString());
