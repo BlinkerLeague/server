@@ -23,4 +23,15 @@ class ThresholdServiceTest {
 		assertThat(store.stored()).contains(expected);
 		assertThat(service.current()).isEqualTo(expected);
 	}
+
+	@Test
+	void 이미_저장된_기준값이_있으면_재시작해도_기본값으로_덮어쓰지_않는다() {
+		VersionedThresholds changed = new VersionedThresholds(3, ThresholdsFixture.withMinDistanceKm(2.0));
+		store.save(changed);
+
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+
+		assertThat(store.stored()).contains(changed);
+		assertThat(service.current()).isEqualTo(changed);
+	}
 }
