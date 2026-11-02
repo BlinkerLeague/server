@@ -1,6 +1,7 @@
 package com.blinkerleague.server.trip.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.List;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.ThresholdsFixture;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
@@ -64,6 +67,18 @@ class UploadTripServiceTest {
 		assertThat(retried).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.UPLOADED, false));
 		assertThat(trips.findAll()).singleElement()
 			.satisfies(trip -> assertThat(trip.getDistanceKm()).isEqualTo(12.3));
+	}
+
+	@Test
+	void 다른_운전자가_올린_tripId로_업로드하면_CONFLICT로_거부하고_남의_결과를_알려주지_않는다() {
+		service.upload(1L, command("trip-1", 12.3));
+
+		assertThatThrownBy(() -> service.upload(2L, command("trip-1", 12.3)))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException) e).getErrorCode())
+			.isEqualTo(ErrorCode.CONFLICT);
+		assertThat(trips.findAll()).singleElement()
+			.satisfies(trip -> assertThat(trip.getDriverId()).isEqualTo(1L));
 	}
 
 	private static UploadTripService.Command command(String tripId, double distanceKm, RecordedEvent... events) {
