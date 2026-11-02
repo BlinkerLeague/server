@@ -2,6 +2,7 @@ package com.blinkerleague.server.trip.application.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
@@ -23,6 +24,10 @@ public class UploadTripService {
 	private final ThresholdProvider thresholdProvider;
 
 	public Result upload(Long driverId, Command command) {
+		Optional<Trip> existing = loadTripPort.findById(command.tripId());
+		if (existing.isPresent()) {
+			return new Result(existing.get().getId(), existing.get().getStatus(), false);
+		}
 		double minDistanceKm = thresholdProvider.current().thresholds().trip().minDistanceKm();
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), minDistanceKm);
