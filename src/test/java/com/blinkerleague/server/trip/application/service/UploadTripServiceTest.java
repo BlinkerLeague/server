@@ -81,6 +81,17 @@ class UploadTripServiceTest {
 			.satisfies(trip -> assertThat(trip.getDriverId()).isEqualTo(1L));
 	}
 
+	@Test
+	void 확인과_저장_사이에_같은_운행이_먼저_저장되면_다시_읽어_기존_결과를_돌려준다() {
+		trips.saveConcurrentlyBeforeNextSave(Trip.upload("trip-1", 1L, STARTED_AT, ENDED_AT, 12.3,
+			Set.of(ScoreItem.TURN_SIGNAL), List.of(), 3.0));
+
+		UploadTripService.Result result = service.upload(1L, command("trip-1", 12.3));
+
+		assertThat(result).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.UPLOADED, false));
+		assertThat(trips.findAll()).hasSize(1);
+	}
+
 	private static UploadTripService.Command command(String tripId, double distanceKm, RecordedEvent... events) {
 		return new UploadTripService.Command(tripId, STARTED_AT, ENDED_AT, distanceKm, Set.of(ScoreItem.TURN_SIGNAL),
 			List.of(events));
