@@ -1,5 +1,6 @@
 package com.blinkerleague.server.trip.adapter.in.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.blinkerleague.server.support.TestTokens;
+import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -33,6 +35,9 @@ class TripControllerTest {
 
 	@Autowired
 	ObjectMapper objectMapper;
+
+	@Autowired
+	LoadTripPort tripRepository;
 
 	@Test
 	void 운행을_업로드하면_201과_tripId_UPLOADED_상태를_돌려준다() throws Exception {
@@ -53,6 +58,19 @@ class TripControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.tripId").value(tripId))
 			.andExpect(jsonPath("$.status").value("UPLOADED"));
+	}
+
+	@Test
+	void 차선_변경_이벤트도_받아서_저장한다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(tripId, 12.3));
+		((ObjectNode)body.at("/events/0")).put("type", "LANE_CHANGE");
+
+		upload(1L, body.toString()).andExpect(status().isCreated());
+
+		assertThat(tripRepository.findById(tripId)).get()
+			.satisfies(trip -> assertThat(trip.getEvents()).extracting(event -> event.getType().name())
+				.containsExactly("LANE_CHANGE"));
 	}
 
 	@ParameterizedTest(name = "{0}")
