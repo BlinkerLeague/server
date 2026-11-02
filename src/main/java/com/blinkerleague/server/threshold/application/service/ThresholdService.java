@@ -17,11 +17,11 @@ public class ThresholdService implements ThresholdProvider {
 
 	/** 저장된 기준값이 없으면 기본값을 version 1로 저장한다. */
 	public void seedIfAbsent(Thresholds defaults) {
-		throw new UnsupportedOperationException();
+		saveThresholdsPort.save(new VersionedThresholds(1, defaults));
 	}
 
 	@Override
 	public VersionedThresholds current() {
-		throw new UnsupportedOperationException();
+		return loadThresholdsPort.load().orElseThrow();
 	}
 }
