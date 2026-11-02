@@ -1,6 +1,7 @@
 package com.blinkerleague.server.trip.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
@@ -17,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
 import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlreadyExistsException;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripEventType;
@@ -59,6 +61,19 @@ class TripPersistenceAdapterTest {
 				tuple("event-1", "{\"signalOn\":true}"),
 				tuple("event-2", null));
 		assertThat(adapter.findById("없는-운행")).isEmpty();
+	}
+
+	@Test
+	void 같은_tripId가_이미_저장돼_있으면_덮어쓰지_않고_TripAlreadyExistsException으로_알린다() {
+		adapter.saveNew(trip("trip-1", 1L));
+		entityManager.flush();
+		entityManager.clear();
+
+		// 동시 요청 두 건이 모두 findById를 통과한 상황. 나중 요청은 다른 운전자일 수도 있다.
+		assertThatThrownBy(() -> adapter.saveNew(trip("trip-1", 2L)))
+			.isInstanceOf(TripAlreadyExistsException.class);
+		entityManager.clear();
+		assertThat(adapter.findById("trip-1").orElseThrow().getDriverId()).isEqualTo(1L);
 	}
 
 	private static Trip trip(String tripId, Long driverId, RecordedEvent... events) {
