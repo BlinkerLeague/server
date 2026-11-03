@@ -1,0 +1,152 @@
+### 운전자 등록 API 로컬 수동 테스트 (IntelliJ HTTP Client)
+# 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
+# 환경: 실행 시 http-client.env.json의 "local"을 고른다.
+# 위에서부터 순서대로 실행한다. 등록 응답의 토큰과 닉네임을 다음 요청이 이어받는다.
+# H2는 인메모리라 서버를 재시작하면 등록한 운전자가 사라진다.
+
+### 1. 등록 성공 → 201 + accessToken, refreshToken
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "깜빡이{{$randomInt}}",
+  "regionCode": "11680"
+}
+
+> {%
+    client.test("201 Created", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.accessToken, "accessToken 없음");
+        client.assert(response.body.refreshToken, "refreshToken 없음");
+    });
+    client.global.set("nickname", response.body.nickname);
+    client.global.set("accessToken", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+%}
+
+### 2. 같은 닉네임 재등록 → 409 CONFLICT
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "{{nickname}}",
+  "regionCode": "11680"
+}
+
+> {%
+    client.test("409 CONFLICT", function () {
+        client.assert(response.status === 409, "status: " + response.status);
+        client.assert(response.body.code === "CONFLICT", "code: " + response.body.code);
+    });
+%}
+
+### 3. 닉네임 1자 → 400 INVALID_INPUT
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "깜",
+  "regionCode": "11680"
+}
+
+> {%
+    client.test("400 INVALID_INPUT", function () {
+        client.assert(response.status === 400, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_INPUT", "code: " + response.body.code);
+    });
+%}
+
+### 4. 지역 코드 형식 오류(숫자 5자리 아님) → 400 INVALID_INPUT
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "지역오류{{$randomInt}}",
+  "regionCode": "1168A"
+}
+
+> {%
+    client.test("400 INVALID_INPUT", function () {
+        client.assert(response.status === 400, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_INPUT", "code: " + response.body.code);
+    });
+%}
+
+### 5. 토큰 없이 보호 API → 401 UNAUTHORIZED
+GET {{host}}/api/trips/some-trip/score
+
+> {%
+    client.test("401 UNAUTHORIZED", function () {
+        client.assert(response.status === 401, "status: " + response.status);
+        client.assert(response.body.code === "UNAUTHORIZED", "code: " + response.body.code);
+    });
+%}
+
+### 6. 위조 토큰으로 보호 API → 401 INVALID_TOKEN
+GET {{host}}/api/trips/some-trip/score
+Authorization: Bearer forged.token.value
+
+> {%
+    client.test("401 INVALID_TOKEN", function () {
+        client.assert(response.status === 401, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_TOKEN", "code: " + response.body.code);
+    });
+%}
+
+### 7. 등록 토큰으로 보호 API → 인증 통과 (아직 컨트롤러가 없어 404면 성공)
+GET {{host}}/api/trips/some-trip/score
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("인증 통과(404)", function () {
+        client.assert(response.status === 404, "status: " + response.status);
+    });
+%}
+
+### 8. Refresh로 재발급 → 200 + 새 토큰 쌍 (이전 refreshToken은 사용됨으로 기록)
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+    client.test("200 재발급", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.refreshToken !== client.global.get("refreshToken"), "refreshToken이 바뀌지 않음");
+    });
+    client.global.set("usedRefreshToken", client.global.get("refreshToken"));
+    client.global.set("accessToken", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+%}
+
+### 9. 이미 쓴 refreshToken 재사용 → 401 INVALID_TOKEN (탈취로 보고 현재 refreshToken도 무효화)
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{usedRefreshToken}}"
+}
+
+> {%
+    client.test("401 INVALID_TOKEN", function () {
+        client.assert(response.status === 401, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_TOKEN", "code: " + response.body.code);
+    });
+%}
+
+### 10. 9번 이후 최신 refreshToken도 거부됨 → 401 INVALID_TOKEN
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+    client.test("401 INVALID_TOKEN", function () {
+        client.assert(response.status === 401, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_TOKEN", "code: " + response.body.code);
+    });
+%}

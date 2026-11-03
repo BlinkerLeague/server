@@ -40,7 +40,10 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 
 | 메서드 | 경로 | 인증 | 설명 |
 | --- | --- | --- | --- |
+| `POST` | `/api/drivers` | 없음 | `{ "nickname": "깜빡왕", "regionCode": "11680" }` → 201 `{ "driverId", "nickname", "regionCode", "accessToken", "refreshToken" }`. 닉네임 2~12자 · 중복 시 409 `CONFLICT`, 지역 코드는 시군구 5자리 숫자 |
 | `POST` | `/api/auth/refresh` | 없음 | `{ "refreshToken": "..." }` → `{ "accessToken", "refreshToken" }`. 사용한 Refresh 토큰은 무효, 재사용하면 그 운전자의 토큰 전체 무효 |
+| `GET` | `/api/config/thresholds` | 없음 | 판정 기준값 · 점수 가중치 · 포인트 규칙 · 등급 기준(`grades`) · 항목별 팁 문구(`tips`)와 `version`. 앱은 시작할 때 내려받고 `version`이 바뀐 경우에만 갱신 |
+| `POST` | `/api/trips` | Bearer | 운행 + 이벤트 업로드(형식은 plan.md 3.4). 새로 저장하면 201, 같은 `tripId` 재전송은 저장하지 않고 처음 결과를 200으로 반환 → `{ "tripId", "status" }`. `status`는 최소 거리(기준값 `trip.minDistanceKm`, 기본 3km) 미만이면 `EXCLUDED_SHORT`, 아니면 `UPLOADED`. 다른 운전자의 `tripId`는 409 `CONFLICT`, 필수 값 누락 · 음수 거리 · 구간 밖 이벤트 · 종료가 시작 이전이면 400 `INVALID_INPUT` |
 
 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.
 
