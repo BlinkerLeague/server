@@ -79,9 +79,30 @@ class TripControllerTest {
 			.containsExactly("LANE_CHANGE");
 	}
 
+	@Test
+	void 다른_운전자가_올린_tripId로_업로드하면_409_CONFLICT를_돌려준다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
+
+		upload(2L, tripBody(tripId, 12.3))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("CONFLICT"));
+	}
+
 	@ParameterizedTest(name = "{0}")
 	@CsvSource(delimiter = '|', value = {
-		"tripId 빈 문자열            | /tripId              | \"\"",
+		"종료 시각이 시작 시각과 같음 | /endedAt           | \"2026-11-03T08:00:00+09:00\"",
+		"이벤트가 운행 종료 뒤       | /events/0/occurredAt | \"2026-11-03T08:40:01+09:00\""})
+	void 운행_시각_규칙을_어기면_400_INVALID_INPUT을_돌려준다(String caseName, String pointer, String value)
+		throws Exception {
+		upload(1L, tripBodyWith(pointer, value))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@CsvSource(delimiter = '|', value = {
+		"tripId 빈 문자열           | /tripId              | \"\"",
 		"tripId 36자 초과            | /tripId              | \"0123456789-0123456789-0123456789-0123\"",
 		"startedAt 누락              | /startedAt           | null",
 		"distanceKm 누락             | /distanceKm          | null",
@@ -93,14 +114,18 @@ class TripControllerTest {
 		"이벤트 type 알 수 없는 값   | /events/0/type       | \"UNKNOWN\""})
 	void 요청_값이_빠지거나_잘못되면_400_INVALID_INPUT을_돌려준다(String caseName, String pointer, String value)
 		throws Exception {
+		upload(1L, tripBodyWith(pointer, value))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	// 기본 요청 본문에서 pointer 위치의 값만 JSON value로 바꾼다.
+	private String tripBodyWith(String pointer, String value) throws Exception {
 		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 12.3));
 		JsonPointer field = JsonPointer.compile(pointer);
 		ObjectNode parent = (ObjectNode)body.at(field.head());
 		parent.set(field.last().getMatchingProperty(), objectMapper.readTree(value));
-
-		upload(1L, body.toString())
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+		return body.toString();
 	}
 
 	private ResultActions upload(Long driverId, String body) throws Exception {
