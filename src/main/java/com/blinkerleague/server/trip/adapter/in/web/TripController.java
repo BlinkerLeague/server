@@ -48,7 +48,7 @@ public class TripController {
 		@NotNull OffsetDateTime startedAt,
 		@NotNull OffsetDateTime endedAt,
 		@NotNull @PositiveOrZero Double distanceKm,
-		@NotNull Set<ScoreItem> supported,
+		@NotNull Set<@NotNull ScoreItem> supported,
 		@NotNull List<@Valid @NotNull EventRequest> events) {
 
 		UploadTripService.Command toCommand() {
