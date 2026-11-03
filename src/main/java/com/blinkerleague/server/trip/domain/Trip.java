@@ -78,6 +78,7 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 	public static Trip upload(String tripId, Long driverId, Instant startedAt, Instant endedAt, double distanceKm,
 		Set<ScoreItem> supportedSignals, List<RecordedEvent> events, double minDistanceKm) {
 		validateTimes(startedAt, endedAt, events);
+		validateUniqueEventIds(events);
 		Trip trip = new Trip();
 		trip.id = tripId;
 		trip.driverId = driverId;
@@ -110,6 +111,14 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 			.anyMatch(at -> at.isBefore(startedAt) || at.isAfter(endedAt));
 		if (outOfTrip) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT, "이벤트 시각은 운행 구간 안이어야 합니다.");
+		}
+	}
+
+	// 같은 eventId가 두 번 오면 저장 시 PK 충돌로 500이 되므로 미리 거부한다.
+	private static void validateUniqueEventIds(List<RecordedEvent> events) {
+		long distinct = events.stream().map(RecordedEvent::eventId).distinct().count();
+		if (distinct != events.size()) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "한 운행 안에서 eventId가 중복되었습니다.");
 		}
 	}
 }
