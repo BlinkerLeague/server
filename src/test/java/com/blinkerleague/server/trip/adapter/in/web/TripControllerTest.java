@@ -120,6 +120,7 @@ class TripControllerTest {
 		"distanceKm 누락             | /distanceKm          | null",
 		"distanceKm 음수             | /distanceKm          | -0.1",
 		"supported 누락              | /supported           | null",
+		"supported 안에 null         | /supported           | [\"TURN_SIGNAL\", null]",
 		"events 누락                 | /events              | null",
 		"이벤트 eventId 누락         | /events/0/eventId    | null",
 		"이벤트 occurredAt 누락      | /events/0/occurredAt | null",
