@@ -129,6 +129,18 @@ Conventions:
 - Pin time by injecting a fixed `Clock` in tests and never depend on the real date.
 - When reporting progress, show the red run (failing output) and the green run for each cycle. A feat PR is ready only when every `plan.md` test case for it exists and `./gradlew build` passes.
 
+## Branches and pull requests
+
+`main` holds released work and `develop` is the integration branch. GitHub's default branch is `main`, so `gh pr create` targets `main` unless told otherwise; always pass the base explicitly.
+
+- **Work branches start from `develop`.** Name them `feat/<name>` (as in `plan.md`), `fix/`, `docs/`, `refactor/`, or `test/`. Pull `develop` first so the branch starts from its latest commit.
+- **Work PRs target `develop`:** `gh pr create --base develop`. Never open or merge a work branch into `main`. Before merging any PR, check its base branch (`gh pr view <n> --json baseRefName`).
+- **Only `develop → main` reaches `main`,** as a release PR that lists the work PRs it brings in. Open it only when the user asks.
+- **Merge with a merge commit** (`gh pr merge --merge`), as every PR so far has, so the TDD commit order stays visible. No squash or rebase merges.
+- **After merging,** delete the work branch on the remote and locally once it is contained in `develop`. Never delete `main` or `develop`.
+- **If a PR was merged into the wrong base,** do not merge the same commits again after a revert: git treats them as already merged, and the revert wins. Revert only that PR's changes on the wrong branch, then cherry-pick the commits onto `develop` in a new branch and open a new PR (this is how #23–#26 fixed #21 and #22 going straight to `main`).
+- PR bodies follow the earlier ones: changes, TDD cycles, how it was checked (`./gradlew build` and test count), and points for review. Claim a red failure reason only if it was actually observed.
+
 ## Environment gotcha
 
 IntelliJ IDEA 2021.3.1's Gradle sync (via its bundled Android plugin, which injects `AndroidStudioToolingPlugin`) fails with `NoClassDefFoundError: org/gradle/util/VersionNumber` on newer Gradle (seen on 9.8.2). It is unrelated to the Korean characters in the user path. Hence the pinned Gradle 7.6.4 / Boot 3.3.x. The IDE sync was not re-verified after the downgrade; the CLI wrapper build works.
