@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.blinkerleague.server.support.TestTokens;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @SpringBootTest
@@ -87,6 +88,17 @@ class TripControllerTest {
 		upload(2L, tripBody(tripId, 12.3))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("CONFLICT"));
+	}
+
+	@Test
+	void 한_요청_안에_같은_eventId가_두_번_있으면_400_INVALID_INPUT을_돌려준다() throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 12.3));
+		ArrayNode events = (ArrayNode)body.get("events");
+		events.add(events.get(0).deepCopy());
+
+		upload(1L, body.toString())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
 
 	@ParameterizedTest(name = "{0}")
