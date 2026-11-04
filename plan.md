@@ -26,6 +26,10 @@
 | D15 | 업로드 요청 형식 | plan은 "기획서 8.2 형식 그대로"인데 기획서가 저장소에 없음 | **결정(11.3): 3.4의 제안 형식으로 구현.** 기획서 8.2와 다르면 DTO만 맞춘다 |
 | D16 | 운행 업로드 이벤트 개수 · 요청 크기 상한 | `POST /api/trips`의 `events` 개수와 본문 크기에 제한이 없음. 한 요청으로 수만 건을 보내 DB · 메모리를 소모시킬 수 있음 | **미정.** A) `events` 최대 개수(예: 1,000)를 Bean Validation `@Size`로 두고, 초과는 400 / B) 서버(Tomcat) 요청 본문 크기 상한만 둠 / C) 둘 다. 값은 차량 앱 팀과 실제 운행(장거리 포함)의 이벤트 수를 확인해 정함 |
 | D17 | 운행 시각 허용 범위 | `startedAt` · `endedAt`이 먼 미래나 아주 오래된 시각이어도 받음. 미래 시각 운행은 일일 미션 · 일일 상한 · 시즌 집계를 왜곡할 수 있음 | **미정.** A) 서버 시각(`Clock`) 기준 `endedAt`이 현재 + 허용 오차(예: 5분)보다 뒤면 400, 시작이 너무 오래 전(예: 7일)이면 400 / B) 미래만 막음 / C) 제한 없음(오프라인 운행을 나중에 올리는 경우를 우선). 앱의 오프라인 보관 기간과 함께 정함 |
+| D18 | 점수 항목 확장 | 항목 4개(P0은 깜빡이 1개)라 회전 2~3번으로 점수가 정해지고 만점이 쉬움. 차량 앱 팀이 Pleos SDK 실행 결과로 쓸 수 있는 데이터를 확인함(android-app `docs/sdk-test-log.md`) | **제안(11.4): 11개 항목으로 확장**(`POLICY_NOTION.md` 4-1장, android-app `docs/scoring-criteria.md`). 깜빡이 4단계(30m 기준) · 깜빡이 끄기 · 내비 안내 회전 · 제한속도 · 단속 구간 · 보호 구간 감속 · 회전 속도 · 급가감속 · 안전벨트 · 경고등 · 야간 전조등 · 우천 운전. 법규 기준, 거리 정규화, 최소 표본. 내비 데이터 항목(제한속도 · 단속 · 보호 구간 · 내비 회전)은 에뮬레이터에서 값이 안 와 실차 확인 필요 → 4.6으로 분리. 채택 범위 · 가중치는 `feat/score-full-metrics` 착수 전 확정 |
+| D19 | 리그 비교 점수 | 차량마다 측정 가능한 항목이 달라, 항목이 적은 차가 리그에서 유리할 수 있음(4.4 "같은 측정 항목 집단끼리 비교") | **제안(11.4): 리그 순위 · 안전지수는 모든 차가 측정하는 공통 항목 점수로**, 운행 점수 · 포인트는 전체 항목 점수로. 공통 항목 목록은 기준값 설정에 둠. `feat/region-league` 착수 전 확정 |
+| D20 | 오토라이트 · 비상등 규칙 | Vehicle SDK 2.3.2에 오토라이트 상태 · 비상등 API가 없음(에뮬레이터 확인) | **제안(11.4): 4.1의 "오토라이트면 100점"과 `NIGHT_SEGMENT.autoLight` 삭제**, 하향등 상태로만 판정. 앱 회전 제외 규칙의 비상등 조건도 적용 불가. 실차에서 경고등으로 비상등이 오면 재검토 |
+| D21 | 새 이벤트 종류 · 항목 이름 수용 | `TripEventType` · `ScoreItem`이 enum이라 모르는 값이 오면 `POST /api/trips`가 400. 앱은 4xx를 재전송하지 않고 `REJECTED`로 멈추므로 운행 전체가 버려짐 | **미정.** A) 서버 P1 반영(enum 추가)이 배포된 뒤에만 앱이 새 값을 보냄(기준값 `version`으로 앱이 판단) / B) 모르는 이벤트 종류는 저장만 하고 무시, 모르는 `supported` 이름은 버림. 기본 제안 A |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -61,6 +65,7 @@ feat/common-setup
   │                   └─ feat/daily-mission
 [P1 · 11.23 ~ 12.2]
 feat/score-full-metrics   (trip-score 이후)
+  └─ feat/score-navi-metrics  (차량 앱 실차 확인 이후, D18)
 feat/point-ledger         (daily-mission 이후)
   └─ feat/streak-badge
 feat/region-league        (point-ledger, score-full-metrics 이후)
@@ -83,6 +88,7 @@ feat/reward-exchange      (point-ledger 이후)
 | 10 | `feat/region-league` | FR-13 | P1 | 11.27 ~ 11.30 |
 | 11 | `feat/weekly-report` | FR-14 | P1 | 11.30 ~ 12.1 |
 | 12 | `feat/reward-exchange` | FR-15 | P2 | 미정 |
+| 7-1 | `feat/score-navi-metrics` | D18 (제안) | P1 | 실차 확인 후. 12.2 전에 확인되지 않으면 이후로 |
 
 FR-02(회전 감지), FR-07(음성 피드백)은 차량 앱 범위라 서버 브랜치가 없습니다. 서버는 판정이 끝난 이벤트만 받습니다.
 
@@ -324,6 +330,20 @@ API: `GET /api/missions/today`
 
 테스트: 항목별 경계값, 지원 신호 조합별 재분배, 제외 항목의 `status` · `reason`, `detail` 수치, 회전 0회일 때 깜빡이 제외 후 나머지로 평점.
 
+**점수 항목 확장(D18, 제안) 반영 시 이 브랜치에 추가되는 것** — 에뮬레이터에서 데이터를 확인한 🟢 · 🟡 항목만. 내비 데이터 항목은 4.6.
+- 대상 항목: `TURN_SIGNAL` 4단계, `SIGNAL_CANCEL`, `TURN_SPEED`, `SMOOTH_DRIVING`, `SEAT_BELT`, `SAFETY_WARNING`, `NIGHT_HEADLIGHT`, `RAIN_DRIVING`
+- 범위가 커지므로 일정(11.23 ~ 11.25)은 착수 전 다시 잡는다. 기존 4개 항목을 먼저 끝내고 새 항목을 하나씩 red-green으로 추가
+- `ScoreItem` enum에 `SIGNAL_CANCEL`, `TURN_SPEED`, `SEAT_BELT`, `RAIN_DRIVING` 추가. `supported`는 계속 `ScoreItem` 이름이고, 앱은 항목에 필요한 신호가 모두 있을 때만 그 항목을 넣는다(예: `TURN_SPEED` = 조향각 + 속도)
+- `TripEventType`에 `SIGNAL_LEFT_ON`, `SEAT_BELT`, `RAIN_SEGMENT` 추가. 배포 순서는 D21
+- `TURN` payload 확장: `{ direction, signalOn, signalTiming, leadDistanceM, maxSpeedKmh }`. `signalTiming`은 `ON_TIME` / `LATE` / `WRONG_DIRECTION` / `NONE`. `signalOn`은 P0 호환용으로 유지하고, `signalTiming`이 없으면 `signalOn`으로 2단계 판정
+- 새 payload: `SIGNAL_LEFT_ON { durationSec }`, `SEAT_BELT { buckledAtDeparture, unbuckledMovingSec }`(운행당 1건), `RAIN_SEGMENT { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec }`
+- `NIGHT_SEGMENT`: `autoLight` 제거(D20), 오토라이트 100점 규칙 삭제
+- 기준값(3.3) 추가: `turn.signalLeadDistanceM`(30), `turn.lateSignalScore`(0.5), `turn.turnSpeedKmh`(30), `signalCancel.forgetSec`(20) · `minSpeedKmh`(30) · `penalty`(25), `seatBelt.departurePenalty`(50) · `perMinutePenalty`(10), `rain.minWiperSec`(30) · `speedRatio`(0.8), `safetyWarning.telltales`(점수에 셀 경고등 종류 목록), 항목별 최소 표본 `minSamples`. `weights`는 D18 확정값으로 교체하고 `version`을 올린다. `Thresholds` record와 `default-thresholds.json`을 함께 바꿈(이미 저장된 값은 시드가 덮어쓰지 않으므로 `ThresholdService.update`로 갱신)
+- `tips`에 새 항목 문구 추가
+- 최소 표본 미달은 `NOT_APPLICABLE`(`reason: TOO_FEW_SAMPLES`)
+
+테스트(추가): 깜빡이 4단계 점수(제때 1.0 · 늦게 0.5), `signalTiming` 없는 P0 payload 호환, 깜빡이 끄기 횟수별 감점, 회전 속도 비율, 안전벨트 감점 하한 0, 우천 구간에서 제한속도를 모를 때 점등만으로 계산, 최소 표본 미달 `NOT_APPLICABLE`, 새 가중치 합 1과 재분배.
+
 ### 4.2 `feat/point-ledger` — 포인트 원장 (FR-12)
 
 API: `GET /api/points` (잔액 + 최근 원장 20건)
@@ -359,6 +379,7 @@ API: `GET /api/streak`
 - 7일마다 50P (`reason=STREAK_7`, `ref_id = driverId:달성일`)
 - `badge_award`: `driver_id`, `badge_code`, `awarded_at`, (`driver_id`, `badge_code`) 유니크. 배지 목록 · 조건(예: 첫 운행, 연속 7일, 깜빡이 100회)은 착수 시 확정
 - **전체 배지 카탈로그 반환**(SCR-05 진열장): `GET /api/badges`에서 획득한 배지만이 아니라 전체 배지를 잠금 상태 · 조건과 함께. 예) `{ "code": "STREAK_7", "name": "...", "condition": "7일 연속 미션 달성", "earned": false, "awardedAt": null }`. 배지 정의(이름 · 조건 문구)는 `badge` 카탈로그(시드)에 둔다
+- **확장 항목 배지(D18, 제안)**: 항목별 누적 기록 배지를 카탈로그에 추가. 예) 제때 깜빡이 100회(`TURN` `signalTiming=ON_TIME` 누적), 벨트 매고 출발 30회, 단속 구간 50곳 무위반(4.6 이후). 누적 집계는 `trip_metric` · `trip_event`에서 읽음
 
 ### 4.4 `feat/region-league` — 지역 리그 (FR-13)
 
@@ -369,6 +390,7 @@ API: `GET /api/leagues/current`
 - 순위 조회는 Redis에서(캐시 응답 요구사항). 응답에는 닉네임만, 내 순위 + 상위 N명
 - 시즌 종료 배치(`@Scheduled`): 순위 · 안전지수 RDB 확정, 상위 지역 참여자 100P, 새 시즌 생성
 - 지역 안전지수 계산식(D5), "같은 측정 항목 집단끼리 비교" 여부 착수 전 결정
+- **리그 비교 점수(D19, 제안)**: 순위 · 안전지수에는 운행 총점이 아니라 공통 항목(기준값 `league.commonItems`, 예: `TURN_SIGNAL`, `SMOOTH_DRIVING`, `TURN_SPEED`)만으로 재분배한 **리그 점수**를 쓴다. 점수 엔진(4.1)이 운행마다 총점과 리그 점수를 함께 계산해 `trip`(또는 `trip_metric`)에 저장하고, 리그 집계는 리그 점수를 읽는다. 공통 항목이 하나도 측정되지 않은 운행은 리그 집계에서 제외
 - **리그 권역(D11)**: `league_region_mapping`(`region_code` 시군구 → `league_region`) 매핑표로 묶는다. 위의 `region`은 시군구가 아니라 리그 권역이다. 초기 매핑(서울 생활권 5개 등)은 착수 시 확정
 - **소속(D12)**: 운전자의 등록 지역 기준. 시즌 중 지역 변경은 다음 시즌부터 반영(시즌 시작 시 소속 권역을 고정해 기록)
 - **순위 자격(D13)**: 시즌 누적 50km 이상 또는 운행 10회 이상인 운전자만 순위에 포함. 리그 참여자가 10명 미만이면 순위 비공개(D11). 두 값 모두 기준값 설정에 둔다
@@ -385,6 +407,7 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 - 가장 약한 항목을 골라 다음 주 "맞춤 개선 미션"(주간 미션) 생성
 - 매주 월요일 새벽 배치로 생성 · 저장(`weekly_report`), 조회는 저장본 반환
 - 주간 미션 "안전 경고 없는 주"(50km 이상, 경고 0회)도 여기서 함께 판정
+- **확장 항목(D18, 제안)**: 항목별 주간 평균과 "가장 약한 항목"을 `supported`로 측정된 모든 항목에서 고른다. 맞춤 미션 후보: "회전 5번 모두 30m 전 깜빡이", "벨트 매고 출발 7일", "깜빡이 끄기 잊지 않기", "비 오는 날 전조등", "어린이보호구역 모두 30km 이하"(4.6 이후). 미션 `condition` JSON에 항목 이름과 목표값을 넣어 코드 변경 없이 추가
 - **응답 형식**(SCR-07): 항목별 이번 주 · 지난주 값과 변화, 가장 약한 항목, 생성된 맞춤 미션. "퀘스트 수락" 버튼 유지 여부는 D7 결정에 따름
 
 ```json
@@ -400,6 +423,26 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 ```
 
 ---
+
+### 4.6 `feat/score-navi-metrics` — 내비 데이터 점수 항목 (D18, 제안)
+
+차량 앱이 NaviHelper SDK로 받는 데이터로 매기는 항목. **에뮬레이터에서는 값이 오지 않아(제한속도 항상 0, 카메라 · 주의 지점 이벤트 없음) 차량 앱 팀의 실차 확인 후 착수**한다. 확인되지 않으면 이 브랜치는 하지 않고, 앱이 `supported`에 넣지 않으므로 점수에서 자동 제외된다.
+
+- `ScoreItem` 추가: `NAVI_TURN_SIGNAL`, `SPEED_LIMIT`, `ENFORCEMENT`, `CAUTION_ZONE`
+- `TripEventType` 추가와 payload (좌표 없음):
+  - `NAVI_TURN { turnType, signalOnTime }`
+  - `SPEEDING_SUMMARY { knownLimitSec, overLimitSec }` (운행당 1건)
+  - `CAMERA_PASS { cameraType, overSpeed, overSectionAvrSpeed }` — 과속 판정은 내비가 한 값을 그대로 씀
+  - `CAUTION_ZONE { zoneType, maxSpeedKmh, limitKmh }` — `SCHOOL_ZONE`, `SPEED_BUMP` 등
+- 점수:
+  - `SPEED_LIMIT`: `max(0, 100 − 200 × overLimitSec ÷ knownLimitSec)`. `knownLimitSec`가 최소 표본(예: 300초) 미만이면 `NOT_APPLICABLE`
+  - `ENFORCEMENT`: 준수 통과 수 ÷ 전체 × 100
+  - `CAUTION_ZONE`: 준수 구간 비율 × 100, 어린이보호구역 위반은 2배 가중
+  - `NAVI_TURN_SIGNAL`: 성공 비율 × 100
+- 기준값 추가: `speedLimit.toleranceKmh`(10), `speedLimit.penaltyFactor`(200), `caution.schoolZoneKmh`(30), `caution.bumpKmh`(30), `caution.schoolZoneWeight`(2)
+- 의존: `feat/score-full-metrics` 이후, 차량 앱 실차 확인 이후
+
+테스트: 제한속도 초과 비율별 점수, 표본 부족 `NOT_APPLICABLE`, 카메라 통과 준수율, 어린이보호구역 2배 가중, 4개 항목이 `supported`에 없을 때 재분배.
 
 ## 5. P2
 
@@ -428,6 +471,11 @@ API: `GET /api/reports/weekly?week=2026-W45` (기본: 지난주)
 | `HARSH_*`, `SAFETY_WARNING`, `NIGHT_SEGMENT` payload | `feat/score-full-metrics` 전 (9장 5~7 결과) |
 | `supported` 신호 이름 목록 | 제안: `ScoreItem` 이름(`TURN_SIGNAL` 등) 사용(D15). 앱 팀 확인 필요 |
 | 차선 변경 감지 가능성(조향각 · 자이로 신호 제공 여부, 커브 오탐) | P1 착수 전 (D14) |
+| 점수 항목 확장 채택 범위 · 가중치 (D18) | `feat/score-full-metrics` 착수 전 |
+| 확장 항목 payload(`TURN` 확장, `SIGNAL_LEFT_ON`, `SEAT_BELT`, `RAIN_SEGMENT`) | `feat/score-full-metrics` 착수 전 |
+| 새 이벤트 · 항목 이름을 앱이 보내기 시작하는 시점 (D21) | 서버 P1 배포 전 |
+| 차량 속도 권한 `android.car.permission.CAR_SPEED`(dangerous)의 Pleos 심사 통과 여부. 거부되면 속도가 필요한 항목 전부 미지원 | `feat/score-full-metrics` 착수 전 |
+| 실차 확인: NaviHelper 제한속도 · 단속 카메라 · 주의 지점, 안전벨트 · 와이퍼 변경 콜백, 경고등 종류 | `feat/score-navi-metrics` 착수 전 (4.6) |
 
 ## 8. 운전자 인증 JWT 전환 (D2)
 
