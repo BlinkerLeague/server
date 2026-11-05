@@ -21,8 +21,7 @@ public class ListRecentTripsService {
 		Thresholds thresholds = thresholdProvider.current().thresholds();
 		return loadRecentTripsPort.findRecentByDriver(driverId).stream()
 			.map(trip -> new RecentTrip(trip.getId(), trip.getEndedAt(), trip.getDistanceKm(), trip.getStatus(),
-				trip.getScore(),
-				trip.getScore() == null ? null : thresholds.gradeOf(trip.getScore()).orElse(null)))
+				trip.getScore(), TripScoreView.gradeOf(trip.getScore(), thresholds)))
 			.toList();
 	}
 

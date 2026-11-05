@@ -13,7 +13,7 @@ public record TripScoreView(String tripId, TripStatus status, Integer score, Str
 	Turns turns, MatchReport.Summary summary, List<MatchReport.Play> plays) {
 
 	static TripScoreView of(Trip trip, Thresholds thresholds) {
-		String grade = trip.getScore() == null ? null : thresholds.gradeOf(trip.getScore()).orElse(null);
+		String grade = gradeOf(trip.getScore(), thresholds);
 		List<Metric> metrics = trip.getMetrics().stream()
 			.map(m -> new Metric(m.getMetric(), m.getValue(), m.getScore(), m.getWeight()))
 			.toList();
@@ -21,6 +21,11 @@ public record TripScoreView(String tripId, TripStatus status, Integer score, Str
 		Turns turns = new Turns(report.summary().goals() + report.summary().conceded(), report.summary().goals());
 		return new TripScoreView(trip.getId(), trip.getStatus(), trip.getScore(), grade, metrics, turns,
 			report.summary(), report.plays());
+	}
+
+	/** 점수가 없거나 최저 등급 기준 미만이면 등급이 없다. */
+	static String gradeOf(Integer score, Thresholds thresholds) {
+		return score == null ? null : thresholds.gradeOf(score).orElse(null);
 	}
 
 	public record Metric(ScoreItem metric, double value, int score, double weight) {
