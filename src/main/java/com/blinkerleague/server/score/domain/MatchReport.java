@@ -1,6 +1,7 @@
 package com.blinkerleague.server.score.domain;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 
 import com.blinkerleague.server.trip.domain.TripEventType;
@@ -9,7 +10,20 @@ import com.blinkerleague.server.trip.domain.TripEventType;
 public record MatchReport(Summary summary, List<Play> plays) {
 
 	public static MatchReport of(List<DrivingEvent> events) {
-		throw new UnsupportedOperationException();
+		List<Play> plays = events.stream()
+			.sorted(Comparator.comparing(DrivingEvent::occurredAt))
+			.map(event -> new Play(event.occurredAt(), event.type(), resultOf(event)))
+			.toList();
+		int goals = (int) plays.stream().filter(play -> play.result() == PlayResult.GOAL).count();
+		int conceded = (int) plays.stream().filter(play -> play.result() == PlayResult.CONCEDED).count();
+		return new MatchReport(new Summary(goals, conceded, 0), plays);
+	}
+
+	private static PlayResult resultOf(DrivingEvent event) {
+		if (event.type() != TripEventType.TURN) {
+			return null;
+		}
+		return event.signalOn() ? PlayResult.GOAL : PlayResult.CONCEDED;
 	}
 
 	public record Summary(int goals, int conceded, int fouls) {
