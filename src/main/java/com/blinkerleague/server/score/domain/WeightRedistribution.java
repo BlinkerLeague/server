@@ -1,5 +1,6 @@
 package com.blinkerleague.server.score.domain;
 
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,6 +13,9 @@ public final class WeightRedistribution {
 	}
 
 	public static Map<ScoreItem, Double> redistribute(Map<ScoreItem, Double> weights, Set<ScoreItem> measured) {
-		throw new UnsupportedOperationException();
+		double total = measured.stream().mapToDouble(item -> weights.getOrDefault(item, 0.0)).sum();
+		Map<ScoreItem, Double> result = new EnumMap<>(ScoreItem.class);
+		measured.forEach(item -> result.put(item, weights.getOrDefault(item, 0.0) / total));
+		return result;
 	}
 }
