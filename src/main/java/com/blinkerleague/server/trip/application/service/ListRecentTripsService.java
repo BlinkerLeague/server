@@ -15,16 +15,22 @@ import lombok.RequiredArgsConstructor;
 public class ListRecentTripsService {
 
 	private static final int DEFAULT_LIMIT = 10;
+	private static final int MAX_LIMIT = 50;
 
 	private final LoadRecentTripsPort loadRecentTripsPort;
 	private final ThresholdProvider thresholdProvider;
 
 	public List<RecentTrip> list(Long driverId, Integer limit) {
 		Thresholds thresholds = thresholdProvider.current().thresholds();
-		return loadRecentTripsPort.findRecentByDriver(driverId, limit == null ? DEFAULT_LIMIT : limit).stream()
+		return loadRecentTripsPort.findRecentByDriver(driverId, effectiveLimit(limit)).stream()
 			.map(trip -> new RecentTrip(trip.getId(), trip.getEndedAt(), trip.getDistanceKm(), trip.getStatus(),
 				trip.getScore(), TripScoreView.gradeOf(trip.getScore(), thresholds)))
 			.toList();
+	}
+
+	// 기본 10, 최대 50. 50을 넘으면 거부하지 않고 자른다(plan.md D24).
+	private static int effectiveLimit(Integer limit) {
+		return limit == null ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
 	}
 
 	public record RecentTrip(String tripId, Instant endedAt, double distanceKm, TripStatus status, Integer score,
