@@ -43,7 +43,7 @@ public class UploadTripService {
 		if (trip.getStatus() == TripStatus.UPLOADED) {
 			ScoreResult score = scoreCalculator.calculate(trip.getSupportedSignals(), drivingEvents(command.events()),
 				thresholds.weights());
-			trip.applyScore(score.score());
+			trip.applyScore(score.score(), List.of());
 		}
 		try {
 			saveTripPort.saveNew(trip);
