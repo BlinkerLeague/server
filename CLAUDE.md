@@ -19,7 +19,7 @@ Implemented so far: the common base, driver authentication (`auth`), driver regi
 - `trip`: trip and event upload, in the hexagonal layout. `domain.Trip` is the JPA entity (`trip` table, client UUID `trip_id`, `supported_signals` via `ScoreItemSetConverter`, `status`) and owns `TripEvent`s (`trip_event`, client UUID `event_id`, raw JSON `payload`). `Trip.upload(...)` validates `endedAt > startedAt`, that events fall inside the trip (inclusive), and that `eventId`s are unique within the trip (a duplicate would otherwise surface as a PK violation and a 500), and sets `EXCLUDED_SHORT` below `minDistanceKm` or `UPLOADED`. `Trip` implements `Persistable` so saving a client-assigned id INSERTs instead of merging; never switch it back to merge, or a concurrent duplicate silently overwrites the first trip. `application.service.UploadTripService` reads the minimum distance from `ThresholdProvider`, returns the stored result (`created=false`) for a retried `tripId` by the same driver, rejects another driver's `tripId` with `CONFLICT`, and on `TripAlreadyExistsException` (concurrent upload) reloads and applies the same rule. `adapter.out.persistence.TripPersistenceAdapter` maps only unique/PK violations to `TripAlreadyExistsException`. `adapter.in.web.TripController` serves `POST /api/trips` (201 new, 200 retry, Bean Validation on the request, including no `null` inside `supported`). Event-count/request-size limits (D16) and an allowed trip time window (D17) are still undecided in `plan.md` §0, so none are enforced yet.
 - Domain packages go under `com.blinkerleague.server.<domain>` and follow the hexagonal layout below. It replaced the original `controller/service/repository/domain/dto` layout, and `plan.md` §2 now records the same rule.
 
-## Policy decisions (plan.md §0, D10–D15, decided 2026-11-03)
+## Policy decisions (plan.md §0, D10–D15 decided 2026-11-03, D22–D24 decided 2026-11-05)
 
 These are product rules the code must follow. Do not change them without the user's decision, and keep `plan.md` §0 in sync.
 
@@ -30,6 +30,9 @@ These are product rules the code must follow. Do not change them without the use
 - **League ranking eligibility (D13):** at least 50km or 10 trips in the season. Anti-gaming lives here (plus distance-weighted averages), not in per-trip limits. Keep the values in the threshold config.
 - **Lane changes (D14):** P0 scores turns only. `POST /api/trips` accepts and stores `LANE_CHANGE` events without scoring them; scoring waits for the car-app team to confirm detection is feasible (P1).
 - **Upload request format (D15):** the proposed format in `plan.md` §3.4 (`tripId`, `startedAt`, `endedAt`, `distanceKm`, `supported`, `events[{eventId, type, occurredAt, payload}]`). The server stores `payload` as raw JSON. Adjust only the DTO if the 기획서 8.2 format turns out different.
+- **Match summary and plays (D22, decided 2026-11-05):** a goal is a turn with the signal on, a conceded goal is a turn without it, and a foul is a harsh accel/brake or safety warning (always 0 in P0). `plays` lists every stored event in time order; only `TURN` has a `result` (`GOAL`/`CONCEDED`), the others carry `result: null`.
+- **Unreadable `signalOn` (D23):** a `TURN` whose payload lacks a boolean `signalOn` counts as a turn without the signal. Upload does not reject it.
+- **Recent trips `limit` (D24):** default 10, max 50; larger values are clamped to 50.
 
 ## Architecture: hexagonal (ports and adapters) first
 
