@@ -34,11 +34,11 @@ public class UploadTripService {
 	private final ScoreCalculator scoreCalculator = new ScoreCalculator();
 
 	public Result upload(Long driverId, Command command) {
+		Thresholds thresholds = thresholdProvider.current().thresholds();
 		Optional<Trip> existing = loadTripPort.findById(command.tripId());
 		if (existing.isPresent()) {
-			return alreadyUploaded(existing.get(), driverId);
+			return alreadyUploaded(existing.get(), driverId, thresholds);
 		}
-		Thresholds thresholds = thresholdProvider.current().thresholds();
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), thresholds.trip().minDistanceKm());
 		if (trip.getStatus() == TripStatus.UPLOADED) {
@@ -52,9 +52,9 @@ public class UploadTripService {
 			saveTripPort.saveNew(trip);
 		} catch (TripAlreadyExistsException e) {
 			// 확인과 저장 사이에 같은 tripId가 먼저 저장된 동시 업로드. 먼저 저장된 운행이 기준이다.
-			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId);
+			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
-		return new Result(trip.getId(), trip.getStatus(), true);
+		return new Result(TripScoreView.of(trip, thresholds), true);
 	}
 
 	private static List<DrivingEvent> drivingEvents(List<RecordedEvent> events) {
@@ -65,11 +65,11 @@ public class UploadTripService {
 	}
 
 	// 재전송은 처음 저장한 결과를 돌려주고, 남의 운행이면 결과를 알려주지 않고 거부한다.
-	private static Result alreadyUploaded(Trip existing, Long driverId) {
+	private static Result alreadyUploaded(Trip existing, Long driverId, Thresholds thresholds) {
 		if (!existing.getDriverId().equals(driverId)) {
 			throw new BusinessException(ErrorCode.CONFLICT, "이미 다른 운전자가 사용한 운행 ID입니다.");
 		}
-		return new Result(existing.getId(), existing.getStatus(), false);
+		return new Result(TripScoreView.of(existing, thresholds), false);
 	}
 
 	public record Command(String tripId, Instant startedAt, Instant endedAt, double distanceKm,
@@ -77,6 +77,14 @@ public class UploadTripService {
 	}
 
 	/** created가 false면 이미 업로드된 운행을 다시 받은 것이다. */
-	public record Result(String tripId, TripStatus status, boolean created) {
+	public record Result(TripScoreView trip, boolean created) {
+
+		public String tripId() {
+			return trip.tripId();
+		}
+
+		public TripStatus status() {
+			return trip.status();
+		}
 	}
 }

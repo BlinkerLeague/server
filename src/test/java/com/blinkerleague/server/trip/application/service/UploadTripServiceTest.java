@@ -38,7 +38,8 @@ class UploadTripServiceTest {
 			new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600),
 				"{\"direction\":\"LEFT\",\"signalOn\":true}")));
 
-		assertThat(result).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.SCORED, true));
+		assertThat(result).extracting(UploadTripService.Result::tripId, UploadTripService.Result::status, UploadTripService.Result::created)
+			.containsExactly("trip-1", TripStatus.SCORED, true);
 		Trip saved = trips.findById("trip-1").orElseThrow();
 		assertThat(saved.getDriverId()).isEqualTo(1L);
 		assertThat(saved.getDistanceKm()).isEqualTo(12.3);
@@ -66,7 +67,8 @@ class UploadTripServiceTest {
 		// 재전송 중 내용이 달라져도 처음 저장한 운행이 기준이다.
 		UploadTripService.Result retried = service.upload(1L, command("trip-1", 1.0));
 
-		assertThat(retried).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.NO_TURN, false));
+		assertThat(retried).extracting(UploadTripService.Result::tripId, UploadTripService.Result::status, UploadTripService.Result::created)
+			.containsExactly("trip-1", TripStatus.NO_TURN, false);
 		assertThat(trips.findAll()).singleElement()
 			.satisfies(trip -> assertThat(trip.getDistanceKm()).isEqualTo(12.3));
 	}
@@ -90,7 +92,8 @@ class UploadTripServiceTest {
 
 		UploadTripService.Result result = service.upload(1L, command("trip-1", 12.3));
 
-		assertThat(result).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.UPLOADED, false));
+		assertThat(result).extracting(UploadTripService.Result::tripId, UploadTripService.Result::status, UploadTripService.Result::created)
+			.containsExactly("trip-1", TripStatus.UPLOADED, false);
 		assertThat(trips.findAll()).hasSize(1);
 	}
 

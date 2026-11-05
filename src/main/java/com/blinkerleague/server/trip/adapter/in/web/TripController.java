@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.application.service.TripScoreView;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.TripEventType;
@@ -39,7 +40,7 @@ public class TripController {
 		@Valid @RequestBody UploadTripRequest request) {
 		UploadTripService.Result result = uploadTripService.upload(driverId, request.toCommand());
 		return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
-			.body(new TripResult(result.tripId(), result.status()));
+			.body(TripResult.from(result.trip()));
 	}
 
 	/** 원시 위치 좌표 필드는 두지 않는다(개인정보 요구사항). */
@@ -70,7 +71,18 @@ public class TripController {
 		}
 	}
 
-	/** 점수 응답(plan.md 3.5)과 같은 구조. 점수 · 미션 필드는 feat/trip-score, feat/daily-mission에서 채운다. */
-	public record TripResult(String tripId, TripStatus status) {
+	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). 미션 필드는 feat/daily-mission에서 채운다. */
+	public record TripResult(String tripId, TripStatus status, Integer score, String grade,
+		List<MetricResult> metrics) {
+
+		static TripResult from(TripScoreView view) {
+			List<MetricResult> metrics = view.metrics().stream()
+				.map(m -> new MetricResult(m.metric(), m.value(), m.score(), m.weight()))
+				.toList();
+			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics);
+		}
+	}
+
+	public record MetricResult(ScoreItem metric, double value, int score, double weight) {
 	}
 }

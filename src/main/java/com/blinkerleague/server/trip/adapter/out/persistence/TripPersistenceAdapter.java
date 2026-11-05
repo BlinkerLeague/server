@@ -2,10 +2,12 @@ package com.blinkerleague.server.trip.adapter.out.persistence;
 
 import java.util.Optional;
 
+import org.hibernate.Hibernate;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
@@ -19,9 +21,13 @@ public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort {
 
 	private final TripJpaRepository repository;
 
+	// open-in-view가 꺼져 있으므로 응답에 쓰는 지연 컬렉션은 트랜잭션 안에서 읽어 둔다.
 	@Override
+	@Transactional(readOnly = true)
 	public Optional<Trip> findById(String tripId) {
-		return repository.findById(tripId);
+		Optional<Trip> trip = repository.findById(tripId);
+		trip.ifPresent(found -> Hibernate.initialize(found.getMetrics()));
+		return trip;
 	}
 
 	@Override
