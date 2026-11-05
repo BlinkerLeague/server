@@ -123,6 +123,13 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 없는_운행의_점수를_조회하면_404_NOT_FOUND를_반환한다() throws Exception {
+		getScore(1L, UUID.randomUUID().toString())
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
@@ -211,6 +218,11 @@ class TripControllerTest {
 		ObjectNode parent = (ObjectNode)body.at(field.head());
 		parent.set(field.last().getMatchingProperty(), objectMapper.readTree(value));
 		return body.toString();
+	}
+
+	private ResultActions getScore(Long driverId, String tripId) throws Exception {
+		return mockMvc.perform(get("/api/trips/{tripId}/score", tripId)
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId)));
 	}
 
 	private ResultActions upload(Long driverId, String body) throws Exception {
