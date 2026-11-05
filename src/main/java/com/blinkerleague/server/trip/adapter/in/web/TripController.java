@@ -18,6 +18,7 @@ import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.score.domain.PlayResult;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.service.GetTripScoreService;
+import com.blinkerleague.server.trip.application.service.ListRecentTripsService;
 import com.blinkerleague.server.trip.application.service.TripScoreView;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
@@ -39,6 +40,7 @@ public class TripController {
 
 	private final UploadTripService uploadTripService;
 	private final GetTripScoreService getTripScoreService;
+	private final ListRecentTripsService listRecentTripsService;
 
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
 	@PostMapping
@@ -47,6 +49,12 @@ public class TripController {
 		UploadTripService.Result result = uploadTripService.upload(driverId, request.toCommand());
 		return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
 			.body(TripResult.from(result.trip()));
+	}
+
+	/** 최근 경기 목록(SCR-01). 종료 시각 최신순. */
+	@GetMapping
+	public List<RecentTripResult> recent(@CurrentDriver Long driverId) {
+		return listRecentTripsService.list(driverId).stream().map(RecentTripResult::from).toList();
 	}
 
 	@GetMapping("/{tripId}/score")
@@ -99,6 +107,15 @@ public class TripController {
 				new TurnsResult(view.turns().total(), view.turns().success()),
 				new SummaryResult(view.summary().goals(), view.summary().conceded(), view.summary().fouls()),
 				plays, null);
+		}
+	}
+
+	public record RecentTripResult(String tripId, OffsetDateTime endedAt, double distanceKm, TripStatus status,
+		Integer score, String grade) {
+
+		static RecentTripResult from(ListRecentTripsService.RecentTrip trip) {
+			return new RecentTripResult(trip.tripId(), OffsetDateTime.ofInstant(trip.endedAt(), TimeConfig.ZONE),
+				trip.distanceKm(), trip.status(), trip.score(), trip.grade());
 		}
 	}
 

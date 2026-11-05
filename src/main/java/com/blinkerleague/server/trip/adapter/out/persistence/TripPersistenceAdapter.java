@@ -1,5 +1,6 @@
 package com.blinkerleague.server.trip.adapter.out.persistence;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.Hibernate;
@@ -9,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.blinkerleague.server.trip.application.port.out.LoadRecentTripsPort;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
 import com.blinkerleague.server.trip.domain.Trip;
@@ -17,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort {
+public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort, LoadRecentTripsPort {
 
 	private final TripJpaRepository repository;
 
@@ -31,6 +33,11 @@ public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort {
 			Hibernate.initialize(found.getEvents());
 		});
 		return trip;
+	}
+
+	@Override
+	public List<Trip> findRecentByDriver(Long driverId) {
+		return repository.findByDriverIdOrderByEndedAtDesc(driverId);
 	}
 
 	@Override
