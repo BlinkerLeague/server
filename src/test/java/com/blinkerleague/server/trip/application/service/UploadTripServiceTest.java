@@ -2,6 +2,7 @@ package com.blinkerleague.server.trip.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +20,7 @@ import com.blinkerleague.server.threshold.domain.VersionedThresholds;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripEventType;
+import com.blinkerleague.server.trip.domain.TripMetric;
 import com.blinkerleague.server.trip.domain.TripStatus;
 
 class UploadTripServiceTest {
@@ -102,6 +104,9 @@ class UploadTripServiceTest {
 		Trip saved = trips.findById("trip-1").orElseThrow();
 		assertThat(saved.getStatus()).isEqualTo(TripStatus.SCORED);
 		assertThat(saved.getScore()).isEqualTo(75);
+		assertThat(saved.getMetrics())
+			.extracting(TripMetric::getMetric, TripMetric::getValue, TripMetric::getScore, TripMetric::getWeight)
+			.containsExactly(tuple(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0));
 	}
 
 	@Test
