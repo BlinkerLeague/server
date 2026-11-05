@@ -1,12 +1,14 @@
 package com.blinkerleague.server.trip.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -189,6 +191,23 @@ class TripControllerTest {
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(1L)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@Test
+	void 회전_300회_운행도_업로드와_점수_계산을_3초_안에_끝낸다() throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 120.0));
+		ArrayNode events = body.putArray("events");
+		for (int i = 0; i < 300; i++) {
+			events.addObject()
+				.put("eventId", UUID.randomUUID().toString())
+				.put("type", "TURN")
+				.put("occurredAt", "2026-11-03T08:%02d:%02d+09:00".formatted(1 + i / 60, i % 60))
+				.putObject("payload").put("direction", "LEFT").put("signalOn", i % 4 != 0);
+		}
+
+		assertTimeoutPreemptively(Duration.ofSeconds(3), () -> upload(1L, body.toString())
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.score").value(75)));
 	}
 
 	@Test
