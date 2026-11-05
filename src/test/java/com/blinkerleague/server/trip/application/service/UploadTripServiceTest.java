@@ -31,12 +31,12 @@ class UploadTripServiceTest {
 		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)));
 
 	@Test
-	void 최소_거리_이상_운행은_이벤트와_함께_UPLOADED로_저장하고_새로_만들었다고_알린다() {
+	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {
 		UploadTripService.Result result = service.upload(1L, command("trip-1", 12.3,
 			new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600),
 				"{\"direction\":\"LEFT\",\"signalOn\":true}")));
 
-		assertThat(result).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.UPLOADED, true));
+		assertThat(result).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.SCORED, true));
 		Trip saved = trips.findById("trip-1").orElseThrow();
 		assertThat(saved.getDriverId()).isEqualTo(1L);
 		assertThat(saved.getDistanceKm()).isEqualTo(12.3);
@@ -49,7 +49,7 @@ class UploadTripServiceTest {
 	}
 
 	@ParameterizedTest(name = "{0}km → {1}")
-	@CsvSource({"0.0, EXCLUDED_SHORT", "2.9, EXCLUDED_SHORT", "3.0, UPLOADED", "3.1, UPLOADED"})
+	@CsvSource({"0.0, EXCLUDED_SHORT", "2.9, EXCLUDED_SHORT", "3.0, NO_TURN", "3.1, NO_TURN"})
 	void 기준값의_최소_거리_미만_운행은_EXCLUDED_SHORT로_저장한다(double distanceKm, TripStatus expected) {
 		UploadTripService.Result result = service.upload(1L, command("trip-1", distanceKm));
 
@@ -64,7 +64,7 @@ class UploadTripServiceTest {
 		// 재전송 중 내용이 달라져도 처음 저장한 운행이 기준이다.
 		UploadTripService.Result retried = service.upload(1L, command("trip-1", 1.0));
 
-		assertThat(retried).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.UPLOADED, false));
+		assertThat(retried).isEqualTo(new UploadTripService.Result("trip-1", TripStatus.NO_TURN, false));
 		assertThat(trips.findAll()).singleElement()
 			.satisfies(trip -> assertThat(trip.getDistanceKm()).isEqualTo(12.3));
 	}

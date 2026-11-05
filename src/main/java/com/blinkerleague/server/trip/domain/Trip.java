@@ -91,6 +91,12 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 		return trip;
 	}
 
+	/** 점수 계산 결과를 반영한다. 측정할 항목이 없어 점수가 없으면 NO_TURN이다(plan.md 3.5). */
+	public void applyScore(Integer score) {
+		this.score = score;
+		this.status = score == null ? TripStatus.NO_TURN : TripStatus.SCORED;
+	}
+
 	@Override
 	public boolean isNew() {
 		return newEntity;

@@ -41,13 +41,13 @@ class TripControllerTest {
 	JdbcTemplate jdbcTemplate;
 
 	@Test
-	void 운행을_업로드하면_201과_tripId_UPLOADED_상태를_돌려준다() throws Exception {
+	void 운행을_업로드하면_201과_tripId_점수를_매긴_상태를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 
 		upload(1L, tripBody(tripId, 12.3))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.tripId").value(tripId))
-			.andExpect(jsonPath("$.status").value("UPLOADED"));
+			.andExpect(jsonPath("$.status").value("SCORED"));
 	}
 
 	@Test
@@ -58,7 +58,7 @@ class TripControllerTest {
 		upload(1L, tripBody(tripId, 1.0))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.tripId").value(tripId))
-			.andExpect(jsonPath("$.status").value("UPLOADED"));
+			.andExpect(jsonPath("$.status").value("SCORED"));
 	}
 
 	@Test
