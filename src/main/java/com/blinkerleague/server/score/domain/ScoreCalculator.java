@@ -15,7 +15,7 @@ public class ScoreCalculator {
 
 	public ScoreResult calculate(Set<ScoreItem> supported, List<TurnRecord> turns, Map<ScoreItem, Double> weights) {
 		Map<ScoreItem, Double> values = new EnumMap<>(ScoreItem.class);
-		if (!turns.isEmpty()) {
+		if (supported.contains(ScoreItem.TURN_SIGNAL) && !turns.isEmpty()) {
 			long signalOn = turns.stream().filter(TurnRecord::signalOn).count();
 			values.put(ScoreItem.TURN_SIGNAL, (double) signalOn / turns.size());
 		}
