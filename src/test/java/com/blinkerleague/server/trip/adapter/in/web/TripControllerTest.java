@@ -2,6 +2,7 @@ package com.blinkerleague.server.trip.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,6 +101,25 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.plays[2].result").value("CONCEDED"))
 			.andExpect(jsonPath("$.mission").hasJsonPath())
 			.andExpect(jsonPath("$.mission").value(nullValue()));
+	}
+
+	@Test
+	void 내_운행의_점수를_업로드_응답과_같은_구조로_조회한다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/trips/{tripId}/score", tripId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(1L)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.tripId").value(tripId))
+			.andExpect(jsonPath("$.status").value("SCORED"))
+			.andExpect(jsonPath("$.score").value(100))
+			.andExpect(jsonPath("$.grade").value("S"))
+			.andExpect(jsonPath("$.metrics[0].metric").value("TURN_SIGNAL"))
+			.andExpect(jsonPath("$.turns.total").value(1))
+			.andExpect(jsonPath("$.summary.goals").value(1))
+			.andExpect(jsonPath("$.plays[0].result").value("GOAL"))
+			.andExpect(jsonPath("$.mission").hasJsonPath());
 	}
 
 	@Test
