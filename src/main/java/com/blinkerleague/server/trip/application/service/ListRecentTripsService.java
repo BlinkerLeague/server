@@ -14,12 +14,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ListRecentTripsService {
 
+	private static final int DEFAULT_LIMIT = 10;
+
 	private final LoadRecentTripsPort loadRecentTripsPort;
 	private final ThresholdProvider thresholdProvider;
 
 	public List<RecentTrip> list(Long driverId, Integer limit) {
 		Thresholds thresholds = thresholdProvider.current().thresholds();
-		return loadRecentTripsPort.findRecentByDriver(driverId).stream()
+		return loadRecentTripsPort.findRecentByDriver(driverId, DEFAULT_LIMIT).stream()
 			.map(trip -> new RecentTrip(trip.getId(), trip.getEndedAt(), trip.getDistanceKm(), trip.getStatus(),
 				trip.getScore(), TripScoreView.gradeOf(trip.getScore(), thresholds)))
 			.toList();

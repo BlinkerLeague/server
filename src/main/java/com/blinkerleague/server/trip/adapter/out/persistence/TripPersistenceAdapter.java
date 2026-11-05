@@ -7,6 +7,7 @@ import org.hibernate.Hibernate;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,8 +37,8 @@ public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort, LoadR
 	}
 
 	@Override
-	public List<Trip> findRecentByDriver(Long driverId) {
-		return repository.findByDriverIdOrderByEndedAtDesc(driverId);
+	public List<Trip> findRecentByDriver(Long driverId, int limit) {
+		return repository.findByDriverIdOrderByEndedAtDesc(driverId, PageRequest.of(0, limit));
 	}
 
 	@Override

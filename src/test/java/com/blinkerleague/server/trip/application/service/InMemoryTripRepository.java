@@ -24,10 +24,11 @@ class InMemoryTripRepository implements LoadTripPort, SaveTripPort, LoadRecentTr
 	}
 
 	@Override
-	public List<Trip> findRecentByDriver(Long driverId) {
+	public List<Trip> findRecentByDriver(Long driverId, int limit) {
 		return trips.values().stream()
 			.filter(trip -> trip.getDriverId().equals(driverId))
 			.sorted(Comparator.comparing(Trip::getEndedAt).reversed())
+			.limit(limit)
 			.toList();
 	}
 
