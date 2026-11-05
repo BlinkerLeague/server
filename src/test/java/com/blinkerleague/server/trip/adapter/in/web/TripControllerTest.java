@@ -1,6 +1,7 @@
 package com.blinkerleague.server.trip.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -61,6 +62,44 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.metrics[0].value").value(1.0))
 			.andExpect(jsonPath("$.metrics[0].score").value(100))
 			.andExpect(jsonPath("$.metrics[0].weight").value(1.0));
+	}
+
+	@Test
+	void 업로드_응답에_회전_수_경기_요약_시각순_경기_기록을_담고_미션은_아직_null이다() throws Exception {
+		String body = """
+			{
+			  "tripId": "%s",
+			  "startedAt": "2026-11-03T08:00:00+09:00",
+			  "endedAt": "2026-11-03T08:40:00+09:00",
+			  "distanceKm": 12.3,
+			  "supported": ["TURN_SIGNAL"],
+			  "events": [
+			    { "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T08:15:02+09:00",
+			      "payload": { "direction": "RIGHT", "signalOn": false } },
+			    { "eventId": "%s", "type": "LANE_CHANGE", "occurredAt": "2026-11-03T08:14:00+09:00", "payload": {} },
+			    { "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T08:12:30+09:00",
+			      "payload": { "direction": "LEFT", "signalOn": true } }
+			  ]
+			}
+			""".formatted(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+
+		upload(1L, body)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.turns.total").value(2))
+			.andExpect(jsonPath("$.turns.success").value(1))
+			.andExpect(jsonPath("$.summary.goals").value(1))
+			.andExpect(jsonPath("$.summary.conceded").value(1))
+			.andExpect(jsonPath("$.summary.fouls").value(0))
+			.andExpect(jsonPath("$.plays.length()").value(3))
+			.andExpect(jsonPath("$.plays[0].type").value("TURN"))
+			.andExpect(jsonPath("$.plays[0].result").value("GOAL"))
+			.andExpect(jsonPath("$.plays[0].occurredAt").value("2026-11-03T08:12:30+09:00"))
+			.andExpect(jsonPath("$.plays[1].type").value("LANE_CHANGE"))
+			.andExpect(jsonPath("$.plays[1].result").hasJsonPath())
+			.andExpect(jsonPath("$.plays[1].result").value(nullValue()))
+			.andExpect(jsonPath("$.plays[2].result").value("CONCEDED"))
+			.andExpect(jsonPath("$.mission").hasJsonPath())
+			.andExpect(jsonPath("$.mission").value(nullValue()));
 	}
 
 	@Test
