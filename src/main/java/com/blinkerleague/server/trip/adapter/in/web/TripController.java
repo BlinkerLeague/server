@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
@@ -53,8 +54,9 @@ public class TripController {
 
 	/** 최근 경기 목록(SCR-01). 종료 시각 최신순. */
 	@GetMapping
-	public List<RecentTripResult> recent(@CurrentDriver Long driverId) {
-		return listRecentTripsService.list(driverId, null).stream().map(RecentTripResult::from).toList();
+	public List<RecentTripResult> recent(@CurrentDriver Long driverId,
+		@RequestParam(required = false) Integer limit) {
+		return listRecentTripsService.list(driverId, limit).stream().map(RecentTripResult::from).toList();
 	}
 
 	@GetMapping("/{tripId}/score")
