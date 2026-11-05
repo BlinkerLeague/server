@@ -130,6 +130,16 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 남의_운행_점수를_조회하면_있는지_알리지_않고_404_NOT_FOUND를_반환한다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
+
+		getScore(2L, tripId)
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
