@@ -26,7 +26,10 @@ public class TripPersistenceAdapter implements LoadTripPort, SaveTripPort {
 	@Transactional(readOnly = true)
 	public Optional<Trip> findById(String tripId) {
 		Optional<Trip> trip = repository.findById(tripId);
-		trip.ifPresent(found -> Hibernate.initialize(found.getMetrics()));
+		trip.ifPresent(found -> {
+			Hibernate.initialize(found.getMetrics());
+			Hibernate.initialize(found.getEvents());
+		});
 		return trip;
 	}
 

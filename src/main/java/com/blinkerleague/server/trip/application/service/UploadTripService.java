@@ -7,7 +7,6 @@ import java.util.Set;
 
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
-import com.blinkerleague.server.score.domain.DrivingEvent;
 import com.blinkerleague.server.score.domain.ScoreCalculator;
 import com.blinkerleague.server.score.domain.ScoreResult;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
@@ -18,7 +17,6 @@ import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlreadyExistsException;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
-import com.blinkerleague.server.trip.domain.TripEventType;
 import com.blinkerleague.server.trip.domain.TripMetric;
 import com.blinkerleague.server.trip.domain.TripStatus;
 
@@ -42,7 +40,7 @@ public class UploadTripService {
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), thresholds.trip().minDistanceKm());
 		if (trip.getStatus() == TripStatus.UPLOADED) {
-			ScoreResult score = scoreCalculator.calculate(trip.getSupportedSignals(), drivingEvents(command.events()),
+			ScoreResult score = scoreCalculator.calculate(trip.getSupportedSignals(), DrivingEvents.fromRecorded(command.events()),
 				thresholds.weights());
 			trip.applyScore(score.score(), score.metrics().stream()
 				.map(m -> new TripMetric(m.metric(), m.value(), m.score(), m.weight()))
@@ -55,13 +53,6 @@ public class UploadTripService {
 			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
 		return new Result(TripScoreView.of(trip, thresholds), true);
-	}
-
-	private static List<DrivingEvent> drivingEvents(List<RecordedEvent> events) {
-		return events.stream()
-			.map(event -> new DrivingEvent(event.type(), event.occurredAt(),
-				event.type() == TripEventType.TURN && TurnPayload.signalOn(event.payload())))
-			.toList();
 	}
 
 	// 재전송은 처음 저장한 결과를 돌려주고, 남의 운행이면 결과를 알려주지 않고 거부한다.

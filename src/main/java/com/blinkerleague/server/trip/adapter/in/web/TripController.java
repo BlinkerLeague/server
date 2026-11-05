@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
+import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.service.TripScoreView;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
@@ -71,18 +72,38 @@ public class TripController {
 		}
 	}
 
-	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). 미션 필드는 feat/daily-mission에서 채운다. */
+	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). mission은 feat/daily-mission 전까지 null이다. */
 	public record TripResult(String tripId, TripStatus status, Integer score, String grade,
-		List<MetricResult> metrics) {
+		List<MetricResult> metrics, TurnsResult turns, SummaryResult summary, List<PlayResult> plays,
+		Object mission) {
 
 		static TripResult from(TripScoreView view) {
 			List<MetricResult> metrics = view.metrics().stream()
 				.map(m -> new MetricResult(m.metric(), m.value(), m.score(), m.weight()))
 				.toList();
-			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics);
+			List<PlayResult> plays = view.plays().stream()
+				.map(p -> new PlayResult(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
+					p.result()))
+				.toList();
+			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics,
+				new TurnsResult(view.turns().total(), view.turns().success()),
+				new SummaryResult(view.summary().goals(), view.summary().conceded(), view.summary().fouls()),
+				plays, null);
 		}
 	}
 
 	public record MetricResult(ScoreItem metric, double value, int score, double weight) {
+	}
+
+	public record TurnsResult(int total, int success) {
+	}
+
+	/** 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0, D22). */
+	public record SummaryResult(int goals, int conceded, int fouls) {
+	}
+
+	/** TURN이 아닌 이벤트는 result가 null이다(D22). */
+	public record PlayResult(OffsetDateTime occurredAt, TripEventType type,
+		com.blinkerleague.server.score.domain.PlayResult result) {
 	}
 }
