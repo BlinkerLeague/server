@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +17,7 @@ import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
 import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.score.domain.PlayResult;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.application.service.GetTripScoreService;
 import com.blinkerleague.server.trip.application.service.TripScoreView;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
@@ -35,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 public class TripController {
 
 	private final UploadTripService uploadTripService;
+	private final GetTripScoreService getTripScoreService;
 
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
 	@PostMapping
@@ -43,6 +47,11 @@ public class TripController {
 		UploadTripService.Result result = uploadTripService.upload(driverId, request.toCommand());
 		return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
 			.body(TripResult.from(result.trip()));
+	}
+
+	@GetMapping("/{tripId}/score")
+	public TripResult score(@CurrentDriver Long driverId, @PathVariable String tripId) {
+		return TripResult.from(getTripScoreService.get(driverId, tripId));
 	}
 
 	/** 원시 위치 좌표 필드는 두지 않는다(개인정보 요구사항). */
