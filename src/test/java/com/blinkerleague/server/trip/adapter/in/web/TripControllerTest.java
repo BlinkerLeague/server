@@ -140,6 +140,34 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 최근_경기_목록은_내_운행만_종료_시각_최신순으로_돌려준다() throws Exception {
+		Long me = 1001L;
+		String older = UUID.randomUUID().toString();
+		String newest = UUID.randomUUID().toString();
+		String shortTrip = UUID.randomUUID().toString();
+		upload(me, tripBodyEndingAt(older, 12.3, "2026-11-03T08:40:00+09:00")).andExpect(status().isCreated());
+		upload(me, tripBodyEndingAt(newest, 12.3, "2026-11-03T18:40:00+09:00")).andExpect(status().isCreated());
+		upload(me, tripBodyEndingAt(shortTrip, 2.0, "2026-11-03T12:40:00+09:00")).andExpect(status().isCreated());
+		upload(1002L, tripBodyEndingAt(UUID.randomUUID().toString(), 12.3, "2026-11-03T20:40:00+09:00"))
+			.andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/trips").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(me)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.length()").value(3))
+			.andExpect(jsonPath("$[0].tripId").value(newest))
+			.andExpect(jsonPath("$[0].endedAt").value("2026-11-03T18:40:00+09:00"))
+			.andExpect(jsonPath("$[0].distanceKm").value(12.3))
+			.andExpect(jsonPath("$[0].status").value("SCORED"))
+			.andExpect(jsonPath("$[0].score").value(100))
+			.andExpect(jsonPath("$[0].grade").value("S"))
+			.andExpect(jsonPath("$[1].tripId").value(shortTrip))
+			.andExpect(jsonPath("$[1].status").value("EXCLUDED_SHORT"))
+			.andExpect(jsonPath("$[1].score").value(nullValue()))
+			.andExpect(jsonPath("$[1].grade").value(nullValue()))
+			.andExpect(jsonPath("$[2].tripId").value(older));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
@@ -240,6 +268,10 @@ class TripControllerTest {
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(body));
+	}
+
+	private static String tripBodyEndingAt(String tripId, double distanceKm, String endedAt) {
+		return tripBody(tripId, distanceKm).replace("2026-11-03T08:40:00+09:00", endedAt);
 	}
 
 	private static String tripBody(String tripId, double distanceKm) {
