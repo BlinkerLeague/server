@@ -168,6 +168,21 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 최근_경기_목록은_limit만큼만_돌려준다() throws Exception {
+		Long me = 1003L;
+		for (int hour = 10; hour <= 12; hour++) {
+			upload(me, tripBodyEndingAt(UUID.randomUUID().toString(), 12.3, "2026-11-03T%d:00:00+09:00".formatted(hour)))
+				.andExpect(status().isCreated());
+		}
+
+		mockMvc.perform(get("/api/trips").param("limit", "2")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(me)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.length()").value(2))
+			.andExpect(jsonPath("$[0].endedAt").value("2026-11-03T12:00:00+09:00"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
