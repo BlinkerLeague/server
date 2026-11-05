@@ -29,4 +29,11 @@ class ScoreCalculatorTest {
 
 		assertThat(result.score()).isEqualTo(75);
 	}
+
+	@Test
+	void 회전이_0회면_측정할_항목이_없어_점수가_없다() {
+		ScoreResult result = calculator.calculate(Set.of(ScoreItem.TURN_SIGNAL), List.of(), WEIGHTS);
+
+		assertThat(result.score()).isNull();
+	}
 }
