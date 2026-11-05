@@ -10,6 +10,9 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 public class ScoreCalculator {
 
 	public ScoreResult calculate(Set<ScoreItem> supported, List<TurnRecord> turns, Map<ScoreItem, Double> weights) {
+		if (turns.isEmpty()) {
+			return new ScoreResult(null);
+		}
 		long signalOn = turns.stream().filter(TurnRecord::signalOn).count();
 		return new ScoreResult((int) Math.round(signalOn * 100.0 / turns.size()));
 	}
