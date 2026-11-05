@@ -92,6 +92,23 @@ class UploadTripServiceTest {
 		assertThat(trips.findAll()).hasSize(1);
 	}
 
+	@Test
+	void 최소_거리_이상_운행은_업로드할_때_회전_깜빡이_비율로_점수를_매겨_SCORED로_저장한다() {
+		UploadTripService.Result result = service.upload(1L, command("trip-1", 12.3,
+			turn("event-1", 600, true), turn("event-2", 700, true), turn("event-3", 800, true),
+			turn("event-4", 900, false)));
+
+		assertThat(result.status()).isEqualTo(TripStatus.SCORED);
+		Trip saved = trips.findById("trip-1").orElseThrow();
+		assertThat(saved.getStatus()).isEqualTo(TripStatus.SCORED);
+		assertThat(saved.getScore()).isEqualTo(75);
+	}
+
+	private static RecordedEvent turn(String eventId, long secondsAfterStart, boolean signalOn) {
+		return new RecordedEvent(eventId, TripEventType.TURN, STARTED_AT.plusSeconds(secondsAfterStart),
+			"{\"direction\":\"LEFT\",\"signalOn\":" + signalOn + "}");
+	}
+
 	private static UploadTripService.Command command(String tripId, double distanceKm, RecordedEvent... events) {
 		return new UploadTripService.Command(tripId, STARTED_AT, ENDED_AT, distanceKm, Set.of(ScoreItem.TURN_SIGNAL),
 			List.of(events));
