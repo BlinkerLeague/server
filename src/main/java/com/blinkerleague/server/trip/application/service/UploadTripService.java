@@ -19,6 +19,7 @@ import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlrea
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripEventType;
+import com.blinkerleague.server.trip.domain.TripMetric;
 import com.blinkerleague.server.trip.domain.TripStatus;
 
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,9 @@ public class UploadTripService {
 		if (trip.getStatus() == TripStatus.UPLOADED) {
 			ScoreResult score = scoreCalculator.calculate(trip.getSupportedSignals(), drivingEvents(command.events()),
 				thresholds.weights());
-			trip.applyScore(score.score(), List.of());
+			trip.applyScore(score.score(), score.metrics().stream()
+				.map(m -> new TripMetric(m.metric(), m.value(), m.score(), m.weight()))
+				.toList());
 		}
 		try {
 			saveTripPort.saveNew(trip);
