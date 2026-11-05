@@ -28,6 +28,13 @@ class ListRecentTripsServiceTest {
 		assertThat(service.list(1L, null)).hasSize(10);
 	}
 
+	@Test
+	void limit이_50을_넘으면_50건으로_자른다() {
+		saveTrips(1L, 51);
+
+		assertThat(service.list(1L, 100)).hasSize(50);
+	}
+
 	private void saveTrips(Long driverId, int count) {
 		for (int i = 0; i < count; i++) {
 			trips.saveNew(Trip.upload("trip-" + i, driverId, STARTED_AT.plusSeconds(3600L * i),
