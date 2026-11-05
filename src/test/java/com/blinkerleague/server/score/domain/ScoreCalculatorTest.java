@@ -2,6 +2,7 @@ package com.blinkerleague.server.score.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.domain.TripEventType;
 
 class ScoreCalculatorTest {
 
@@ -19,12 +21,14 @@ class ScoreCalculatorTest {
 		ScoreItem.SAFETY_WARNING, 0.2,
 		ScoreItem.NIGHT_HEADLIGHT, 0.1);
 
+	private static final Instant AT = Instant.parse("2026-11-03T08:12:30+09:00");
+
 	private final ScoreCalculator calculator = new ScoreCalculator();
 
 	@Test
 	void 회전_4회_중_3회_깜빡이를_켜면_75점이다() {
-		List<TurnRecord> turns = List.of(
-			new TurnRecord(true), new TurnRecord(true), new TurnRecord(true), new TurnRecord(false));
+		List<DrivingEvent> turns = List.of(
+			turn(true), turn(true), turn(true), turn(false));
 
 		ScoreResult result = calculator.calculate(Set.of(ScoreItem.TURN_SIGNAL), turns, WEIGHTS);
 
@@ -40,8 +44,8 @@ class ScoreCalculatorTest {
 
 	@Test
 	void 차량이_모든_항목을_지원해도_P0은_깜빡이만_측정해_가중치_1로_재분배한다() {
-		List<TurnRecord> turns = List.of(
-			new TurnRecord(true), new TurnRecord(true), new TurnRecord(true), new TurnRecord(false));
+		List<DrivingEvent> turns = List.of(
+			turn(true), turn(true), turn(true), turn(false));
 
 		ScoreResult result = calculator.calculate(EnumSet.allOf(ScoreItem.class), turns, WEIGHTS);
 
@@ -51,11 +55,15 @@ class ScoreCalculatorTest {
 
 	@Test
 	void 차량이_깜빡이_신호를_지원하지_않으면_회전이_있어도_점수가_없다() {
-		List<TurnRecord> turns = List.of(new TurnRecord(true), new TurnRecord(false));
+		List<DrivingEvent> turns = List.of(turn(true), turn(false));
 
 		ScoreResult result = calculator.calculate(Set.of(ScoreItem.SMOOTH_DRIVING), turns, WEIGHTS);
 
 		assertThat(result.score()).isNull();
 		assertThat(result.metrics()).isEmpty();
+	}
+
+	private static DrivingEvent turn(boolean signalOn) {
+		return new DrivingEvent(TripEventType.TURN, AT, signalOn);
 	}
 }

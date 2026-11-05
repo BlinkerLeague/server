@@ -13,10 +13,11 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
  */
 public class ScoreCalculator {
 
-	public ScoreResult calculate(Set<ScoreItem> supported, List<TurnRecord> turns, Map<ScoreItem, Double> weights) {
+	public ScoreResult calculate(Set<ScoreItem> supported, List<DrivingEvent> events, Map<ScoreItem, Double> weights) {
+		List<DrivingEvent> turns = events;
 		Map<ScoreItem, Double> values = new EnumMap<>(ScoreItem.class);
 		if (supported.contains(ScoreItem.TURN_SIGNAL) && !turns.isEmpty()) {
-			long signalOn = turns.stream().filter(TurnRecord::signalOn).count();
+			long signalOn = turns.stream().filter(DrivingEvent::signalOn).count();
 			values.put(ScoreItem.TURN_SIGNAL, (double) signalOn / turns.size());
 		}
 		if (values.isEmpty()) {
