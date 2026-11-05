@@ -2,6 +2,7 @@ package com.blinkerleague.server.score.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,5 +36,16 @@ class ScoreCalculatorTest {
 		ScoreResult result = calculator.calculate(Set.of(ScoreItem.TURN_SIGNAL), List.of(), WEIGHTS);
 
 		assertThat(result.score()).isNull();
+	}
+
+	@Test
+	void 차량이_모든_항목을_지원해도_P0은_깜빡이만_측정해_가중치_1로_재분배한다() {
+		List<TurnRecord> turns = List.of(
+			new TurnRecord(true), new TurnRecord(true), new TurnRecord(true), new TurnRecord(false));
+
+		ScoreResult result = calculator.calculate(EnumSet.allOf(ScoreItem.class), turns, WEIGHTS);
+
+		assertThat(result.metrics()).containsExactly(new MetricScore(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0));
+		assertThat(result.score()).isEqualTo(75);
 	}
 }

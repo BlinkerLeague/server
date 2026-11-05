@@ -11,9 +11,9 @@ public class ScoreCalculator {
 
 	public ScoreResult calculate(Set<ScoreItem> supported, List<TurnRecord> turns, Map<ScoreItem, Double> weights) {
 		if (turns.isEmpty()) {
-			return new ScoreResult(null);
+			return new ScoreResult(null, List.of());
 		}
 		long signalOn = turns.stream().filter(TurnRecord::signalOn).count();
-		return new ScoreResult((int) Math.round(signalOn * 100.0 / turns.size()));
+		return new ScoreResult((int) Math.round(signalOn * 100.0 / turns.size()), List.of());
 	}
 }
