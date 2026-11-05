@@ -48,4 +48,14 @@ class ScoreCalculatorTest {
 		assertThat(result.metrics()).containsExactly(new MetricScore(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0));
 		assertThat(result.score()).isEqualTo(75);
 	}
+
+	@Test
+	void 차량이_깜빡이_신호를_지원하지_않으면_회전이_있어도_점수가_없다() {
+		List<TurnRecord> turns = List.of(new TurnRecord(true), new TurnRecord(false));
+
+		ScoreResult result = calculator.calculate(Set.of(ScoreItem.SMOOTH_DRIVING), turns, WEIGHTS);
+
+		assertThat(result.score()).isNull();
+		assertThat(result.metrics()).isEmpty();
+	}
 }
