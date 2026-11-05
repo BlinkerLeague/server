@@ -104,6 +104,17 @@ class UploadTripServiceTest {
 		assertThat(saved.getScore()).isEqualTo(75);
 	}
 
+	@Test
+	void signalOn이_없거나_boolean이_아니거나_payload가_없는_회전은_깜빡이를_켜지_않은_회전으로_센다() {
+		service.upload(1L, command("trip-1", 12.3,
+			turn("event-1", 600, true),
+			new RecordedEvent("event-2", TripEventType.TURN, STARTED_AT.plusSeconds(700), "{\"direction\":\"LEFT\"}"),
+			new RecordedEvent("event-3", TripEventType.TURN, STARTED_AT.plusSeconds(800), "{\"signalOn\":\"true\"}"),
+			new RecordedEvent("event-4", TripEventType.TURN, STARTED_AT.plusSeconds(900), null)));
+
+		assertThat(trips.findById("trip-1").orElseThrow().getScore()).isEqualTo(25);
+	}
+
 	private static RecordedEvent turn(String eventId, long secondsAfterStart, boolean signalOn) {
 		return new RecordedEvent(eventId, TripEventType.TURN, STARTED_AT.plusSeconds(secondsAfterStart),
 			"{\"direction\":\"LEFT\",\"signalOn\":" + signalOn + "}");
