@@ -70,7 +70,7 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 	@OrderBy("occurredAt")
 	private List<TripEvent> events = new ArrayList<>();
 
-	@Transient
+	@OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<TripMetric> metrics = new ArrayList<>();
 
 	@Transient
@@ -97,6 +97,8 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 	/** 점수 계산 결과를 반영한다. 측정할 항목이 없어 점수가 없으면 NO_TURN이다(plan.md 3.5). */
 	public void applyScore(Integer score, List<TripMetric> metrics) {
 		this.score = score;
+		metrics.forEach(metric -> metric.assignTo(this));
+		this.metrics.addAll(metrics);
 		this.status = score == null ? TripStatus.NO_TURN : TripStatus.SCORED;
 	}
 
