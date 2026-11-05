@@ -246,6 +246,8 @@ API: `POST /api/trips` (인증 필요. 요청 형식은 아래 제안 형식, D1
 
 ### 3.5 `feat/trip-score` — 점수 엔진 (FR-03, FR-05)
 
+상태: 완료. 순수 점수 엔진은 `score.domain`(`ScoreCalculator`, `WeightRedistribution`, `MatchReport`)에 있고, `POST /api/trips`가 업로드하면서 점수를 매긴다(별도 배치 없음). 항목별 점수는 `trip_metric`에 저장한다(`value`가 H2 예약어라 컬럼 이름은 `metric_value`). `summary` · `plays` · `turns`는 저장하지 않고 조회할 때 이벤트에서 계산한다. 결정: 경기 요약 · 기록 D22, `signalOn` 해석 불가 D23, 목록 `limit` D24. `limit`이 1 미만이면 400(500 방지). 응답 시간은 회전 300회 운행 업로드가 3초 안에 끝나는지 통합 테스트로 확인(로컬 0.2초). 남은 항목: `mission`은 3.6에서 채운다. 기준값(가중치)이 바뀌어도 이미 저장된 점수는 다시 계산하지 않는다(등급만 조회 시점 기준으로 계산).
+
 API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 구조(`TripResult`)
 
 ```json
