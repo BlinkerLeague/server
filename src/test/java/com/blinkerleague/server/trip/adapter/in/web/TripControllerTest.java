@@ -51,6 +51,19 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 업로드_응답에_총점_등급_항목별_점수를_담는다() throws Exception {
+		upload(1L, tripBody(UUID.randomUUID().toString(), 12.3))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.score").value(100))
+			.andExpect(jsonPath("$.grade").value("S"))
+			.andExpect(jsonPath("$.metrics.length()").value(1))
+			.andExpect(jsonPath("$.metrics[0].metric").value("TURN_SIGNAL"))
+			.andExpect(jsonPath("$.metrics[0].value").value(1.0))
+			.andExpect(jsonPath("$.metrics[0].score").value(100))
+			.andExpect(jsonPath("$.metrics[0].weight").value(1.0));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
