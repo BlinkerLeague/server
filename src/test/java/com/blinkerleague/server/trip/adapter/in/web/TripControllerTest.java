@@ -182,6 +182,15 @@ class TripControllerTest {
 			.andExpect(jsonPath("$[0].endedAt").value("2026-11-03T12:00:00+09:00"));
 	}
 
+	@ParameterizedTest(name = "limit={0}")
+	@CsvSource({"0", "-1", "abc"})
+	void 최근_경기_목록_limit이_1_이상의_숫자가_아니면_400_INVALID_INPUT을_반환한다(String limit) throws Exception {
+		mockMvc.perform(get("/api/trips").param("limit", limit)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(1L)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
 	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
