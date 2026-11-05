@@ -63,6 +63,15 @@ class ScoreCalculatorTest {
 		assertThat(result.metrics()).isEmpty();
 	}
 
+	@Test
+	void 회전이_아닌_이벤트는_깜빡이_점수에_세지_않는다() {
+		List<DrivingEvent> events = List.of(turn(true), new DrivingEvent(TripEventType.LANE_CHANGE, AT, false));
+
+		ScoreResult result = calculator.calculate(Set.of(ScoreItem.TURN_SIGNAL), events, WEIGHTS);
+
+		assertThat(result.score()).isEqualTo(100);
+	}
+
 	private static DrivingEvent turn(boolean signalOn) {
 		return new DrivingEvent(TripEventType.TURN, AT, signalOn);
 	}
