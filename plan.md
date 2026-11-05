@@ -97,9 +97,10 @@ FR-02(회전 감지), FR-07(음성 피드백)은 차량 앱 범위라 서버 브
 ```
 com.blinkerleague.server
 ├── common      # 공통 응답, 예외 처리, BaseTimeEntity, 시간 유틸
-├── security    # 토큰 인증 필터, SecurityConfig
+├── security    # SecurityConfig, JWT 인코더 · 디코더 설정
+├── auth        # Access · Refresh 토큰 발급 · 재발급 (8장)
 ├── driver
-├── config      # 측정 기준값 · 가중치 설정 (threshold)
+├── threshold   # 측정 기준값 · 가중치 설정
 ├── trip        # 운행 · 이벤트 업로드
 ├── score       # 점수 엔진 (순수 계산 로직)
 ├── mission
@@ -109,7 +110,19 @@ com.blinkerleague.server
 └── report
 ```
 
-각 도메인 패키지는 `controller / service / repository / domain / dto` 하위 구조를 씁니다.
+**각 도메인 패키지는 헥사고날(포트 · 어댑터) 구조를 씁니다.** 처음 계획한 `controller / service / repository / domain / dto` 구조를 대신합니다. 의존은 항상 안쪽으로(`adapter → application → domain`) 향하고, `HexagonalArchitectureTest`(ArchUnit)가 빌드에서 검사합니다. 자세한 규칙은 CLAUDE.md의 "Architecture" 절을 따릅니다.
+
+```
+<domain>
+├── domain/                 # 도메인 모델 · 규칙 (JPA 엔티티를 겸할 수 있음)
+├── application/
+│   ├── port/in/            # 유스케이스 인터페이스 (선택)
+│   ├── port/out/           # 외부 기술 인터페이스 (필수)
+│   └── service/            # 유스케이스 구현
+└── adapter/
+    ├── in/web/             # 컨트롤러, 요청 · 응답 DTO
+    └── out/<기술>/         # port/out 구현 (persistence, redis, jwt …)
+```
 
 ---
 
