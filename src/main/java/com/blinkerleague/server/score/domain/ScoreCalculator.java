@@ -10,6 +10,7 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 public class ScoreCalculator {
 
 	public ScoreResult calculate(Set<ScoreItem> supported, List<TurnRecord> turns, Map<ScoreItem, Double> weights) {
-		throw new UnsupportedOperationException();
+		long signalOn = turns.stream().filter(TurnRecord::signalOn).count();
+		return new ScoreResult((int) Math.round(signalOn * 100.0 / turns.size()));
 	}
 }
