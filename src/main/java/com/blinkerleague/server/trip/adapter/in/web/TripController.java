@@ -54,7 +54,7 @@ public class TripController {
 	/** 최근 경기 목록(SCR-01). 종료 시각 최신순. */
 	@GetMapping
 	public List<RecentTripResult> recent(@CurrentDriver Long driverId) {
-		return listRecentTripsService.list(driverId).stream().map(RecentTripResult::from).toList();
+		return listRecentTripsService.list(driverId, null).stream().map(RecentTripResult::from).toList();
 	}
 
 	@GetMapping("/{tripId}/score")

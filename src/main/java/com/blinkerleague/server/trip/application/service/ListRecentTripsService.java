@@ -17,7 +17,7 @@ public class ListRecentTripsService {
 	private final LoadRecentTripsPort loadRecentTripsPort;
 	private final ThresholdProvider thresholdProvider;
 
-	public List<RecentTrip> list(Long driverId) {
+	public List<RecentTrip> list(Long driverId, Integer limit) {
 		Thresholds thresholds = thresholdProvider.current().thresholds();
 		return loadRecentTripsPort.findRecentByDriver(driverId).stream()
 			.map(trip -> new RecentTrip(trip.getId(), trip.getEndedAt(), trip.getDistanceKm(), trip.getStatus(),

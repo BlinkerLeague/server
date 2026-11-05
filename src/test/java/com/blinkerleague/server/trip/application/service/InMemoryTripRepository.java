@@ -1,16 +1,19 @@
 package com.blinkerleague.server.trip.application.service;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.blinkerleague.server.trip.application.port.out.LoadRecentTripsPort;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
 import com.blinkerleague.server.trip.domain.Trip;
 
 /** 운행 저장 포트의 메모리 구현. */
-class InMemoryTripRepository implements LoadTripPort, SaveTripPort {
+class InMemoryTripRepository implements LoadTripPort, SaveTripPort, LoadRecentTripsPort {
 
 	private final Map<String, Trip> trips = new LinkedHashMap<>();
 	private Trip racingTrip;
@@ -18,6 +21,14 @@ class InMemoryTripRepository implements LoadTripPort, SaveTripPort {
 	@Override
 	public Optional<Trip> findById(String tripId) {
 		return Optional.ofNullable(trips.get(tripId));
+	}
+
+	@Override
+	public List<Trip> findRecentByDriver(Long driverId) {
+		return trips.values().stream()
+			.filter(trip -> trip.getDriverId().equals(driverId))
+			.sorted(Comparator.comparing(Trip::getEndedAt).reversed())
+			.toList();
 	}
 
 	@Override
