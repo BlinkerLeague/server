@@ -1,7 +1,10 @@
 package com.blinkerleague.server.trip.application.service;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
+import com.blinkerleague.server.trip.domain.Trip;
 
 import lombok.RequiredArgsConstructor;
 
@@ -13,7 +16,8 @@ public class GetTripScoreService {
 	private final ThresholdProvider thresholdProvider;
 
 	public TripScoreView get(Long driverId, String tripId) {
-		return TripScoreView.of(loadTripPort.findById(tripId).orElseThrow(),
-			thresholdProvider.current().thresholds());
+		Trip trip = loadTripPort.findById(tripId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "운행을 찾을 수 없습니다."));
+		return TripScoreView.of(trip, thresholdProvider.current().thresholds());
 	}
 }
