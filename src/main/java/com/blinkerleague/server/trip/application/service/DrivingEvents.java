@@ -1,5 +1,6 @@
 package com.blinkerleague.server.trip.application.service;
 
+import java.time.Instant;
 import java.util.List;
 
 import com.blinkerleague.server.score.domain.DrivingEvent;
@@ -21,7 +22,7 @@ final class DrivingEvents {
 		return events.stream().map(e -> toDrivingEvent(e.type(), e.occurredAt(), e.payload())).toList();
 	}
 
-	private static DrivingEvent toDrivingEvent(TripEventType type, java.time.Instant occurredAt, String payload) {
+	private static DrivingEvent toDrivingEvent(TripEventType type, Instant occurredAt, String payload) {
 		return new DrivingEvent(type, occurredAt, type == TripEventType.TURN && TurnPayload.signalOn(payload));
 	}
 }

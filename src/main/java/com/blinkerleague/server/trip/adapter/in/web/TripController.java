@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
 import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.score.domain.PlayResult;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.service.TripScoreView;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
@@ -74,15 +75,15 @@ public class TripController {
 
 	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). mission은 feat/daily-mission 전까지 null이다. */
 	public record TripResult(String tripId, TripStatus status, Integer score, String grade,
-		List<MetricResult> metrics, TurnsResult turns, SummaryResult summary, List<PlayResult> plays,
+		List<MetricResult> metrics, TurnsResult turns, SummaryResult summary, List<PlayItem> plays,
 		Object mission) {
 
 		static TripResult from(TripScoreView view) {
 			List<MetricResult> metrics = view.metrics().stream()
 				.map(m -> new MetricResult(m.metric(), m.value(), m.score(), m.weight()))
 				.toList();
-			List<PlayResult> plays = view.plays().stream()
-				.map(p -> new PlayResult(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
+			List<PlayItem> plays = view.plays().stream()
+				.map(p -> new PlayItem(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
 					p.result()))
 				.toList();
 			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics,
@@ -103,7 +104,6 @@ public class TripController {
 	}
 
 	/** TURN이 아닌 이벤트는 result가 null이다(D22). */
-	public record PlayResult(OffsetDateTime occurredAt, TripEventType type,
-		com.blinkerleague.server.score.domain.PlayResult result) {
+	public record PlayItem(OffsetDateTime occurredAt, TripEventType type, PlayResult result) {
 	}
 }
