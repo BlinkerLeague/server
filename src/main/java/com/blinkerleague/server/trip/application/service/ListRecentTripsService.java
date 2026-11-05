@@ -3,6 +3,8 @@ package com.blinkerleague.server.trip.application.service;
 import java.time.Instant;
 import java.util.List;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.trip.application.port.out.LoadRecentTripsPort;
@@ -28,9 +30,15 @@ public class ListRecentTripsService {
 			.toList();
 	}
 
-	// 기본 10, 최대 50. 50을 넘으면 거부하지 않고 자른다(plan.md D24).
+	// 기본 10, 최대 50. 50을 넘으면 거부하지 않고 자른다(plan.md D24). 1 미만은 잘못된 요청이다.
 	private static int effectiveLimit(Integer limit) {
-		return limit == null ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+		if (limit == null) {
+			return DEFAULT_LIMIT;
+		}
+		if (limit < 1) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "limit은 1 이상이어야 합니다.");
+		}
+		return Math.min(limit, MAX_LIMIT);
 	}
 
 	public record RecentTrip(String tripId, Instant endedAt, double distanceKm, TripStatus status, Integer score,
