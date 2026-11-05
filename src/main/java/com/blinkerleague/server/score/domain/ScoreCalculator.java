@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.domain.TripEventType;
 
 /**
  * 운행 점수 엔진. DB · 스프링에 의존하지 않는 순수 계산이다(plan.md 3.5).
@@ -14,7 +15,7 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 public class ScoreCalculator {
 
 	public ScoreResult calculate(Set<ScoreItem> supported, List<DrivingEvent> events, Map<ScoreItem, Double> weights) {
-		List<DrivingEvent> turns = events;
+		List<DrivingEvent> turns = events.stream().filter(event -> event.type() == TripEventType.TURN).toList();
 		Map<ScoreItem, Double> values = new EnumMap<>(ScoreItem.class);
 		if (supported.contains(ScoreItem.TURN_SIGNAL) && !turns.isEmpty()) {
 			long signalOn = turns.stream().filter(DrivingEvent::signalOn).count();
