@@ -80,6 +80,10 @@ public class TripController {
 		@NotBlank @Size(max = 36) String eventId,
 		@NotNull TripEventType type,
 		@NotNull OffsetDateTime occurredAt,
+		@Schema(implementation = Object.class, description = "이벤트 타입별 추가 정보(선택). 서버는 해석하지 않고 JSON 그대로 저장한다. "
+			+ "TURN: { \"direction\": \"LEFT\" | \"RIGHT\", \"signalOn\": true | false } "
+			+ "(깜빡이 점수는 signalOn으로 계산한다). 다른 타입의 형식은 아직 정해지지 않아 저장만 한다.",
+			example = "{\"direction\": \"LEFT\", \"signalOn\": true}")
 		JsonNode payload) {
 
 		RecordedEvent toRecordedEvent() {
