@@ -19,8 +19,8 @@ public class MissionBeanConfig {
 
 	@Bean
 	public GetTodayMissionService getTodayMissionService(LoadActiveMissionPort loadActiveMissionPort,
-		LoadDailyRoundsPort loadDailyRoundsPort, Clock clock) {
-		return new GetTodayMissionService(loadActiveMissionPort, loadDailyRoundsPort, clock);
+		LoadDailyRoundsPort loadDailyRoundsPort, DriverMissionStore driverMissionStore, Clock clock) {
+		return new GetTodayMissionService(loadActiveMissionPort, loadDailyRoundsPort, driverMissionStore, clock);
 	}
 
 	@Bean

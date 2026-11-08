@@ -21,6 +21,13 @@ class InMemoryDriverMissionStore implements DriverMissionStore {
 			.findFirst();
 	}
 
+	@Override
+	public Optional<DriverMission> findLatestBefore(Long driverId, String periodKey) {
+		return saved.stream()
+			.filter(m -> m.getDriverId().equals(driverId) && m.getPeriodKey().compareTo(periodKey) < 0)
+			.max(java.util.Comparator.comparing(DriverMission::getPeriodKey));
+	}
+
 	private DriverMission savedConcurrently;
 
 	/** 다음 새 기록을 저장하기 직전에 다른 요청이 같은 날 기록을 먼저 저장한 상황을 흉내 낸다. */

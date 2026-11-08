@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
+import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
@@ -22,6 +23,7 @@ public class GetTodayMissionService {
 
 	private final LoadActiveMissionPort loadActiveMissionPort;
 	private final LoadDailyRoundsPort loadDailyRoundsPort;
+	private final DriverMissionStore driverMissionStore;
 	private final Clock clock;
 
 	public TodayMission today(Long driverId) {

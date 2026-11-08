@@ -25,6 +25,11 @@ public class DriverMissionPersistenceAdapter implements DriverMissionStore {
 	}
 
 	@Override
+	public Optional<DriverMission> findLatestBefore(Long driverId, String periodKey) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
 	public void save(DriverMission driverMission) {
 		try {
 			// 즉시 flush해 같은 날 동시 업로드로 생긴 유니크 충돌을 여기서 잡는다.

@@ -8,6 +8,9 @@ public interface DriverMissionStore {
 
 	Optional<DriverMission> find(Long driverId, Long missionId, String periodKey);
 
+	/** periodKey보다 앞선 날 중 가장 최근 기록(오늘 운행 전 화면에 보여 줄 마지막 미션 날). */
+	Optional<DriverMission> findLatestBefore(Long driverId, String periodKey);
+
 	/** 새 기록이 같은 운전자 · 미션 · 날짜와 겹치면(동시 업로드) {@link DriverMissionAlreadyExistsException}. */
 	void save(DriverMission driverMission);
 
