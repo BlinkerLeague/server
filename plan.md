@@ -14,7 +14,7 @@
 | D3 | 운영 DB | H2 인메모리만 있음 | MVP 시연까지 H2(파일 모드 또는 인메모리), 2차에서 MySQL/PostgreSQL을 docker-compose에 추가 |
 | D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
 | D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | 시즌 내 지역 운전자들의 운행 점수 평균(거리 가중). 2차 착수 전 확정 |
-| D6 | 홈(SCR-01) 연승 표시 | 화면은 P0 홈에 "5일 연승"을 보여주지만 연승 계산은 P1 `feat/streak-badge` | **미정.** A) P0 `feat/daily-mission` 응답에 `streakDays` 추가 / B) P0 동안 화면에서 연승 카드를 숨김(plan 변경 없음) |
+| D6 | 홈(SCR-01) 연승 표시 | 화면은 P0 홈에 "5일 연승"을 보여주지만 연승 계산은 P1 `feat/streak-badge` | **결정(11.8): B) P0 동안 화면에서 연승 카드를 숨김.** `GET /api/missions/today`에 `streakDays`를 넣지 않는다. 연승은 P1 `feat/streak-badge`에서 계산하고 그때 카드를 다시 보여 준다 |
 | D7 | 주간 리포트(SCR-07) "퀘스트 수락" 버튼 | plan은 맞춤 미션을 배치로 자동 생성 | **미정.** A) 수락 API와 미수락 상태 추가 / B) 화면을 "다음 주 퀘스트로 등록됨" 안내로 변경(plan 변경 없음) |
 | D8 | 설정(SCR-08) "리그 순위 공개" 토글 | 개발 기획서 · plan 어디에도 없음 | **미정.** A) `driver`에 공개 여부 컬럼과 리그 집계 제외 로직 추가 / B) 화면에서 제거(plan 변경 없음) |
 | D9 | "측정 누락 구간" 예외 상태 | 서버는 누락 구간을 알 수 없음 | **미정.** A) 업로드 요청에 누락 구간 필드 추가 / B) 앱에서만 표시하는 문구로 둠(plan 변경 없음) |
@@ -301,7 +301,7 @@ API: `GET /api/missions/today`
 
 - `rewardPoint`: 달성 시 지급 포인트(SCR-03). 실제 지급은 `feat/point-ledger`
 - `conditions`: 조건별 진행도(SCR-01 진행 링, SCR-03). 회전 수와 깜빡이 사용률(%)
-- 홈 연승 표시(`streakDays`)를 여기에 넣을지는 D6 결정에 따름
+- 홈 연승 표시(`streakDays`)는 넣지 않음(D6 결정 B, P1 `feat/streak-badge`에서)
 
 작업:
 - `mission` 테이블: `mission_id`, `type`, `period`(`DAILY`/`WEEKLY`), `condition`(JSON), `reward_point`, `active_from`, `active_to`. "회전 깜빡이 완벽"(회전 3회 이상, 사용률 100%, 20P) 시드
