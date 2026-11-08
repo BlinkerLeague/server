@@ -14,6 +14,6 @@ public class SeedBadgeService {
 	private final SaveBadgeCatalogPort saveBadgeCatalogPort;
 
 	public void seedIfAbsent(List<Badge> defaults) {
-		throw new UnsupportedOperationException();
+		saveBadgeCatalogPort.saveAll(defaults);
 	}
 }
