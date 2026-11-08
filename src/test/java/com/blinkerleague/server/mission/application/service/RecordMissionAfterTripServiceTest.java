@@ -29,6 +29,7 @@ class RecordMissionAfterTripServiceTest {
 	private final List<RoundTurns> rounds = new ArrayList<>();
 	private final List<Instant[]> loadedRanges = new ArrayList<>();
 	private final InMemoryDriverMissionStore store = new InMemoryDriverMissionStore();
+	private final List<Object[]> rewards = new ArrayList<>();
 
 	private final RecordMissionAfterTripService service = new RecordMissionAfterTripService(
 		date -> Optional.of(seed),
@@ -36,7 +37,8 @@ class RecordMissionAfterTripServiceTest {
 			loadedRanges.add(new Instant[] {from, to});
 			return rounds;
 		},
-		store, Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+		store, (driverId, refId, rewardPoint) -> rewards.add(new Object[] {driverId, refId, rewardPoint}),
+		Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
 
 	@Test
 	void 운행이_끝난_날의_미션을_판정해_driver_mission에_남기고_결과를_돌려준다() {
@@ -76,7 +78,8 @@ class RecordMissionAfterTripServiceTest {
 	@Test
 	void 그날_운영_중인_미션이_없으면_기록하지_않고_빈_결과를_돌려준다() {
 		RecordMissionAfterTripService noMission = new RecordMissionAfterTripService(date -> Optional.empty(),
-			(driverId, from, to) -> rounds, store, Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+			(driverId, from, to) -> rounds, store, (driverId, refId, rewardPoint) -> rewards.add(new Object[0]),
+			Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
 
 		assertThat(noMission.recordAfterTrip(1L, NOW)).isEmpty();
 		assertThat(store.saved).isEmpty();
@@ -143,5 +146,15 @@ class RecordMissionAfterTripServiceTest {
 			assertThat(saved.getStatus()).isEqualTo(MissionStatus.ACHIEVED);
 			assertThat(saved.getAchievedAt()).isEqualTo(NOW);
 		});
+	}
+
+	@Test
+	void 그날을_달성하면_미션의_보상_포인트를_운전자_미션_날짜_기준으로_적립한다() {
+		rounds.add(new RoundTurns(3, 3));
+
+		service.recordAfterTrip(1L, Instant.parse("2026-11-03T00:00:00Z"));
+
+		assertThat(rewards).singleElement()
+			.satisfies(call -> assertThat(call).containsExactly(1L, "1:" + seed.getId() + ":2026-11-03", 20));
 	}
 }

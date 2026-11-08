@@ -10,6 +10,7 @@ import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
+import com.blinkerleague.server.mission.application.port.out.MissionRewardPort;
 
 import com.blinkerleague.server.mission.domain.DailyPeriod;
 import com.blinkerleague.server.mission.domain.DriverMission;
@@ -26,6 +27,7 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 	private final LoadActiveMissionPort loadActiveMissionPort;
 	private final LoadDailyRoundsPort loadDailyRoundsPort;
 	private final DriverMissionStore driverMissionStore;
+	private final MissionRewardPort missionRewardPort;
 	private final Clock clock;
 
 	@Override
