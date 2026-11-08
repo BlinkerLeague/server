@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
+
 class TurnSignalConditionTest {
 
 	// 시드 미션 "회전 깜빡이 완벽": 회전 3회 이상, 깜빡이 사용률 100%
@@ -22,5 +24,12 @@ class TurnSignalConditionTest {
 	@Test
 	void 깜빡이를_안_켠_회전이_한_번이라도_있으면_FAILED다() {
 		assertThat(condition.judge(new DailyTurns(1, 0)).status()).isEqualTo(MissionStatus.FAILED);
+	}
+
+	@Test
+	void 조건별_진행도로_회전_수와_깜빡이_사용률을_돌려준다() {
+		assertThat(condition.judge(new DailyTurns(3, 2)).conditions()).containsExactly(
+			new ConditionProgress(ConditionType.TURN_COUNT, 3, 3),
+			new ConditionProgress(ConditionType.SIGNAL_RATE, 66, 100));
 	}
 }
