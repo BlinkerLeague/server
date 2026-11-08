@@ -2,6 +2,7 @@ package com.blinkerleague.server.point.application.service;
 
 import java.time.Clock;
 
+import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
 import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.point.domain.PointRules;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EarnPointService {
 
+	private final LoadPointLedgerPort loadPointLedgerPort;
 	private final SavePointEntryPort savePointEntryPort;
 	private final ThresholdProvider thresholdProvider;
 	private final Clock clock;
