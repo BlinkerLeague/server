@@ -44,6 +44,7 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 | `POST` | `/api/auth/refresh` | 없음 | `{ "refreshToken": "..." }` → `{ "accessToken", "refreshToken" }`. 사용한 Refresh 토큰은 무효, 재사용하면 그 운전자의 토큰 전체 무효 |
 | `GET` | `/api/config/thresholds` | 없음 | 판정 기준값 · 점수 가중치 · 포인트 규칙 · 등급 기준(`grades`) · 항목별 팁 문구(`tips`)와 `version`. 앱은 시작할 때 내려받고 `version`이 바뀐 경우에만 갱신 |
 | `POST` | `/api/trips` | Bearer | 운행 + 이벤트 업로드(형식은 plan.md 3.4). 새로 저장하면 201, 같은 `tripId` 재전송은 저장하지 않고 처음 결과를 200으로 반환 → `{ "tripId", "status" }`. `status`는 최소 거리(기준값 `trip.minDistanceKm`, 기본 3km) 미만이면 `EXCLUDED_SHORT`, 아니면 `UPLOADED`. 다른 운전자의 `tripId`는 409 `CONFLICT`, 필수 값 누락 · 음수 거리 · 구간 밖 이벤트 · 종료가 시작 이전이면 400 `INVALID_INPUT` |
+| `GET` | `/api/points` | Bearer | 내 포인트 → `{ "balance", "todayEarned", "dailyCap", "entries": [{ "amount", "reason", "description", "createdAt" }] }`. 잔액은 전체 적립 합계, 오늘 적립은 Asia/Seoul 기준, 원장은 최근 20건. 운행 적립(`TRIP`)의 `description`은 적립 당시 `{ "distanceKm", "score" }`. 적립 연결(운행 점수 · 미션 달성)은 아직 없음 |
 
 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.
 
@@ -126,11 +127,11 @@ docker compose up -d          # Redis (Docker 엔진이 켜져 있어야 함)
 | 보호된 API가 401 `UNAUTHORIZED` | `Authorize`를 하지 않았습니다. 5번을 보세요. |
 | 보호된 API가 401 `INVALID_TOKEN` | Access 토큰이 만료됐거나(6번), `.env`의 `JWT_SECRET`을 바꾼 뒤 이전 토큰을 쓰고 있습니다(4번부터 다시). |
 
-API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합니다(`servers`는 지워 실행 포트가 박히지 않게 합니다).
+API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합니다. `servers`는 지워 실행 포트가 박히지 않게 하고, `-S`로 키를 정렬해 실행할 때마다 응답 코드 순서가 바뀌어 diff가 생기지 않게 합니다.
 
 ```bash
 ./gradlew bootRun   # 다른 터미널에서
-curl -s http://localhost:8080/v3/api-docs | jq 'del(.servers)' > docs/api/openapi.json
+curl -s http://localhost:8080/v3/api-docs | jq -S 'del(.servers)' > docs/api/openapi.json
 ```
 
 ### API 명세 관리 규칙
