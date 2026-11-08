@@ -21,6 +21,6 @@ public class PointRewardAdapter implements MissionRewardPort {
 
 	@Override
 	public void rewardStreak(Long driverId, String refId) {
-		throw new UnsupportedOperationException();
+		earnPointUseCase.earnForStreak(driverId, refId);
 	}
 }
