@@ -17,11 +17,11 @@ public class DriverMissionPersistenceAdapter implements DriverMissionStore {
 
 	@Override
 	public Optional<DriverMission> find(Long driverId, Long missionId, String periodKey) {
-		throw new UnsupportedOperationException();
+		return repository.findByDriverIdAndMissionIdAndPeriodKey(driverId, missionId, periodKey);
 	}
 
 	@Override
 	public void save(DriverMission driverMission) {
-		throw new UnsupportedOperationException();
+		repository.saveAndFlush(driverMission);
 	}
 }
