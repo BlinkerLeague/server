@@ -2,12 +2,19 @@ package com.blinkerleague.server.mission.application.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.blinkerleague.server.mission.application.port.in.RecordMissionAfterTripUseCase;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
+
+import com.blinkerleague.server.mission.domain.DailyPeriod;
+import com.blinkerleague.server.mission.domain.DriverMission;
+import com.blinkerleague.server.mission.domain.Mission;
+import com.blinkerleague.server.mission.domain.MissionStatus;
+import com.blinkerleague.server.mission.domain.RoundTurns;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +29,19 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 
 	@Override
 	public Optional<MissionOutcome> recordAfterTrip(Long driverId, Instant tripEndedAt) {
-		throw new UnsupportedOperationException();
+		// 운행은 종료 시각이 속한 날에 집계한다. 늦게 올린 어제 운행은 어제 미션에 반영한다.
+		DailyPeriod period = DailyPeriod.of(tripEndedAt, clock.getZone());
+		Optional<Mission> active = loadActiveMissionPort.findActiveDaily(period.date());
+		if (active.isEmpty()) {
+			return Optional.empty();
+		}
+		Mission mission = active.get();
+		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
+		MissionStatus judged = mission.getCondition().judgeDay(rounds).status();
+		DriverMission record = driverMissionStore.find(driverId, mission.getId(), period.key())
+			.orElseGet(() -> DriverMission.start(driverId, mission.getId(), period.key()));
+		record.apply(judged, clock.instant());
+		driverMissionStore.save(record);
+		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
 	}
 }
