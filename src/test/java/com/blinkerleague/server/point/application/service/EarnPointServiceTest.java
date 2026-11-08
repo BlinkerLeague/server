@@ -81,4 +81,22 @@ class EarnPointServiceTest {
 
 		assertThat(earned).isZero();
 	}
+
+	@Test
+	void 미션_달성_보상은_DAILY_MISSION으로_일일_상한_안에서_적립한다() {
+		ledger.saveNew(PointEntry.trip(1L, "trip-0", 140, 50.0, 100, NOW.minusSeconds(3600)));
+
+		int earned = service.earnForMission(1L, "1:10:2026-11-03", 20);
+
+		assertThat(earned).isEqualTo(10);
+		assertThat(ledger.entries()).filteredOn(entry -> entry.getReason() == PointReason.DAILY_MISSION)
+			.singleElement().satisfies(entry -> {
+				assertThat(entry.getDriverId()).isEqualTo(1L);
+				assertThat(entry.getRefId()).isEqualTo("1:10:2026-11-03");
+				assertThat(entry.getAmount()).isEqualTo(10);
+				assertThat(entry.getDistanceKm()).isNull();
+				assertThat(entry.getScore()).isNull();
+				assertThat(entry.getEarnedAt()).isEqualTo(NOW);
+			});
+	}
 }

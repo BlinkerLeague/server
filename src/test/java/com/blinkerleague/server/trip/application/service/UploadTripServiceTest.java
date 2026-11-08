@@ -33,6 +33,7 @@ class UploadTripServiceTest {
 
 	private final InMemoryTripRepository trips = new InMemoryTripRepository();
 	private final List<Object[]> missionCalls = new ArrayList<>();
+	private final List<Object[]> pointCalls = new ArrayList<>();
 	private final UploadTripService service = new UploadTripService(trips, trips,
 		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)),
 		new TripMissionPort() {
@@ -46,7 +47,8 @@ class UploadTripServiceTest {
 			public Optional<TripMission> judgeDay(Long driverId, Instant endedAt) {
 				throw new AssertionError("업로드는 판정을 기록해야 한다");
 			}
-		});
+		},
+		(driverId, tripId, distanceKm, score) -> pointCalls.add(new Object[] {driverId, tripId, distanceKm, score}));
 
 	@Test
 	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {
@@ -166,5 +168,38 @@ class UploadTripServiceTest {
 
 		assertThat(retried.created()).isFalse();
 		assertThat(retried.trip().mission()).isEqualTo(new TripMissionPort.TripMission(7L, "ACHIEVED"));
+	}
+
+	@Test
+	void 점수가_난_운행을_올리면_거리와_점수로_포인트를_적립한다() {
+		UploadTripService.Result result = service.upload(1L, command("trip-1", 12.3,
+			new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600), "{\"signalOn\":true}")));
+
+		assertThat(result.status()).isEqualTo(TripStatus.SCORED);
+		assertThat(pointCalls).singleElement()
+			.satisfies(call -> assertThat(call).containsExactly(1L, "trip-1", 12.3, 100));
+	}
+
+	@Test
+	void 같은_운행을_다시_올리면_적립을_다시_요청한다_적립은_한_번만_되므로_첫_적립_실패를_복구한다() {
+		RecordedEvent turn = new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600),
+			"{\"signalOn\":true}");
+		service.upload(1L, command("trip-1", 12.3, turn));
+
+		service.upload(1L, command("trip-1", 12.3, turn));
+
+		assertThat(pointCalls).hasSize(2)
+			.allSatisfy(call -> assertThat(call).containsExactly(1L, "trip-1", 12.3, 100));
+	}
+
+	@Test
+	void 점수가_없는_운행_최소_거리_미만_회전_없음은_적립하지_않는다() {
+		service.upload(1L, command("short", 2.0,
+			new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600), "{\"signalOn\":true}")));
+		service.upload(1L, command("no-turn", 12.3));
+
+		assertThat(trips.findById("short").orElseThrow().getStatus()).isEqualTo(TripStatus.EXCLUDED_SHORT);
+		assertThat(trips.findById("no-turn").orElseThrow().getStatus()).isEqualTo(TripStatus.NO_TURN);
+		assertThat(pointCalls).isEmpty();
 	}
 }

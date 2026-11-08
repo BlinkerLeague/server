@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
+import com.blinkerleague.server.mission.application.port.out.MissionRewardPort;
 import com.blinkerleague.server.mission.application.port.out.SaveMissionPort;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService;
 import com.blinkerleague.server.mission.application.service.RecordMissionAfterTripService;
@@ -30,7 +31,9 @@ public class MissionBeanConfig {
 
 	@Bean
 	public RecordMissionAfterTripService recordMissionAfterTripService(LoadActiveMissionPort loadActiveMissionPort,
-		LoadDailyRoundsPort loadDailyRoundsPort, DriverMissionStore driverMissionStore, Clock clock) {
-		return new RecordMissionAfterTripService(loadActiveMissionPort, loadDailyRoundsPort, driverMissionStore, clock);
+		LoadDailyRoundsPort loadDailyRoundsPort, DriverMissionStore driverMissionStore,
+		MissionRewardPort missionRewardPort, Clock clock) {
+		return new RecordMissionAfterTripService(loadActiveMissionPort, loadDailyRoundsPort, driverMissionStore,
+			missionRewardPort, clock);
 	}
 }

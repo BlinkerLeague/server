@@ -290,7 +290,7 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 
 API: `GET /api/missions/today`
 
-상태: 완료(11.8, PR #33). 판정은 라운드 단위(운행 1건 = 1라운드, 그날 하나라도 채우면 `ACHIEVED`)이고, 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. `POST /api/trips`가 저장한 뒤 그날 판정을 `driver_mission`에 기록하고(한 번 달성한 날은 되돌리지 않음, 같은 날 동시 업로드는 유니크 충돌 후 다시 읽어 반영) 응답 `mission`에 `{ missionId, status }`를 담는다. 같은 운행 재전송도 `mission`을 담는다. `GET /api/trips/{tripId}/score`는 기록하지 않고 그날 판정만 계산해 담는다. 회전 집계는 점수와 같은 기준(D23, `signalOn`이 boolean `true`일 때만 켠 회전). 끝난 날의 미달성은 `FAILED`(D25): 배치 없이 판정할 때 정하고, 오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날(`driver_mission`의 가장 최근 이전 기록)의 최종 상태를 보여 준다. 늦게 올린 운행으로 그날 조건을 채우면 `FAILED` → `ACHIEVED`. 저장된 `driver_mission.status`는 그날 이후 다시 판정될 때 `FAILED`로 바뀌므로, 지난 날 행이 `IN_PROGRESS`로 남아 있으면 `FAILED`로 읽는다. **남은 항목:** 달성 시 20P 적립은 `feat/point-ledger`(#37)에 연결한다.
+상태: 완료(11.8, PR #33). 판정은 라운드 단위(운행 1건 = 1라운드, 그날 하나라도 채우면 `ACHIEVED`)이고, 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. `POST /api/trips`가 저장한 뒤 그날 판정을 `driver_mission`에 기록하고(한 번 달성한 날은 되돌리지 않음, 같은 날 동시 업로드는 유니크 충돌 후 다시 읽어 반영) 응답 `mission`에 `{ missionId, status }`를 담는다. 같은 운행 재전송도 `mission`을 담는다. `GET /api/trips/{tripId}/score`는 기록하지 않고 그날 판정만 계산해 담는다. 회전 집계는 점수와 같은 기준(D23, `signalOn`이 boolean `true`일 때만 켠 회전). 끝난 날의 미달성은 `FAILED`(D25): 배치 없이 판정할 때 정하고, 오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날(`driver_mission`의 가장 최근 이전 기록)의 최종 상태를 보여 준다. 늦게 올린 운행으로 그날 조건을 채우면 `FAILED` → `ACHIEVED`. 저장된 `driver_mission.status`는 그날 이후 다시 판정될 때 `FAILED`로 바뀌므로, 지난 날 행이 `IN_PROGRESS`로 남아 있으면 `FAILED`로 읽는다. 달성하면 미션 보상 20P를 `DAILY_MISSION`으로 적립한다(4.2).
 
 ```json
 {
@@ -372,7 +372,7 @@ API: `GET /api/missions/today`
 
 API: `GET /api/points` (잔액 + 최근 원장 20건)
 
-상태: 원장 핵심 완료(11.8), 적립 연결은 남음. `point_ledger` 테이블, 운행 적립 계산, 일일 상한(`point.dailyCap`, 기준값 설정), (`reason`, `ref_id`) 한 번만 적립(동시 충돌은 유니크 제약으로 감지), 운전자 행 `SELECT ... FOR UPDATE`로 같은 운전자의 적립 직렬화, `GET /api/points`. 적립 시각은 `earned_at`(Instant)에 두고 응답의 `createdAt`은 `+09:00`. **남은 항목:** 운행 점수 확정 후 `TRIP` 적립 호출(`feat/trip-score` 머지 후), 미션 달성 시 `DAILY_MISSION` 20P(`driver_mission` 기록 후, #33), P0 달성분 소급 적립 여부 결정. 아래 예시의 운행 적립은 공식대로 12.3km × 86점 → 10P로 고쳤다(이전 예시 42P는 공식과 맞지 않았음).
+상태: 원장과 적립 연결 완료(11.8, #37 · `feat/point-earning`). `point_ledger` 테이블, 운행 적립 계산, 일일 상한(`point.dailyCap`, 기준값 설정), (`reason`, `ref_id`) 한 번만 적립(동시 충돌은 유니크 제약으로 감지), 운전자 행 `SELECT ... FOR UPDATE`로 같은 운전자의 적립 직렬화, `GET /api/points`. 적립 시각은 `earned_at`(Instant)에 두고 응답의 `createdAt`은 `+09:00`. **적립 연결:** `POST /api/trips`가 점수가 난 운행(`SCORED`)을 저장하면 `TRIP` 적립(재전송에도 다시 요청해 첫 적립 실패를 복구, 한 번만 적립), 그날 미션이 `ACHIEVED`가 되면 미션의 `rewardPoint`(20P)를 `DAILY_MISSION`으로 적립(`ref_id = 운전자ID:미션ID:period_key`). 두 적립 모두 일일 상한 안에서다. trip · mission은 각자 out-port → 어댑터 → point의 in-port `EarnPointUseCase`로 부른다. **남은 항목:** P0 기간 달성분 소급 적립 여부(운영 데이터가 생기기 전이라 지금은 해당 없음). 아래 예시의 운행 적립은 공식대로 12.3km × 86점 → 10P로 고쳤다(이전 예시 42P는 공식과 맞지 않았음).
 
 ```json
 {
@@ -391,7 +391,7 @@ API: `GET /api/points` (잔액 + 최근 원장 20건)
 - `point_ledger`: `ledger_id`, `driver_id`, `amount`, `reason`(`TRIP`/`DAILY_MISSION`/`STREAK_7`/`SEASON_LEAGUE`), `ref_id`, `distance_km`(nullable), `score`(nullable), `created_at`. (`reason`, `ref_id`) 유니크. `distance_km` · `score`는 `TRIP` 적립 시점 값
 - 잔액 = `SUM(amount)` (잔액 컬럼 따로 두지 않음)
 - 운행 적립: `floor(min(distanceKm, 50) × score ÷ 100)`, `ref_id = tripId`
-- 일간 미션 달성 시 20P, `ref_id = driver_mission` ID
+- 일간 미션 달성 시 20P(미션의 `rewardPoint`), `ref_id = 운전자ID:미션ID:period_key`(driver_mission 행 ID 대신, 저장 전에도 정해지고 운전자 · 미션 · 날짜마다 하나)
 - **일일 상한 150P**: 그날 합계를 구해 남은 만큼만 적립. 같은 운전자의 동시 적립은 운전자 단위 비관적 락(또는 `driver` 행 `SELECT ... FOR UPDATE`)으로 직렬화
 - P0에서 이미 달성된 미션에 대한 소급 적립 여부 결정
 

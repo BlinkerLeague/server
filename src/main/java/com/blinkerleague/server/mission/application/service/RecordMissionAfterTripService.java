@@ -10,6 +10,7 @@ import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
+import com.blinkerleague.server.mission.application.port.out.MissionRewardPort;
 
 import com.blinkerleague.server.mission.domain.DailyPeriod;
 import com.blinkerleague.server.mission.domain.DriverMission;
@@ -26,6 +27,7 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 	private final LoadActiveMissionPort loadActiveMissionPort;
 	private final LoadDailyRoundsPort loadDailyRoundsPort;
 	private final DriverMissionStore driverMissionStore;
+	private final MissionRewardPort missionRewardPort;
 	private final Clock clock;
 
 	@Override
@@ -44,6 +46,10 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 		} catch (DriverMissionAlreadyExistsException e) {
 			// 같은 날 다른 운행의 판정이 먼저 기록됐다. 그 기록을 다시 읽어 반영한다.
 			record = applyAndSave(driverId, mission.getId(), period.key(), judged);
+		}
+		if (record.getStatus() == MissionStatus.ACHIEVED) {
+			// 다시 판정해 불러도 같은 ref_id라 한 번만 적립된다. 첫 적립이 실패했으면 다음 업로드에서 복구된다.
+			missionRewardPort.reward(driverId, record.rewardRefId(), mission.getRewardPoint());
 		}
 		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
 	}

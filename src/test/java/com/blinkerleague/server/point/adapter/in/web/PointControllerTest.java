@@ -62,6 +62,35 @@ class PointControllerTest {
 			.andExpect(jsonPath("$.entries[0].createdAt").value(matchesPattern(".+\\+09:00$")));
 	}
 
+	@Test
+	void 점수가_난_운행으로_미션을_달성하면_운행_포인트와_미션_보상이_원장에_쌓인다() throws Exception {
+		driverId = registerDriver();
+		String turns = java.util.stream.IntStream.range(0, 3).mapToObj(i -> """
+			{ "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T08:1%d:00+09:00",
+			  "payload": { "direction": "LEFT", "signalOn": true } }""".formatted(UUID.randomUUID(), i))
+			.collect(java.util.stream.Collectors.joining(","));
+		String trip = """
+			{ "tripId": "%s", "startedAt": "2026-11-03T08:00:00+09:00", "endedAt": "2026-11-03T08:40:00+09:00",
+			  "distanceKm": 12.3, "supported": ["TURN_SIGNAL"], "events": [%s] }
+			""".formatted(UUID.randomUUID(), turns);
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/trips")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId))
+				.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+				.content(trip))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.mission.status").value("ACHIEVED"));
+
+		// 운행 12.3km × 100점 → 12P, 미션 달성 20P
+		mockMvc.perform(get("/api/points")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.balance").value(32))
+			.andExpect(jsonPath("$.entries.length()").value(2))
+			.andExpect(jsonPath("$.entries[?(@.reason == 'TRIP')].amount").value(org.hamcrest.Matchers.contains(12)))
+			.andExpect(jsonPath("$.entries[?(@.reason == 'DAILY_MISSION')].amount").value(org.hamcrest.Matchers.contains(20)))
+			.andExpect(jsonPath("$.entries[?(@.reason == 'DAILY_MISSION')].description").value(org.hamcrest.Matchers.contains(org.hamcrest.Matchers.nullValue())));
+	}
+
 	private Long registerDriver() {
 		String nickname = "p" + UUID.randomUUID().toString().substring(0, 8);
 		jdbcTemplate.update("insert into driver (nickname, region_code, created_at, updated_at) "
