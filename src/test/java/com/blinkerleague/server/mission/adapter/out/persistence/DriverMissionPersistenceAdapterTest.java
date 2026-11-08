@@ -54,4 +54,16 @@ class DriverMissionPersistenceAdapterTest {
 		assertThatThrownBy(() -> adapter.save(DriverMission.start(1L, 10L, "2026-11-03")))
 			.isInstanceOf(DriverMissionAlreadyExistsException.class);
 	}
+
+	@Test
+	void 주어진_날보다_앞선_날_중_가장_최근_기록을_찾는다() {
+		adapter.save(DriverMission.start(1L, 10L, "2026-10-30"));
+		adapter.save(DriverMission.start(1L, 10L, "2026-11-01"));
+		adapter.save(DriverMission.start(1L, 10L, "2026-11-03"));
+		adapter.save(DriverMission.start(2L, 10L, "2026-11-02"));
+
+		assertThat(adapter.findLatestBefore(1L, "2026-11-03"))
+			.hasValueSatisfying(found -> assertThat(found.getPeriodKey()).isEqualTo("2026-11-01"));
+		assertThat(adapter.findLatestBefore(1L, "2026-10-30")).isEmpty();
+	}
 }
