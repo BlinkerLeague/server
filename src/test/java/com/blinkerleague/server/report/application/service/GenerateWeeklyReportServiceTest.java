@@ -15,6 +15,7 @@ import com.blinkerleague.server.report.domain.MetricChange;
 import com.blinkerleague.server.report.domain.ReportWeek;
 import com.blinkerleague.server.report.domain.TripMetricRecord;
 import com.blinkerleague.server.report.domain.WeekDriving;
+import com.blinkerleague.server.report.domain.WeeklyMission;
 import com.blinkerleague.server.report.domain.WeeklyMissionStatus;
 import com.blinkerleague.server.report.domain.WeeklyMissionTemplate;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
@@ -59,5 +60,18 @@ class GenerateWeeklyReportServiceTest {
 		assertThat(stores.find(1L, "2026-W46")).hasValueSatisfying(
 			m -> assertThat(m.getStatus()).isEqualTo(WeeklyMissionStatus.ASSIGNED));
 		assertThat(stores.findReport(1L, "2026-W45")).isPresent();
+	}
+
+	@Test
+	void 이번_주에_수행한_맞춤_미션을_판정해_리포트에_담는다() {
+		// 지난 리포트가 W45에 등록한 미션: 깜빡이 평균 80점 이상, 50km 이상
+		stores.save(new WeeklyMission(1L, "2026-W45", ScoreItem.TURN_SIGNAL, "깜빡이 주간", 80, 50.0));
+
+		WeeklyReportView report = service.generate(1L, W45);
+
+		assertThat(report.lastMission()).isEqualTo(new MissionView("2026-W45", ScoreItem.TURN_SIGNAL, "깜빡이 주간",
+			80, 50.0, WeeklyMissionStatus.ACHIEVED));
+		assertThat(stores.find(1L, "2026-W45")).hasValueSatisfying(
+			m -> assertThat(m.getStatus()).isEqualTo(WeeklyMissionStatus.ACHIEVED));
 	}
 }
