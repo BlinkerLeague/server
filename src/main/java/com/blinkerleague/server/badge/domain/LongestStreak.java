@@ -10,6 +10,18 @@ public final class LongestStreak {
 	}
 
 	public static int of(Set<LocalDate> achievedDays) {
-		throw new UnsupportedOperationException();
+		int longest = 0;
+		for (LocalDate day : achievedDays) {
+			// 연속의 첫날에서만 센다.
+			if (achievedDays.contains(day.minusDays(1))) {
+				continue;
+			}
+			int length = 0;
+			for (LocalDate d = day; achievedDays.contains(d); d = d.plusDays(1)) {
+				length++;
+			}
+			longest = Math.max(longest, length);
+		}
+		return longest;
 	}
 }
