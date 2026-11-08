@@ -6,7 +6,8 @@ public final class PointRules {
 	private PointRules() {
 	}
 
+	/** floor(min(거리, 최대 거리) × 점수 ÷ 100). */
 	public static int tripPoints(double distanceKm, int score, int tripMaxKm) {
-		throw new UnsupportedOperationException();
+		return (int) Math.floor(Math.min(distanceKm, tripMaxKm) * score / 100);
 	}
 }
