@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
+import com.blinkerleague.server.point.application.port.out.SavePointEntryPort.PointAlreadyEarnedException;
 import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.point.domain.PointReason;
 import com.blinkerleague.server.point.domain.PointRules;
@@ -33,7 +34,12 @@ public class EarnPointService {
 		Instant now = clock.instant();
 		int requested = PointRules.tripPoints(distanceKm, score, rule.tripMaxKm());
 		int amount = PointRules.capToDailyLimit(requested, todayEarned(driverId, now), rule.dailyCap());
-		savePointEntryPort.saveNew(PointEntry.trip(driverId, tripId, amount, distanceKm, score, now));
+		try {
+			savePointEntryPort.saveNew(PointEntry.trip(driverId, tripId, amount, distanceKm, score, now));
+		} catch (PointAlreadyEarnedException e) {
+			// 동시에 들어온 같은 운행의 적립이 먼저 저장됐다. 그 적립이 기준이다.
+			return 0;
+		}
 		return amount;
 	}
 
