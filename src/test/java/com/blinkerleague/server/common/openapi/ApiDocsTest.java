@@ -4,6 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -47,5 +49,25 @@ class ApiDocsTest {
 			.andExpect(jsonPath("$.paths['/api/auth/refresh'].post.security").isEmpty())
 			.andExpect(jsonPath("$.paths['/api/config/thresholds'].get.security").isEmpty())
 			.andExpect(jsonPath("$.paths['/api/trips'].post.security").doesNotExist());
+	}
+
+	private static final String ERROR_SCHEMA = "#/components/schemas/ErrorResponse";
+
+	@ParameterizedTest(name = "{0} {1} → {2}")
+	@CsvSource({
+		"/api/drivers,         post, 201, 400 409",
+		"/api/auth/refresh,    post, 200, 400 401",
+		"/api/trips,           post, 201 200, 400 401 409"})
+	void 성공_응답과_오류_응답_코드를_ErrorResponse_형식으로_문서에_담는다(String path, String method,
+		String successCodes, String errorCodes) throws Exception {
+		var result = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+		String responses = "$.paths['" + path + "']." + method + ".responses";
+		for (String code : successCodes.split(" ")) {
+			result.andExpect(jsonPath(responses + "['" + code + "']").exists());
+		}
+		for (String code : errorCodes.split(" ")) {
+			result.andExpect(jsonPath(responses + "['" + code + "'].content['application/json'].schema['$ref']")
+				.value(ERROR_SCHEMA));
+		}
 	}
 }
