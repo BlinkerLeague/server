@@ -30,4 +30,14 @@ class GetWeeklyReportServiceTest {
 		assertThat(service.get(1L, null).week()).isEqualTo("2026-W45");
 		assertThat(service.get(1L, "2026-W44").week()).isEqualTo("2026-W44");
 	}
+
+	@Test
+	void 끝나지_않은_주와_형식이_틀린_주는_INVALID_INPUT이다() {
+		for (String week : new String[] {"2026-W46", "2026-W47", "2026-45", "2026-W60"}) {
+			assertThatThrownBy(() -> service.get(1L, week))
+				.isInstanceOf(BusinessException.class)
+				.extracting(e -> ((BusinessException) e).getErrorCode())
+				.isEqualTo(ErrorCode.INVALID_INPUT);
+		}
+	}
 }
