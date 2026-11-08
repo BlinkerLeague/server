@@ -32,4 +32,12 @@ class TurnSignalConditionTest {
 			new ConditionProgress(ConditionType.TURN_COUNT, 3, 3),
 			new ConditionProgress(ConditionType.SIGNAL_RATE, 66, 100));
 	}
+
+	@Test
+	void 오늘_회전이_없으면_IN_PROGRESS이고_사용률은_0이다() {
+		MissionJudgement judgement = condition.judge(new DailyTurns(0, 0));
+
+		assertThat(judgement.status()).isEqualTo(MissionStatus.IN_PROGRESS);
+		assertThat(judgement.conditions()).contains(new ConditionProgress(ConditionType.SIGNAL_RATE, 0, 100));
+	}
 }
