@@ -16,6 +16,7 @@ public record Thresholds(
 	SafetyWarning safetyWarning,
 	SignalCancel signalCancel,
 	SeatBelt seatBelt,
+	Rain rain,
 	Map<ScoreItem, Double> weights,
 	Map<ScoreItem, Integer> minSamples,
 	Point point,
@@ -34,9 +35,9 @@ public record Thresholds(
 	public record Trip(double minDistanceKm, int parkEndMinutes) {
 	}
 
-	/** 앱의 회전 판정 기준, 서버의 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비)와 회전 속도 기준(turnSpeedKmh). */
+	/** 앱의 회전 판정 기준(제때 깜빡이 signalLeadDistanceM 등), 서버의 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비)와 회전 속도 기준(turnSpeedKmh). */
 	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec,
-		double lateSignalScore, int turnSpeedKmh) {
+		double lateSignalScore, int turnSpeedKmh, int signalLeadDistanceM) {
 	}
 
 	/** 앱의 급가감속 판정 기준(deltaKmhPerSec)과 서버의 감점 폭(10km당 1회마다 penaltyPer10Km점). */
@@ -54,6 +55,10 @@ public record Thresholds(
 
 	/** 안전벨트 감점: 출발 시 미착용(departurePenalty), 주행 중 미착용 1분마다(perMinutePenalty). */
 	public record SeatBelt(int departurePenalty, int perMinutePenalty) {
+	}
+
+	/** 앱의 우천 판정: 와이퍼가 minWiperSec 넘게 켜진 구간, 제한속도의 speedRatio 이하를 감속 준수로 본다. */
+	public record Rain(int minWiperSec, double speedRatio) {
 	}
 
 	public record Point(int tripMaxKm, int dailyCap, int streakRewardDays, int streakRewardPoint) {
