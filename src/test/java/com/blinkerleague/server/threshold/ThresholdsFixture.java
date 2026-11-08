@@ -25,7 +25,7 @@ public final class ThresholdsFixture {
 		return new Thresholds(
 			new Thresholds.Trip(3.0, 3),
 			new Thresholds.Turn(5, 10, 60, 150, 5),
-			new Thresholds.Harsh(10),
+			new Thresholds.Harsh(10, 10),
 			new Thresholds.SafetyWarning(10),
 			Map.of(ScoreItem.TURN_SIGNAL, 0.4, ScoreItem.SMOOTH_DRIVING, 0.3,
 				ScoreItem.SAFETY_WARNING, 0.2, ScoreItem.NIGHT_HEADLIGHT, 0.1),

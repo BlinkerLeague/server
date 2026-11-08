@@ -3,7 +3,6 @@ package com.blinkerleague.server.score.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
@@ -40,21 +39,26 @@ class ScoreCalculatorTest {
 	}
 
 	@Test
-	void 차량이_모든_항목을_지원해도_P0은_깜빡이만_측정해_가중치_1로_재분배한다() {
+	void 깜빡이만_지원하는_차량은_깜빡이_항목이_가중치_1로_재분배된다() {
 		List<DrivingEvent> turns = List.of(
 			turn(true), turn(true), turn(true), turn(false));
 
-		ScoreResult result = calculator.calculate(new TripFacts(EnumSet.allOf(ScoreItem.class), 12.0, turns), THRESHOLDS);
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.TURN_SIGNAL), 12.0, turns), THRESHOLDS);
 
-		assertThat(result.metrics()).containsExactly(MetricScore.scored(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0, java.util.Map.of()));
+		assertThat(result.metrics()).filteredOn(m -> m.status() == MetricStatus.SCORED).singleElement()
+			.satisfies(m -> {
+				assertThat(m.metric()).isEqualTo(ScoreItem.TURN_SIGNAL);
+				assertThat(m.score()).isEqualTo(75);
+				assertThat(m.weight()).isEqualTo(1.0);
+			});
 		assertThat(result.score()).isEqualTo(75);
 	}
 
 	@Test
-	void 차량이_깜빡이_신호를_지원하지_않으면_회전이_있어도_점수가_없다() {
+	void 차량이_측정할_수_있는_항목이_없으면_회전이_있어도_점수가_없다() {
 		List<DrivingEvent> turns = List.of(turn(true), turn(false));
 
-		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.SMOOTH_DRIVING), 12.0, turns), THRESHOLDS);
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(), 12.0, turns), THRESHOLDS);
 
 		assertThat(result.score()).isNull();
 		assertThat(result.metrics()).isEmpty();

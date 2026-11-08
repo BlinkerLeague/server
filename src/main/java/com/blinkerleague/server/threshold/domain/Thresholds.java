@@ -34,7 +34,8 @@ public record Thresholds(
 	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec) {
 	}
 
-	public record Harsh(int deltaKmhPerSec) {
+	/** 앱의 급가감속 판정 기준(deltaKmhPerSec)과 서버의 감점 폭(10km당 1회마다 penaltyPer10Km점). */
+	public record Harsh(int deltaKmhPerSec, double penaltyPer10Km) {
 	}
 
 	public record SafetyWarning(int mergeWindowSec) {
