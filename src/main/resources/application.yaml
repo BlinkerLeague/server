@@ -16,6 +16,17 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+# API 문서(OpenAPI · Swagger UI)는 배포 환경에 노출하지 않는다(Pleos 보안 가이드). local 프로필에서만 켠다.
+springdoc:
+  # 전역 예외 처리기의 응답(400 · 404 · 405 · 500)을 모든 API에 붙이지 않고, 컨트롤러의 @ApiResponse만 쓴다.
+  override-with-generic-response: false
+  # 응답은 모두 JSON이다. 문서 표시만 바꾸며 실제 Accept 처리는 그대로다.
+  default-produces-media-type: application/json
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 jwt:
   # 운영에서는 환경변수로만 주입한다. 32바이트 이상.
   secret: ${JWT_SECRET}
