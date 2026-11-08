@@ -22,7 +22,13 @@ public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 
 	/** rounds는 종료 시각 순서다. */
 	public DayJudgement judgeDay(List<RoundTurns> rounds) {
-		throw new UnsupportedOperationException();
+		for (RoundTurns round : rounds) {
+			MissionJudgement judgement = judge(round);
+			if (judgement.status() == MissionStatus.ACHIEVED) {
+				return new DayJudgement(MissionStatus.ACHIEVED, round, judgement.conditions());
+			}
+		}
+		return new DayJudgement(MissionStatus.IN_PROGRESS, null, List.of());
 	}
 
 	// 내림해서 모든 회전이 성공하기 전에는 100%로 보이지 않게 한다. 회전이 없으면 0%.
