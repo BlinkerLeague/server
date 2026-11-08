@@ -105,4 +105,20 @@ class RecordMissionAfterTripServiceTest {
 			.satisfies(range -> assertThat(range[0]).isEqualTo(Instant.parse("2026-11-02T15:00:00Z")));
 		assertThat(store.saved).isEmpty();
 	}
+
+	// 한국 시간 2026-11-02 10:00(지금보다 하루 전)에 끝난 운행
+	private static final Instant YESTERDAY_TRIP = Instant.parse("2026-11-02T01:00:00Z");
+
+	@Test
+	void 이미_끝난_날의_운행을_늦게_올려도_달성하지_못했으면_그날은_FAILED로_기록한다() {
+		rounds.add(new RoundTurns(2, 2));
+
+		Optional<MissionOutcome> outcome = service.recordAfterTrip(1L, YESTERDAY_TRIP);
+
+		assertThat(outcome.map(MissionOutcome::status)).contains(MissionStatus.FAILED);
+		assertThat(store.saved).singleElement().satisfies(saved -> {
+			assertThat(saved.getPeriodKey()).isEqualTo("2026-11-02");
+			assertThat(saved.getStatus()).isEqualTo(MissionStatus.FAILED);
+		});
+	}
 }
