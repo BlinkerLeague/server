@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.trip.domain.TripEventType;
 
 /**
@@ -14,8 +15,10 @@ import com.blinkerleague.server.trip.domain.TripEventType;
  */
 public class ScoreCalculator {
 
-	public ScoreResult calculate(Set<ScoreItem> supported, List<DrivingEvent> events, Map<ScoreItem, Double> weights) {
-		List<DrivingEvent> turns = events.stream().filter(event -> event.type() == TripEventType.TURN).toList();
+	public ScoreResult calculate(TripFacts facts, Thresholds thresholds) {
+		Set<ScoreItem> supported = facts.supported();
+		Map<ScoreItem, Double> weights = thresholds.weights();
+		List<DrivingEvent> turns = facts.events().stream().filter(event -> event.type() == TripEventType.TURN).toList();
 		Map<ScoreItem, Double> values = new EnumMap<>(ScoreItem.class);
 		if (supported.contains(ScoreItem.TURN_SIGNAL) && !turns.isEmpty()) {
 			long signalOn = turns.stream().filter(DrivingEvent::signalOn).count();
