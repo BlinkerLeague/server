@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
@@ -43,6 +45,7 @@ public class ScoreCalculator {
 			case TURN_SIGNAL -> turnSignal(facts);
 			case SMOOTH_DRIVING -> smoothDriving(facts, thresholds.harsh());
 			case SAFETY_WARNING -> safetyWarning(facts, thresholds.safetyWarning());
+			case NIGHT_HEADLIGHT -> nightHeadlight(facts);
 			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
 	}
@@ -88,6 +91,25 @@ public class ScoreCalculator {
 		double per100Km = count / facts.distanceKm() * 100;
 		double value = Math.max(0, 1 - rule.penaltyPer100Km() * per100Km / 100);
 		return Outcome.of(value, Map.of("count", count, "per100Km", oneDecimal(per100Km)));
+	}
+
+	// (1 − 꺼짐 비율) × 100. 야간 구간이 없으면 측정하지 않는다. 오토라이트 규칙은 없다(D20).
+	private static Outcome nightHeadlight(TripFacts facts) {
+		int duration = sum(facts, TripEventType.NIGHT_SEGMENT, EventPayload::durationSec);
+		int off = sum(facts, TripEventType.NIGHT_SEGMENT, EventPayload::headlightOffSec);
+		if (duration <= 0) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_NIGHT");
+		}
+		return Outcome.of(1 - Math.min(1.0, (double) off / duration),
+			Map.of("durationSec", duration, "headlightOffSec", off));
+	}
+
+	private static int sum(TripFacts facts, TripEventType type, Function<EventPayload, Integer> field) {
+		return ofType(facts, type).stream()
+			.map(event -> field.apply(event.payload()))
+			.filter(Objects::nonNull)
+			.mapToInt(Integer::intValue)
+			.sum();
 	}
 
 	private static List<DrivingEvent> ofType(TripFacts facts, TripEventType type) {
