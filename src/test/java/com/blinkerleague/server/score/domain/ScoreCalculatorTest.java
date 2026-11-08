@@ -111,4 +111,21 @@ class ScoreCalculatorTest {
 				org.assertj.core.groups.Tuple.tuple(ScoreItem.SAFETY_WARNING, MetricStatus.UNSUPPORTED, "SIGNAL_NOT_SUPPORTED", null, null),
 				org.assertj.core.groups.Tuple.tuple(ScoreItem.NIGHT_HEADLIGHT, MetricStatus.UNSUPPORTED, "SIGNAL_NOT_SUPPORTED", null, null));
 	}
+
+	@Test
+	void 경고등은_10초_안의_중복을_1회로_세고_100km당_횟수만큼_감점한다() {
+		List<DrivingEvent> events = List.of(
+			new DrivingEvent(TripEventType.SAFETY_WARNING, AT, false),
+			new DrivingEvent(TripEventType.SAFETY_WARNING, AT.plusSeconds(9), false),
+			new DrivingEvent(TripEventType.SAFETY_WARNING, AT.plusSeconds(60), false));
+
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.SAFETY_WARNING), 40.0, events), THRESHOLDS);
+
+		// 2회(9초 뒤는 같은 경고) ÷ 40km × 100 = 100km당 5회 → 100 − 20 × 5 = 0점
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.SAFETY_WARNING).singleElement()
+			.satisfies(m -> {
+				assertThat(m.score()).isZero();
+				assertThat(m.detail()).containsEntry("count", 2).containsEntry("per100Km", 5.0);
+			});
+	}
 }
