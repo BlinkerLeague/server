@@ -33,6 +33,7 @@
 | D22 | 경기 요약(`summary`) · 경기 기록(`plays`) 정의 | 3.5에 제안만 있고 화면 기획서와 확정 전 | **결정(11.5):** 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 점수에 쓰지 않으므로 항상 0). `plays`는 저장된 **모든 이벤트**를 시각순으로 담고, `TURN`만 `result`(`GOAL`/`CONCEDED`)가 있으며 나머지(`LANE_CHANGE` 등)는 `result: null` |
 | D23 | `TURN` payload의 `signalOn` 해석 불가 | 업로드는 payload를 해석하지 않고 저장하므로 `signalOn`이 없거나 boolean이 아닐 수 있음 | **결정(11.5): 깜빡이를 켜지 않은 회전으로 판정.** `signalOn`이 `true`일 때만 성공. 업로드(400)로 막지 않는다 |
 | D24 | 최근 경기 목록 `limit` | 3.5에서 "착수 시 확정" | **결정(11.5): 기본 10, 최대 50.** 50을 넘으면 50으로 자른다 |
+| D25 | 달성하지 못한 날의 미션 상태 · 홈 표시 | 3.6은 "그날이 끝날 때까지 달성하지 못하면 FAILED"만 있고 시점 · 화면 표시가 없음 | **결정(11.8): 끝난 날의 미달성은 `FAILED`.** 배치 없이 판정할 때(업로드 · 조회) 정한다. **오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날의 최종 상태(`ACHIEVED` · `FAILED`)를 계속 보여 주고**, 오늘 운행을 올리면 오늘 미션으로 새로 시작한다. 그날 끝난 운행을 늦게 올려(오프라인 후) 조건을 채우면 `FAILED`에서 `ACHIEVED`로 바꾼다. `ACHIEVED`는 되돌리지 않는다 |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -289,7 +290,7 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 
 API: `GET /api/missions/today`
 
-상태: 완료(11.8, PR #33). 판정은 라운드 단위(운행 1건 = 1라운드, 그날 하나라도 채우면 `ACHIEVED`)이고, 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. `POST /api/trips`가 저장한 뒤 그날 판정을 `driver_mission`에 기록하고(한 번 달성한 날은 되돌리지 않음, 같은 날 동시 업로드는 유니크 충돌 후 다시 읽어 반영) 응답 `mission`에 `{ missionId, status }`를 담는다. 같은 운행 재전송도 `mission`을 담는다. `GET /api/trips/{tripId}/score`는 기록하지 않고 그날 판정만 계산해 담는다. 회전 집계는 점수와 같은 기준(D23, `signalOn`이 boolean `true`일 때만 켠 회전). **남은 항목:** 그날이 끝날 때까지 달성하지 못한 날을 `FAILED`로 바꾸는 시점(자정 배치 또는 다음 조회 시 판단)은 미정이라 지금은 `IN_PROGRESS`로 남는다. 달성 시 20P 적립은 `feat/point-ledger`(#37)에 연결한다.
+상태: 완료(11.8, PR #33). 판정은 라운드 단위(운행 1건 = 1라운드, 그날 하나라도 채우면 `ACHIEVED`)이고, 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. `POST /api/trips`가 저장한 뒤 그날 판정을 `driver_mission`에 기록하고(한 번 달성한 날은 되돌리지 않음, 같은 날 동시 업로드는 유니크 충돌 후 다시 읽어 반영) 응답 `mission`에 `{ missionId, status }`를 담는다. 같은 운행 재전송도 `mission`을 담는다. `GET /api/trips/{tripId}/score`는 기록하지 않고 그날 판정만 계산해 담는다. 회전 집계는 점수와 같은 기준(D23, `signalOn`이 boolean `true`일 때만 켠 회전). 끝난 날의 미달성은 `FAILED`(D25): 배치 없이 판정할 때 정하고, 오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날(`driver_mission`의 가장 최근 이전 기록)의 최종 상태를 보여 준다. 늦게 올린 운행으로 그날 조건을 채우면 `FAILED` → `ACHIEVED`. 저장된 `driver_mission.status`는 그날 이후 다시 판정될 때 `FAILED`로 바뀌므로, 지난 날 행이 `IN_PROGRESS`로 남아 있으면 `FAILED`로 읽는다. **남은 항목:** 달성 시 20P 적립은 `feat/point-ledger`(#37)에 연결한다.
 
 ```json
 {
