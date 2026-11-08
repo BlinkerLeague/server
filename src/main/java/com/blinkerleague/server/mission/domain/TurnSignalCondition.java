@@ -28,7 +28,9 @@ public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 				return new DayJudgement(MissionStatus.ACHIEVED, round, judgement.conditions());
 			}
 		}
-		return new DayJudgement(MissionStatus.IN_PROGRESS, null, List.of());
+		// 달성 전에는 실패한 라운드가 있어도 그날은 끝나지 않는다. 진행 링은 가장 최근 라운드를 보여 준다.
+		RoundTurns latest = rounds.get(rounds.size() - 1);
+		return new DayJudgement(MissionStatus.IN_PROGRESS, latest, judge(latest).conditions());
 	}
 
 	// 내림해서 모든 회전이 성공하기 전에는 100%로 보이지 않게 한다. 회전이 없으면 0%.
