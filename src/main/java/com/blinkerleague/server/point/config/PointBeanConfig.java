@@ -5,6 +5,7 @@ import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.blinkerleague.server.point.application.port.out.DriverPointLockPort;
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
 import com.blinkerleague.server.point.application.service.EarnPointService;
@@ -16,7 +17,9 @@ public class PointBeanConfig {
 
 	@Bean
 	public EarnPointService earnPointService(LoadPointLedgerPort loadPointLedgerPort,
-		SavePointEntryPort savePointEntryPort, ThresholdProvider thresholdProvider, Clock clock) {
-		return new EarnPointService(loadPointLedgerPort, savePointEntryPort, thresholdProvider, clock);
+		SavePointEntryPort savePointEntryPort, ThresholdProvider thresholdProvider,
+		DriverPointLockPort driverPointLockPort, Clock clock) {
+		return new EarnPointService(loadPointLedgerPort, savePointEntryPort, thresholdProvider, driverPointLockPort,
+			clock);
 	}
 }

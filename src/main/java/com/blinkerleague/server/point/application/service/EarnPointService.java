@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import com.blinkerleague.server.point.application.port.out.DriverPointLockPort;
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort.PointAlreadyEarnedException;
@@ -22,10 +23,15 @@ public class EarnPointService {
 	private final LoadPointLedgerPort loadPointLedgerPort;
 	private final SavePointEntryPort savePointEntryPort;
 	private final ThresholdProvider thresholdProvider;
+	private final DriverPointLockPort driverPointLockPort;
 	private final Clock clock;
 
 	/** 운행 점수로 적립하고, 실제로 적립한 포인트를 돌려준다. */
 	public int earnForTrip(Long driverId, String tripId, double distanceKm, int score) {
+		return driverPointLockPort.withDriverLock(driverId, () -> earnTripLocked(driverId, tripId, distanceKm, score));
+	}
+
+	private int earnTripLocked(Long driverId, String tripId, double distanceKm, int score) {
 		// 같은 운행은 한 번만 적립한다(운행 재전송 · 재계산).
 		if (loadPointLedgerPort.exists(PointReason.TRIP, tripId)) {
 			return 0;

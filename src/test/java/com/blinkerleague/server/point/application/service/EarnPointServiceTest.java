@@ -20,7 +20,8 @@ class EarnPointServiceTest {
 
 	private final InMemoryPointLedger ledger = new InMemoryPointLedger();
 	private final EarnPointService service = new EarnPointService(ledger, ledger,
-		() -> new VersionedThresholds(1, ThresholdsFixture.planExample()), Clock.fixed(NOW, TimeConfig.ZONE));
+		() -> new VersionedThresholds(1, ThresholdsFixture.planExample()), ledger,
+		Clock.fixed(NOW, TimeConfig.ZONE));
 
 	@Test
 	void 운행_점수로_적립하면_적립_시점의_거리와_점수를_원장에_남긴다() {

@@ -3,7 +3,9 @@ package com.blinkerleague.server.point.application.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
+import com.blinkerleague.server.point.application.port.out.DriverPointLockPort;
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort.PointAlreadyEarnedException;
@@ -11,7 +13,7 @@ import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.point.domain.PointReason;
 
 /** 포인트 원장 포트의 메모리 구현. 서비스 단위 테스트용. */
-class InMemoryPointLedger implements LoadPointLedgerPort, SavePointEntryPort {
+class InMemoryPointLedger implements LoadPointLedgerPort, SavePointEntryPort, DriverPointLockPort {
 
 	private final List<PointEntry> entries = new ArrayList<>();
 	private boolean nextSaveConflicts;
@@ -42,6 +44,12 @@ class InMemoryPointLedger implements LoadPointLedgerPort, SavePointEntryPort {
 			.filter(entry -> !entry.getEarnedAt().isBefore(from) && entry.getEarnedAt().isBefore(to))
 			.mapToInt(PointEntry::getAmount)
 			.sum();
+	}
+
+	/** 단위 테스트는 한 스레드라 잠그지 않고 바로 실행한다. 동시성은 EarnPointConcurrencyTest가 확인한다. */
+	@Override
+	public <T> T withDriverLock(Long driverId, Supplier<T> work) {
+		return work.get();
 	}
 
 	List<PointEntry> entries() {
