@@ -24,11 +24,15 @@ public final class ThresholdsFixture {
 	public static Thresholds withGrades(List<GradeRule> grades) {
 		return new Thresholds(
 			new Thresholds.Trip(3.0, 3),
-			new Thresholds.Turn(5, 10, 60, 150, 5),
-			new Thresholds.Harsh(10),
-			new Thresholds.SafetyWarning(10),
+			new Thresholds.Turn(5, 10, 60, 150, 5, 0.5, 30, 30),
+			new Thresholds.Harsh(10, 10),
+			new Thresholds.SafetyWarning(10, 20),
+			new Thresholds.SignalCancel(20, 30, 25),
+			new Thresholds.SeatBelt(50, 10),
+			new Thresholds.Rain(30, 0.8),
 			Map.of(ScoreItem.TURN_SIGNAL, 0.4, ScoreItem.SMOOTH_DRIVING, 0.3,
 				ScoreItem.SAFETY_WARNING, 0.2, ScoreItem.NIGHT_HEADLIGHT, 0.1),
+			Map.of(ScoreItem.TURN_SIGNAL, 1),
 			new Thresholds.Point(50, 150, 7, 50),
 			grades,
 			Map.of(ScoreItem.TURN_SIGNAL, "회전 5초 전에 깜빡이를 켜 보세요.",
@@ -41,6 +45,13 @@ public final class ThresholdsFixture {
 	public static Thresholds withMinDistanceKm(double minDistanceKm) {
 		Thresholds base = planExample();
 		return new Thresholds(new Thresholds.Trip(minDistanceKm, base.trip().parkEndMinutes()), base.turn(),
-			base.harsh(), base.safetyWarning(), base.weights(), base.point(), base.grades(), base.tips());
+			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), base.minSamples(), base.point(), base.grades(), base.tips());
+	}
+
+	/** 같은 구조에서 항목별 최소 표본만 바꾼 값. */
+	public static Thresholds withMinSamples(Map<ScoreItem, Integer> minSamples) {
+		Thresholds base = planExample();
+		return new Thresholds(base.trip(), base.turn(), base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), minSamples,
+			base.point(), base.grades(), base.tips());
 	}
 }

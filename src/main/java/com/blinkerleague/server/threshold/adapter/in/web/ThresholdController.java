@@ -45,7 +45,11 @@ public class ThresholdController {
 		Thresholds.Turn turn,
 		Thresholds.Harsh harsh,
 		Thresholds.SafetyWarning safetyWarning,
+		Thresholds.SignalCancel signalCancel,
+		Thresholds.SeatBelt seatBelt,
+		Thresholds.Rain rain,
 		Map<ScoreItem, Double> weights,
+		Map<ScoreItem, Integer> minSamples,
 		Thresholds.Point point,
 		List<Thresholds.GradeRule> grades,
 		Map<ScoreItem, String> tips) {
@@ -53,7 +57,7 @@ public class ThresholdController {
 		static ThresholdsResponse from(VersionedThresholds current) {
 			Thresholds t = current.thresholds();
 			return new ThresholdsResponse(current.version(), t.trip(), t.turn(), t.harsh(), t.safetyWarning(),
-				t.weights(), t.point(), t.grades(), t.tips());
+				t.signalCancel(), t.seatBelt(), t.rain(), t.weights(), t.minSamples(), t.point(), t.grades(), t.tips());
 		}
 	}
 }

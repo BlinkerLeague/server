@@ -9,6 +9,7 @@ import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.score.domain.ScoreCalculator;
 import com.blinkerleague.server.score.domain.ScoreResult;
+import com.blinkerleague.server.score.domain.TripFacts;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
@@ -46,10 +47,11 @@ public class UploadTripService {
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), thresholds.trip().minDistanceKm());
 		if (trip.getStatus() == TripStatus.UPLOADED) {
-			ScoreResult score = scoreCalculator.calculate(trip.getSupportedSignals(), DrivingEvents.fromRecorded(command.events()),
-				thresholds.weights());
+			ScoreResult score = scoreCalculator.calculate(new TripFacts(trip.getSupportedSignals(), trip.getDistanceKm(),
+				DrivingEvents.fromRecorded(command.events())), thresholds);
 			trip.applyScore(score.score(), score.metrics().stream()
-				.map(m -> new TripMetric(m.metric(), m.value(), m.score(), m.weight()))
+				.map(m -> new TripMetric(m.metric(), m.status().name(), m.reason(), m.value(), m.score(), m.weight(),
+					MetricDetails.toJson(m.detail())))
 				.toList());
 		}
 		try {

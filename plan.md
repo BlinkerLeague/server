@@ -26,15 +26,17 @@
 | D15 | 업로드 요청 형식 | plan은 "기획서 8.2 형식 그대로"인데 기획서가 저장소에 없음 | **결정(11.3): 3.4의 제안 형식으로 구현.** 기획서 8.2와 다르면 DTO만 맞춘다 |
 | D16 | 운행 업로드 이벤트 개수 · 요청 크기 상한 | `POST /api/trips`의 `events` 개수와 본문 크기에 제한이 없음. 한 요청으로 수만 건을 보내 DB · 메모리를 소모시킬 수 있음 | **미정.** A) `events` 최대 개수(예: 1,000)를 Bean Validation `@Size`로 두고, 초과는 400 / B) 서버(Tomcat) 요청 본문 크기 상한만 둠 / C) 둘 다. 값은 차량 앱 팀과 실제 운행(장거리 포함)의 이벤트 수를 확인해 정함 |
 | D17 | 운행 시각 허용 범위 | `startedAt` · `endedAt`이 먼 미래나 아주 오래된 시각이어도 받음. 미래 시각 운행은 일일 미션 · 일일 상한 · 시즌 집계를 왜곡할 수 있음 | **미정.** A) 서버 시각(`Clock`) 기준 `endedAt`이 현재 + 허용 오차(예: 5분)보다 뒤면 400, 시작이 너무 오래 전(예: 7일)이면 400 / B) 미래만 막음 / C) 제한 없음(오프라인 운행을 나중에 올리는 경우를 우선). 앱의 오프라인 보관 기간과 함께 정함 |
-| D18 | 점수 항목 확장 | 항목 4개(P0은 깜빡이 1개)라 회전 2~3번으로 점수가 정해지고 만점이 쉬움. 차량 앱 팀이 Pleos SDK 실행 결과로 쓸 수 있는 데이터를 확인함(android-app `docs/sdk-test-log.md`) | **제안(11.4): 11개 항목으로 확장**(`POLICY_NOTION.md` 4-1장, android-app `docs/scoring-criteria.md`). 깜빡이 4단계(30m 기준) · 깜빡이 끄기 · 내비 안내 회전 · 제한속도 · 단속 구간 · 보호 구간 감속 · 회전 속도 · 급가감속 · 안전벨트 · 경고등 · 야간 전조등 · 우천 운전. 법규 기준, 거리 정규화, 최소 표본. 내비 데이터 항목(제한속도 · 단속 · 보호 구간 · 내비 회전)은 에뮬레이터에서 값이 안 와 실차 확인 필요 → 4.6으로 분리. 채택 범위 · 가중치는 `feat/score-full-metrics` 착수 전 확정 |
+| D18 | 점수 항목 확장 | 항목 4개(P0은 깜빡이 1개)라 회전 2~3번으로 점수가 정해지고 만점이 쉬움. 차량 앱 팀이 Pleos SDK 실행 결과로 쓸 수 있는 데이터를 확인함(android-app `docs/sdk-test-log.md`) | **채택(11.8, `feat/score-full-metrics`): 🟢 · 🟡 8개 항목과 앱 문서의 초안 가중치(TURN_SIGNAL 0.25 · SIGNAL_CANCEL 0.05 · TURN_SPEED 0.05 · SMOOTH_DRIVING 0.15 · SEAT_BELT 0.05 · SAFETY_WARNING 0.05 · NIGHT_HEADLIGHT 0.05 · RAIN_DRIVING 0.05, 측정한 항목끼리 재분배).** 원 제안: 11개 항목으로 확장(`POLICY_NOTION.md` 4-1장, android-app `docs/scoring-criteria.md`). 깜빡이 4단계(30m 기준) · 깜빡이 끄기 · 내비 안내 회전 · 제한속도 · 단속 구간 · 보호 구간 감속 · 회전 속도 · 급가감속 · 안전벨트 · 경고등 · 야간 전조등 · 우천 운전. 법규 기준, 거리 정규화, 최소 표본. 내비 데이터 항목(제한속도 · 단속 · 보호 구간 · 내비 회전)은 에뮬레이터에서 값이 안 와 실차 확인 필요 → 4.6으로 분리. 채택 범위 · 가중치는 `feat/score-full-metrics` 착수 전 확정 |
 | D19 | 리그 비교 점수 | 차량마다 측정 가능한 항목이 달라, 항목이 적은 차가 리그에서 유리할 수 있음(4.4 "같은 측정 항목 집단끼리 비교") | **제안(11.4): 리그 순위 · 안전지수는 모든 차가 측정하는 공통 항목 점수로**, 운행 점수 · 포인트는 전체 항목 점수로. 공통 항목 목록은 기준값 설정에 둠. `feat/region-league` 착수 전 확정 |
-| D20 | 오토라이트 · 비상등 규칙 | Vehicle SDK 2.3.2에 오토라이트 상태 · 비상등 API가 없음(에뮬레이터 확인) | **제안(11.4): 4.1의 "오토라이트면 100점"과 `NIGHT_SEGMENT.autoLight` 삭제**, 하향등 상태로만 판정. 앱 회전 제외 규칙의 비상등 조건도 적용 불가. 실차에서 경고등으로 비상등이 오면 재검토 |
-| D21 | 새 이벤트 종류 · 항목 이름 수용 | `TripEventType` · `ScoreItem`이 enum이라 모르는 값이 오면 `POST /api/trips`가 400. 앱은 4xx를 재전송하지 않고 `REJECTED`로 멈추므로 운행 전체가 버려짐 | **미정.** A) 서버 P1 반영(enum 추가)이 배포된 뒤에만 앱이 새 값을 보냄(기준값 `version`으로 앱이 판단) / B) 모르는 이벤트 종류는 저장만 하고 무시, 모르는 `supported` 이름은 버림. 기본 제안 A |
+| D20 | 오토라이트 · 비상등 규칙 | Vehicle SDK 2.3.2에 오토라이트 상태 · 비상등 API가 없음(에뮬레이터 확인) | **채택(11.8): 4.1의 "오토라이트면 100점"과 `NIGHT_SEGMENT.autoLight` 삭제**, 하향등 상태로만 판정. 앱 회전 제외 규칙의 비상등 조건도 적용 불가. 실차에서 경고등으로 비상등이 오면 재검토 |
+| D21 | 새 이벤트 종류 · 항목 이름 수용 | `TripEventType` · `ScoreItem`이 enum이라 모르는 값이 오면 `POST /api/trips`가 400. 앱은 4xx를 재전송하지 않고 `REJECTED`로 멈추므로 운행 전체가 버려짐 | **미정.** A) 서버 P1 반영(enum 추가)이 배포된 뒤에만 앱이 새 값을 보냄(기준값 `version`으로 앱이 판단) / B) 모르는 이벤트 종류는 저장만 하고 무시, 모르는 `supported` 이름은 버림. **채택(11.8): A**(서버는 계속 모르는 값을 400으로 거부) |
 | D22 | 경기 요약(`summary`) · 경기 기록(`plays`) 정의 | 3.5에 제안만 있고 화면 기획서와 확정 전 | **결정(11.5):** 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 점수에 쓰지 않으므로 항상 0). `plays`는 저장된 **모든 이벤트**를 시각순으로 담고, `TURN`만 `result`(`GOAL`/`CONCEDED`)가 있으며 나머지(`LANE_CHANGE` 등)는 `result: null` |
 | D23 | `TURN` payload의 `signalOn` 해석 불가 | 업로드는 payload를 해석하지 않고 저장하므로 `signalOn`이 없거나 boolean이 아닐 수 있음 | **결정(11.5): 깜빡이를 켜지 않은 회전으로 판정.** `signalOn`이 `true`일 때만 성공. 업로드(400)로 막지 않는다 |
 | D24 | 최근 경기 목록 `limit` | 3.5에서 "착수 시 확정" | **결정(11.5): 기본 10, 최대 50.** 50을 넘으면 50으로 자른다 |
 | D25 | 달성하지 못한 날의 미션 상태 · 홈 표시 | 3.6은 "그날이 끝날 때까지 달성하지 못하면 FAILED"만 있고 시점 · 화면 표시가 없음 | **결정(11.8): 끝난 날의 미달성은 `FAILED`.** 배치 없이 판정할 때(업로드 · 조회) 정한다. **오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날의 최종 상태(`ACHIEVED` · `FAILED`)를 계속 보여 주고**, 오늘 운행을 올리면 오늘 미션으로 새로 시작한다. 그날 끝난 운행을 늦게 올려(오프라인 후) 조건을 채우면 `FAILED`에서 `ACHIEVED`로 바꾼다. `ACHIEVED`는 되돌리지 않는다 |
 | D26 | 연속 기록 · 배지 세부 | 4.3은 "배지 목록 · 조건은 착수 시 확정" | **결정(11.8): 기본 배지 3종** `FIRST_TRIP`(점수가 난 첫 운행), `STREAK_7`(미션 7일 연속 달성, 최장 연속 기준), `SIGNAL_100`(깜빡이를 켠 회전 누적 100회). 카탈로그는 `badges/default-badges.json`(조건 종류 `rule` + 목표 `target`)으로 두어 코드 수정 없이 늘린다. 연속 보상은 기준값 `point.streakRewardDays`(7)일마다 `point.streakRewardPoint`(50P) |
+| D27 | 항목별 최소 표본 기본값 | 제안은 회전 3번 미만이면 깜빡이 항목 제외. MVP 앱은 깜빡이 1항목만 보내 회전 1~2번 운행은 점수 · 포인트가 사라짐 | **결정(11.8): 기준값 `minSamples`(항목별)로 두고 기본 1**(P0 동작 그대로). 2차에 앱이 여러 항목을 보내기 시작하면 설정만 3으로 올린다 |
+| D28 | 측정할 항목이 하나도 없는 운행의 상태 | 4.1은 "`NO_TURN`을 없애고 이름은 착수 시 확정". 앱은 `SCORED` · `NO_TURN` · `EXCLUDED_SHORT`를 가정 | **결정(11.8): `NO_TURN` 이름 유지**, 뜻을 "측정할 수 있는 항목이 하나도 없음"으로 넓힌다. 회전이 0회여도 다른 항목을 측정하면 `SCORED` |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -334,6 +336,13 @@ API: `GET /api/missions/today`
 ## 4. P1 (2차 PT, 12.2)
 
 ### 4.1 `feat/score-full-metrics` — 급가감속 · 야간 전조등 · 안전 경고 (FR-08 ~ FR-10)
+
+상태: 완료(11.8, D18 채택 · D20 · D21 A · D27 · D28). 내비 데이터 항목(4.6)은 제외.
+- 항목 8개: `TURN_SIGNAL`(4단계: 제때 1 · 늦게 `turn.lateSignalScore` 0.5 · 반대 · 안 켬 0, `signalTiming`이 없으면 `signalOn` 2단계), `SIGNAL_CANCEL`(`100 − signalCancel.penalty` 25 × `SIGNAL_LEFT_ON` 횟수), `TURN_SPEED`(속도를 아는 회전 중 `turn.turnSpeedKmh` 30 이하 비율), `SMOOTH_DRIVING`(`100 − harsh.penaltyPer10Km` 10 × 10km당 급가감속), `SEAT_BELT`(출발 시 미착용 −50 · 주행 중 1분마다 −10, 하한 0), `SAFETY_WARNING`(`mergeWindowSec` 안 중복 1회, `100 − safetyWarning.penaltyPer100Km` 20 × 100km당), `NIGHT_HEADLIGHT`(켜 둔 비율, 오토라이트 규칙 없음), `RAIN_DRIVING`(점등 비율과 감속 준수 비율의 평균, 제한속도를 모르면 점등만)
+- `metrics`에 모든 항목을 담는다: `status` `SCORED` / `UNSUPPORTED`(`SIGNAL_NOT_SUPPORTED`) / `NOT_APPLICABLE`(`NO_TURN` · `TOO_FEW_SAMPLES` · `NO_SPEED` · `NO_NIGHT` · `NO_RAIN` · `NO_DATA`), 제외 항목은 `value` · `score` · `weight`가 `null`. `detail`은 근거 수치(예: 깜빡이 `{ turns, onTime, late, missed }`, 급가감속 `{ count, per10Km }`). `trip_metric`에 `status` · `reason` · `detail`(JSON)을 저장
+- 회전 0회는 깜빡이 항목의 제외 사유이고 나머지 항목으로 평점. 측정할 항목이 하나도 없으면 운행 `status=NO_TURN`(D28)
+- 기준값 추가: `turn.lateSignalScore` · `turnSpeedKmh` · `signalLeadDistanceM`, `harsh.penaltyPer10Km`, `safetyWarning.penaltyPer100Km`, `signalCancel`, `seatBelt`, `rain`, `minSamples`(기본 `TURN_SIGNAL` 1, D27), D18 가중치, 새 항목 `tips`. 이미 저장된 기준값은 시드가 덮어쓰지 않으므로, 운영 DB가 생긴 뒤에는 `ThresholdService.update`로 바꿔야 한다
+- 남은 항목: `safetyWarning.telltales`(점수에 셀 경고등 종류)는 실차 확인 후. 미션 · 배지의 회전 판정은 지금도 `signalOn`을 쓰므로 앱이 `signalTiming`과 함께 `signalOn`을 계속 보내야 한다(P0 호환)
 
 - `ScoreCalculator`에 항목 추가 (기획서 6.1)
   - 부드러운 가감속: `max(0, 100 − 10 × 10km당 (HARSH_ACCEL + HARSH_BRAKE))`

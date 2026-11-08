@@ -14,7 +14,11 @@ public record Thresholds(
 	Turn turn,
 	Harsh harsh,
 	SafetyWarning safetyWarning,
+	SignalCancel signalCancel,
+	SeatBelt seatBelt,
+	Rain rain,
 	Map<ScoreItem, Double> weights,
+	Map<ScoreItem, Integer> minSamples,
 	Point point,
 	List<GradeRule> grades,
 	Map<ScoreItem, String> tips) {
@@ -31,16 +35,32 @@ public record Thresholds(
 	public record Trip(double minDistanceKm, int parkEndMinutes) {
 	}
 
-	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec) {
+	/** 앱의 회전 판정 기준(제때 깜빡이 signalLeadDistanceM 등), 서버의 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비)와 회전 속도 기준(turnSpeedKmh). */
+	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec,
+		double lateSignalScore, int turnSpeedKmh, int signalLeadDistanceM) {
 	}
 
-	public record Harsh(int deltaKmhPerSec) {
+	/** 앱의 급가감속 판정 기준(deltaKmhPerSec)과 서버의 감점 폭(10km당 1회마다 penaltyPer10Km점). */
+	public record Harsh(int deltaKmhPerSec, double penaltyPer10Km) {
 	}
 
-	public record SafetyWarning(int mergeWindowSec) {
+	/** 같은 경고를 1회로 묶는 시간(mergeWindowSec)과 감점 폭(100km당 1회마다 penaltyPer100Km점). */
+	public record SafetyWarning(int mergeWindowSec, double penaltyPer100Km) {
 	}
 
 	/** 운행 적립 최대 거리, 일일 상한, 연속 달성 보상(streakRewardDays일마다 streakRewardPoint, plan.md 4.3). */
+	/** 앱의 깜빡이 끄기 판정(forgetSec 넘게, minSpeedKmh 이상)과 서버의 1회당 감점(penalty). */
+	public record SignalCancel(int forgetSec, int minSpeedKmh, int penalty) {
+	}
+
+	/** 안전벨트 감점: 출발 시 미착용(departurePenalty), 주행 중 미착용 1분마다(perMinutePenalty). */
+	public record SeatBelt(int departurePenalty, int perMinutePenalty) {
+	}
+
+	/** 앱의 우천 판정: 와이퍼가 minWiperSec 넘게 켜진 구간, 제한속도의 speedRatio 이하를 감속 준수로 본다. */
+	public record Rain(int minWiperSec, double speedRatio) {
+	}
+
 	public record Point(int tripMaxKm, int dailyCap, int streakRewardDays, int streakRewardPoint) {
 	}
 

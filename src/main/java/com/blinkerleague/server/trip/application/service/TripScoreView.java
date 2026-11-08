@@ -1,6 +1,7 @@
 package com.blinkerleague.server.trip.application.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.blinkerleague.server.score.domain.MatchReport;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
@@ -16,7 +17,8 @@ public record TripScoreView(String tripId, TripStatus status, Integer score, Str
 	static TripScoreView of(Trip trip, Thresholds thresholds) {
 		String grade = gradeOf(trip.getScore(), thresholds);
 		List<Metric> metrics = trip.getMetrics().stream()
-			.map(m -> new Metric(m.getMetric(), m.getValue(), m.getScore(), m.getWeight()))
+			.map(m -> new Metric(m.getMetric(), m.getStatus(), m.getReason(), m.getValue(), m.getScore(), m.getWeight(),
+				MetricDetails.fromJson(m.getDetail())))
 			.toList();
 		MatchReport report = MatchReport.of(DrivingEvents.of(trip.getEvents()));
 		Turns turns = new Turns(report.summary().goals() + report.summary().conceded(), report.summary().goals());
@@ -33,7 +35,9 @@ public record TripScoreView(String tripId, TripStatus status, Integer score, Str
 		return score == null ? null : thresholds.gradeOf(score).orElse(null);
 	}
 
-	public record Metric(ScoreItem metric, double value, int score, double weight) {
+	/** 측정하지 못한 항목은 value · score · weight가 null이고 status · reason을 담는다. */
+	public record Metric(ScoreItem metric, String status, String reason, Double value, Integer score, Double weight,
+		Map<String, Object> detail) {
 	}
 
 	public record Turns(int total, int success) {

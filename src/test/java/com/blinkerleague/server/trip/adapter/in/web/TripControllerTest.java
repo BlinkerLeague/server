@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -60,11 +61,67 @@ class TripControllerTest {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.score").value(100))
 			.andExpect(jsonPath("$.grade").value("S"))
-			.andExpect(jsonPath("$.metrics.length()").value(1))
-			.andExpect(jsonPath("$.metrics[0].metric").value("TURN_SIGNAL"))
-			.andExpect(jsonPath("$.metrics[0].value").value(1.0))
-			.andExpect(jsonPath("$.metrics[0].score").value(100))
-			.andExpect(jsonPath("$.metrics[0].weight").value(1.0));
+			.andExpect(jsonPath("$.metrics[?(@.status == 'SCORED')].metric").value(org.hamcrest.Matchers.contains("TURN_SIGNAL")))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].value").value(org.hamcrest.Matchers.contains(1.0)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].score").value(org.hamcrest.Matchers.contains(100)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].weight").value(org.hamcrest.Matchers.contains(1.0)));
+	}
+
+	@Test
+	void 업로드와_점수_조회는_측정_못_한_항목도_상태_사유와_근거_수치를_담는다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		String body = """
+			{ "tripId": "%s", "startedAt": "2026-11-03T08:00:00+09:00", "endedAt": "2026-11-03T08:40:00+09:00",
+			  "distanceKm": 10.0, "supported": ["TURN_SIGNAL", "SMOOTH_DRIVING", "NIGHT_HEADLIGHT"],
+			  "events": [
+			    { "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T08:10:00+09:00",
+			      "payload": { "direction": "LEFT", "signalOn": true, "signalTiming": "LATE" } },
+			    { "eventId": "%s", "type": "HARSH_BRAKE", "occurredAt": "2026-11-03T08:20:00+09:00", "payload": {} } ] }
+			""".formatted(tripId, UUID.randomUUID(), UUID.randomUUID());
+
+		for (ResultActions response : List.of(upload(1L, body), getScore(1L, tripId))) {
+			response
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].status").value(org.hamcrest.Matchers.contains("SCORED")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].score").value(org.hamcrest.Matchers.contains(50)))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].detail.late").value(org.hamcrest.Matchers.contains(1)))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'SMOOTH_DRIVING')].detail.per10Km").value(org.hamcrest.Matchers.contains(1.0)))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'NIGHT_HEADLIGHT')].status").value(org.hamcrest.Matchers.contains("NOT_APPLICABLE")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'NIGHT_HEADLIGHT')].reason").value(org.hamcrest.Matchers.contains("NO_NIGHT")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'NIGHT_HEADLIGHT')].score").value(org.hamcrest.Matchers.contains(org.hamcrest.Matchers.nullValue())))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'SEAT_BELT')].status").value(org.hamcrest.Matchers.contains("UNSUPPORTED")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'SEAT_BELT')].reason").value(org.hamcrest.Matchers.contains("SIGNAL_NOT_SUPPORTED")));
+		}
+	}
+
+	@Test
+	void 새_이벤트와_항목을_받아_D18_가중치로_평점한다() throws Exception {
+		String body = """
+			{ "tripId": "%s", "startedAt": "2026-11-03T20:00:00+09:00", "endedAt": "2026-11-03T20:40:00+09:00",
+			  "distanceKm": 20.0,
+			  "supported": ["TURN_SIGNAL", "SIGNAL_CANCEL", "TURN_SPEED", "SMOOTH_DRIVING", "SEAT_BELT",
+			                "SAFETY_WARNING", "NIGHT_HEADLIGHT", "RAIN_DRIVING"],
+			  "events": [
+			    { "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T20:10:00+09:00",
+			      "payload": { "direction": "LEFT", "signalOn": true, "signalTiming": "ON_TIME", "maxSpeedKmh": 25 } },
+			    { "eventId": "%s", "type": "SIGNAL_LEFT_ON", "occurredAt": "2026-11-03T20:15:00+09:00", "payload": { "durationSec": 40 } },
+			    { "eventId": "%s", "type": "SEAT_BELT", "occurredAt": "2026-11-03T20:00:00+09:00",
+			      "payload": { "buckledAtDeparture": false, "unbuckledMovingSec": 0 } },
+			    { "eventId": "%s", "type": "NIGHT_SEGMENT", "occurredAt": "2026-11-03T20:00:00+09:00",
+			      "payload": { "durationSec": 2400, "headlightOffSec": 0 } },
+			    { "eventId": "%s", "type": "RAIN_SEGMENT", "occurredAt": "2026-11-03T20:20:00+09:00",
+			      "payload": { "durationSec": 600, "headlightOffSec": 0, "knownLimitSec": 0, "overRainLimitSec": 0 } } ] }
+			""".formatted(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+			UUID.randomUUID());
+
+		// 깜빡이 100 · 끄기 75 · 회전 속도 100 · 급가감속 100 · 벨트 50 · 경고등 100 · 전조등 100 · 우천 100
+		// 가중치 0.25 · 0.05 · 0.05 · 0.15 · 0.05 · 0.05 · 0.05 · 0.05 (합 0.7로 나눔) → (70 − 1.25 − 2.5) ÷ 0.7 = 94.6
+		upload(1L, body)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.status").value("SCORED"))
+			.andExpect(jsonPath("$.score").value(95))
+			.andExpect(jsonPath("$.metrics[?(@.status == 'SCORED')]").value(org.hamcrest.Matchers.hasSize(8)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'SIGNAL_CANCEL')].score").value(org.hamcrest.Matchers.contains(75)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'SEAT_BELT')].score").value(org.hamcrest.Matchers.contains(50)));
 	}
 
 	@Test

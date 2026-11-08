@@ -2,6 +2,7 @@ package com.blinkerleague.server.trip.adapter.in.web;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
@@ -54,7 +55,7 @@ public class TripController {
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
 	@Operation(summary = "운행 · 이벤트 업로드",
 		description = "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.")
-	@ApiResponse(responseCode = "201", description = "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 회전이 없으면 NO_TURN(score=null), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult")
+	@ApiResponse(responseCode = "201", description = "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 측정할 수 있는 항목이 하나도 없으면 NO_TURN(score=null, D28), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult")
 	@ApiResponse(responseCode = "200", description = "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다")
 	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null",
 		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
@@ -117,9 +118,13 @@ public class TripController {
 		@NotBlank @Size(max = 36) String eventId,
 		@NotNull TripEventType type,
 		@NotNull OffsetDateTime occurredAt,
-		@Schema(implementation = Object.class, description = "이벤트 타입별 추가 정보(선택). 서버는 해석하지 않고 JSON 그대로 저장한다. "
-			+ "TURN: { \"direction\": \"LEFT\" | \"RIGHT\", \"signalOn\": true | false } "
-			+ "(깜빡이 점수는 signalOn으로 계산한다). 다른 타입의 형식은 아직 정해지지 않아 저장만 한다.",
+		@Schema(implementation = Object.class, description = "이벤트 타입별 추가 정보(선택). 서버는 JSON 그대로 저장하고 점수에 쓰는 값만 읽는다(plan.md 4.1). "
+			+ "TURN: { direction: LEFT|RIGHT, signalOn, signalTiming: ON_TIME|LATE|WRONG_DIRECTION|NONE, leadDistanceM, maxSpeedKmh } "
+			+ "(signalTiming이 있으면 4단계, 없으면 signalOn으로 2단계 판정) / "
+			+ "SIGNAL_LEFT_ON: { durationSec } / SEAT_BELT(운행당 1건): { buckledAtDeparture, unbuckledMovingSec } / "
+			+ "NIGHT_SEGMENT: { durationSec, headlightOffSec } / "
+			+ "RAIN_SEGMENT: { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec } / "
+			+ "HARSH_ACCEL · HARSH_BRAKE · SAFETY_WARNING · LANE_CHANGE: 형식 없음(횟수만 셈). 원시 위치 좌표는 넣지 않는다.",
 			example = "{\"direction\": \"LEFT\", \"signalOn\": true}")
 		JsonNode payload) {
 
@@ -135,7 +140,7 @@ public class TripController {
 
 		static TripResult from(TripScoreView view) {
 			List<MetricResult> metrics = view.metrics().stream()
-				.map(m -> new MetricResult(m.metric(), m.value(), m.score(), m.weight()))
+				.map(m -> new MetricResult(m.metric(), m.status(), m.reason(), m.value(), m.score(), m.weight(), m.detail()))
 				.toList();
 			List<PlayItem> plays = view.plays().stream()
 				.map(p -> new PlayItem(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
@@ -165,7 +170,12 @@ public class TripController {
 		}
 	}
 
-	public record MetricResult(ScoreItem metric, double value, int score, double weight) {
+	/**
+	 * 항목별 결과(plan.md 4.1). status는 SCORED · UNSUPPORTED(차량 미지원) · NOT_APPLICABLE(측정할 상황 없음 · 표본 부족).
+	 * 측정하지 못한 항목은 reason이 있고 value · score · weight는 null이다. detail은 화면 문구용 근거 수치다.
+	 */
+	public record MetricResult(ScoreItem metric, String status, String reason, Double value, Integer score,
+		Double weight, Map<String, Object> detail) {
 	}
 
 	public record TurnsResult(int total, int success) {
