@@ -72,4 +72,18 @@ class PointLedgerPersistenceAdapterTest {
 		assertThat(adapter.balance(1L)).isEqualTo(30);
 		assertThat(adapter.balance(3L)).isZero();
 	}
+
+	@Test
+	void 최근_원장은_적립_시각이_늦은_것부터_limit건이고_같은_시각이면_나중에_저장한_것이_먼저다() {
+		adapter.saveNew(PointEntry.trip(1L, "old", 10, 12.3, 86, NOW.minusSeconds(120)));
+		adapter.saveNew(PointEntry.trip(1L, "same-first", 10, 12.3, 86, NOW));
+		adapter.saveNew(PointEntry.trip(1L, "same-second", 10, 12.3, 86, NOW));
+		adapter.saveNew(PointEntry.trip(1L, "middle", 10, 12.3, 86, NOW.minusSeconds(60)));
+		adapter.saveNew(PointEntry.trip(2L, "other", 10, 12.3, 86, NOW));
+		entityManager.flush();
+		entityManager.clear();
+
+		assertThat(adapter.findRecent(1L, 3)).extracting(PointEntry::getRefId)
+			.containsExactly("same-second", "same-first", "middle");
+	}
 }
