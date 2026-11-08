@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
@@ -18,41 +18,56 @@ import com.blinkerleague.server.trip.domain.TripEventType;
 public class ScoreCalculator {
 
 	public ScoreResult calculate(TripFacts facts, Thresholds thresholds) {
-		Map<ScoreItem, Measured> measured = new EnumMap<>(ScoreItem.class);
-		if (facts.supported().contains(ScoreItem.TURN_SIGNAL)) {
-			turnSignal(facts).ifPresent(m -> measured.put(ScoreItem.TURN_SIGNAL, m));
+		Map<ScoreItem, Outcome> outcomes = new EnumMap<>(ScoreItem.class);
+		for (ScoreItem item : ScoreItem.values()) {
+			outcomes.put(item, facts.supported().contains(item)
+				? measure(item, facts, thresholds)
+				: Outcome.excluded(MetricStatus.UNSUPPORTED, "SIGNAL_NOT_SUPPORTED"));
 		}
-		if (facts.supported().contains(ScoreItem.SMOOTH_DRIVING)) {
-			measured.put(ScoreItem.SMOOTH_DRIVING, smoothDriving(facts, thresholds.harsh()));
-		}
+		List<ScoreItem> measured = outcomes.entrySet().stream()
+			.filter(e -> e.getValue().measured()).map(Map.Entry::getKey).toList();
 		if (measured.isEmpty()) {
-			return new ScoreResult(null, List.of());
+			return new ScoreResult(null, metrics(outcomes, Map.of()));
 		}
-
-		Map<ScoreItem, Double> applied = WeightRedistribution.redistribute(thresholds.weights(), measured.keySet());
-		List<MetricScore> metrics = new ArrayList<>();
-		measured.forEach((item, m) -> metrics.add(
-			MetricScore.scored(item, m.value(), toScore(m.value()), applied.get(item), m.detail())));
-		double total = metrics.stream().mapToDouble(m -> m.value() * 100 * m.weight()).sum();
+		Map<ScoreItem, Double> applied = WeightRedistribution.redistribute(thresholds.weights(), Set.copyOf(measured));
+		List<MetricScore> metrics = metrics(outcomes, applied);
+		double total = metrics.stream().filter(m -> m.status() == MetricStatus.SCORED)
+			.mapToDouble(m -> m.value() * 100 * m.weight()).sum();
 		return new ScoreResult((int) Math.round(total), metrics);
 	}
 
-	// 깜빡이를 켠 회전 비율. 회전이 없으면 측정하지 않는다.
-	private static Optional<Measured> turnSignal(TripFacts facts) {
+	private static Outcome measure(ScoreItem item, TripFacts facts, Thresholds thresholds) {
+		return switch (item) {
+			case TURN_SIGNAL -> turnSignal(facts);
+			case SMOOTH_DRIVING -> smoothDriving(facts, thresholds.harsh());
+			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
+		};
+	}
+
+	private static List<MetricScore> metrics(Map<ScoreItem, Outcome> outcomes, Map<ScoreItem, Double> applied) {
+		List<MetricScore> metrics = new ArrayList<>();
+		outcomes.forEach((item, o) -> metrics.add(o.measured()
+			? MetricScore.scored(item, o.value(), toScore(o.value()), applied.get(item), o.detail())
+			: MetricScore.excluded(item, o.status(), o.reason())));
+		return metrics;
+	}
+
+	// 깜빡이를 켠 회전 비율. 회전이 없으면 이 항목만 빼고 나머지로 평점한다(plan.md 4.1).
+	private static Outcome turnSignal(TripFacts facts) {
 		List<DrivingEvent> turns = ofType(facts, TripEventType.TURN);
 		if (turns.isEmpty()) {
-			return Optional.empty();
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_TURN");
 		}
 		long signalOn = turns.stream().filter(DrivingEvent::signalOn).count();
-		return Optional.of(new Measured((double) signalOn / turns.size(), Map.of()));
+		return Outcome.of((double) signalOn / turns.size(), Map.of());
 	}
 
 	// max(0, 100 − penaltyPer10Km × 10km당 (급가속 + 급감속)) (plan.md 4.1)
-	private static Measured smoothDriving(TripFacts facts, Thresholds.Harsh rule) {
+	private static Outcome smoothDriving(TripFacts facts, Thresholds.Harsh rule) {
 		int count = ofType(facts, TripEventType.HARSH_ACCEL).size() + ofType(facts, TripEventType.HARSH_BRAKE).size();
 		double per10Km = count / facts.distanceKm() * 10;
 		double value = Math.max(0, 1 - rule.penaltyPer10Km() * per10Km / 100);
-		return new Measured(value, Map.of("count", count, "per10Km", oneDecimal(per10Km)));
+		return Outcome.of(value, Map.of("count", count, "per10Km", oneDecimal(per10Km)));
 	}
 
 	private static List<DrivingEvent> ofType(TripFacts facts, TripEventType type) {
@@ -67,6 +82,19 @@ public class ScoreCalculator {
 		return (int) Math.round(value * 100);
 	}
 
-	private record Measured(double value, Map<String, Number> detail) {
+	/** 항목 하나의 측정 결과. 측정했으면 value · detail, 제외면 status · reason. */
+	private record Outcome(Double value, Map<String, Number> detail, MetricStatus status, String reason) {
+
+		static Outcome of(double value, Map<String, Number> detail) {
+			return new Outcome(value, detail, MetricStatus.SCORED, null);
+		}
+
+		static Outcome excluded(MetricStatus status, String reason) {
+			return new Outcome(null, Map.of(), status, reason);
+		}
+
+		boolean measured() {
+			return status == MetricStatus.SCORED;
+		}
 	}
 }

@@ -61,7 +61,7 @@ class ScoreCalculatorTest {
 		ScoreResult result = calculator.calculate(new TripFacts(Set.of(), 12.0, turns), THRESHOLDS);
 
 		assertThat(result.score()).isNull();
-		assertThat(result.metrics()).isEmpty();
+		assertThat(result.metrics()).allSatisfy(m -> assertThat(m.status()).isEqualTo(MetricStatus.UNSUPPORTED));
 	}
 
 	@Test
