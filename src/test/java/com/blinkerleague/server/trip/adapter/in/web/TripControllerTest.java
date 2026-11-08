@@ -68,7 +68,7 @@ class TripControllerTest {
 	}
 
 	@Test
-	void 업로드_응답에_회전_수_경기_요약_시각순_경기_기록을_담고_미션은_아직_null이다() throws Exception {
+	void 업로드_응답에_회전_수_경기_요약_시각순_경기_기록을_담는다() throws Exception {
 		String body = """
 			{
 			  "tripId": "%s",
@@ -100,9 +100,26 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.plays[1].type").value("LANE_CHANGE"))
 			.andExpect(jsonPath("$.plays[1].result").hasJsonPath())
 			.andExpect(jsonPath("$.plays[1].result").value(nullValue()))
-			.andExpect(jsonPath("$.plays[2].result").value("CONCEDED"))
-			.andExpect(jsonPath("$.mission").hasJsonPath())
-			.andExpect(jsonPath("$.mission").value(nullValue()));
+			.andExpect(jsonPath("$.plays[2].result").value("CONCEDED"));
+	}
+
+	@Test
+	void 업로드_응답에_운행이_끝난_날의_미션_판정을_담는다() throws Exception {
+		// 다른 테스트의 운행과 섞이지 않도록 새 운전자로 올린다. 기본 미션: 한 라운드에서 회전 3회 이상 · 깜빡이 100%
+		Long driverId = 900_000L + new java.util.Random().nextInt(100_000);
+		ObjectNode body = (ObjectNode) objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 12.3));
+		ArrayNode events = body.putArray("events");
+		for (int i = 0; i < 3; i++) {
+			ObjectNode turn = events.addObject();
+			turn.put("eventId", UUID.randomUUID().toString()).put("type", "TURN")
+				.put("occurredAt", "2026-11-03T08:1" + i + ":00+09:00")
+				.putObject("payload").put("direction", "LEFT").put("signalOn", true);
+		}
+
+		upload(driverId, objectMapper.writeValueAsString(body))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.mission.missionId").isNumber())
+			.andExpect(jsonPath("$.mission.status").value("ACHIEVED"));
 	}
 
 	@Test
