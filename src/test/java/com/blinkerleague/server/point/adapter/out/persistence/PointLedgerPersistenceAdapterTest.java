@@ -62,4 +62,14 @@ class PointLedgerPersistenceAdapterTest {
 		assertThatThrownBy(() -> adapter.saveNew(PointEntry.trip(1L, "trip-1", 10, 12.3, 86, NOW)))
 			.isInstanceOf(PointAlreadyEarnedException.class);
 	}
+
+	@Test
+	void 잔액은_운전자의_전체_적립_합계이고_적립이_없으면_0이다() {
+		adapter.saveNew(PointEntry.trip(1L, "trip-1", 10, 12.3, 86, NOW.minusSeconds(86_400 * 3)));
+		adapter.saveNew(PointEntry.trip(1L, "trip-2", 20, 20.0, 100, NOW));
+		adapter.saveNew(PointEntry.trip(2L, "other", 100, 50.0, 100, NOW));
+
+		assertThat(adapter.balance(1L)).isEqualTo(30);
+		assertThat(adapter.balance(3L)).isZero();
+	}
 }
