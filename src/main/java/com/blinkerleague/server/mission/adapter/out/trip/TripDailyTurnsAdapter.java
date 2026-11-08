@@ -27,6 +27,7 @@ public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
 		  join trip t on t.trip_id = e.trip_id
 		 where t.driver_id = ?
 		   and t.ended_at >= ? and t.ended_at < ?
+		   and t.status <> 'EXCLUDED_SHORT'
 		   and e.type = 'TURN'
 		""";
 
