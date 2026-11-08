@@ -3,6 +3,7 @@ package com.blinkerleague.server.mission.adapter.out.persistence;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
@@ -13,6 +14,7 @@ import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
 import com.blinkerleague.server.mission.application.port.out.LoadAchievedDaysPort;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.domain.DriverMission;
+import com.blinkerleague.server.mission.domain.MissionStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,7 +36,9 @@ public class DriverMissionPersistenceAdapter implements DriverMissionStore, Load
 
 	@Override
 	public Set<LocalDate> achievedDays(Long driverId) {
-		throw new UnsupportedOperationException();
+		return repository.findByDriverIdAndStatus(driverId, MissionStatus.ACHIEVED).stream()
+			.map(record -> LocalDate.parse(record.getPeriodKey()))
+			.collect(Collectors.toSet());
 	}
 
 	@Override
