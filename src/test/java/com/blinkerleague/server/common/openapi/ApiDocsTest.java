@@ -27,4 +27,11 @@ class ApiDocsTest {
 			.andExpect(jsonPath("$.openapi").exists())
 			.andExpect(jsonPath("$.paths['/api/trips'].post").exists());
 	}
+
+	@Test
+	void 토큰에서_꺼내는_운전자_ID는_요청_파라미터로_문서에_나오지_않는다() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/api/trips'].post.parameters").doesNotExist());
+	}
 }
