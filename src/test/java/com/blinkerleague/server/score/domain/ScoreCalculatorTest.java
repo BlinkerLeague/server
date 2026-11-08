@@ -128,4 +128,29 @@ class ScoreCalculatorTest {
 				assertThat(m.detail()).containsEntry("count", 2).containsEntry("per100Km", 5.0);
 			});
 	}
+
+	@Test
+	void 야간_전조등은_야간_구간에서_켜_둔_비율이고_야간_구간이_없으면_측정하지_않는다() {
+		List<DrivingEvent> night = List.of(nightSegment(600, 60), nightSegment(400, 40));
+
+		ScoreResult scored = calculator.calculate(new TripFacts(Set.of(ScoreItem.NIGHT_HEADLIGHT), 12.0, night), THRESHOLDS);
+		ScoreResult day = calculator.calculate(new TripFacts(Set.of(ScoreItem.NIGHT_HEADLIGHT), 12.0, List.of()), THRESHOLDS);
+
+		// 꺼진 100초 ÷ 야간 1000초 = 10% → 90점
+		assertThat(scored.metrics()).filteredOn(m -> m.metric() == ScoreItem.NIGHT_HEADLIGHT).singleElement()
+			.satisfies(m -> {
+				assertThat(m.score()).isEqualTo(90);
+				assertThat(m.detail()).containsEntry("durationSec", 1000).containsEntry("headlightOffSec", 100);
+			});
+		assertThat(day.metrics()).filteredOn(m -> m.metric() == ScoreItem.NIGHT_HEADLIGHT).singleElement()
+			.satisfies(m -> {
+				assertThat(m.status()).isEqualTo(MetricStatus.NOT_APPLICABLE);
+				assertThat(m.reason()).isEqualTo("NO_NIGHT");
+			});
+	}
+
+	private static DrivingEvent nightSegment(int durationSec, int headlightOffSec) {
+		return new DrivingEvent(TripEventType.NIGHT_SEGMENT, AT,
+			new EventPayload(false, null, null, durationSec, headlightOffSec, null, null, null, null));
+	}
 }
