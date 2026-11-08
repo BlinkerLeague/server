@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class GetPointsService {
 
+	private static final int RECENT_ENTRIES = 20;
+
 	private final LoadPointLedgerPort loadPointLedgerPort;
 	private final ThresholdProvider thresholdProvider;
 	private final Clock clock;
@@ -22,7 +24,8 @@ public class GetPointsService {
 		PointDay today = PointDay.containing(clock.instant(), clock.getZone());
 		return new Points(loadPointLedgerPort.balance(driverId),
 			loadPointLedgerPort.sumEarned(driverId, today.from(), today.to()),
-			thresholdProvider.current().thresholds().point().dailyCap(), List.of());
+			thresholdProvider.current().thresholds().point().dailyCap(),
+			loadPointLedgerPort.findRecent(driverId, RECENT_ENTRIES));
 	}
 
 	/** balance는 전체 적립 합계, todayEarned는 오늘(Asia/Seoul) 적립 합계. */

@@ -1,6 +1,7 @@
 package com.blinkerleague.server.point.adapter.out.persistence;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
@@ -34,6 +35,11 @@ public class PointLedgerPersistenceAdapter implements LoadPointLedgerPort, SaveP
 	@Override
 	public int sumEarned(Long driverId, Instant from, Instant to) {
 		return repository.sumAmount(driverId, from, to);
+	}
+
+	@Override
+	public List<PointEntry> findRecent(Long driverId, int limit) {
+		throw new UnsupportedOperationException();
 	}
 
 	@Override

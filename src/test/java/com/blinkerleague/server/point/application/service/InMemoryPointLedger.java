@@ -2,6 +2,7 @@ package com.blinkerleague.server.point.application.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -49,6 +50,15 @@ class InMemoryPointLedger implements LoadPointLedgerPort, SavePointEntryPort, Dr
 			.filter(entry -> !entry.getEarnedAt().isBefore(from) && entry.getEarnedAt().isBefore(to))
 			.mapToInt(PointEntry::getAmount)
 			.sum();
+	}
+
+	@Override
+	public List<PointEntry> findRecent(Long driverId, int limit) {
+		return entries.stream()
+			.filter(entry -> entry.getDriverId().equals(driverId))
+			.sorted(Comparator.comparing(PointEntry::getEarnedAt).reversed())
+			.limit(limit)
+			.toList();
 	}
 
 	/** 단위 테스트는 한 스레드라 잠그지 않고 바로 실행한다. 동시성은 EarnPointConcurrencyTest가 확인한다. */
