@@ -1,12 +1,16 @@
 package com.blinkerleague.server.mission.adapter.out.trip;
 
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
 import com.blinkerleague.server.mission.domain.DailyTurns;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,10 +19,32 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
 
+	private static final ObjectMapper MAPPER = new ObjectMapper();
+
+	private static final String TURN_PAYLOADS = """
+		select e.payload
+		  from trip_event e
+		  join trip t on t.trip_id = e.trip_id
+		 where t.driver_id = ?
+		   and t.ended_at >= ? and t.ended_at < ?
+		   and e.type = 'TURN'
+		""";
+
 	private final JdbcTemplate jdbcTemplate;
 
 	@Override
 	public DailyTurns load(Long driverId, Instant from, Instant to) {
-		throw new UnsupportedOperationException();
+		List<String> payloads = jdbcTemplate.queryForList(TURN_PAYLOADS, String.class,
+			driverId, Timestamp.from(from), Timestamp.from(to));
+		int success = (int)payloads.stream().filter(TripDailyTurnsAdapter::signalOn).count();
+		return new DailyTurns(payloads.size(), success);
+	}
+
+	private static boolean signalOn(String payload) {
+		try {
+			return MAPPER.readTree(payload).path("signalOn").asBoolean(false);
+		} catch (JsonProcessingException e) {
+			return false;
+		}
 	}
 }
