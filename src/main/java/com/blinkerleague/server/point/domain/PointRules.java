@@ -11,7 +11,8 @@ public final class PointRules {
 		return (int) Math.floor(Math.min(distanceKm, tripMaxKm) * score / 100);
 	}
 
+	/** 오늘 적립 합계가 일일 상한에 닿으면 남은 만큼만 준다. 이미 넘었으면 0. */
 	public static int capToDailyLimit(int requested, int todayEarned, int dailyCap) {
-		throw new UnsupportedOperationException();
+		return Math.max(0, Math.min(requested, dailyCap - todayEarned));
 	}
 }
