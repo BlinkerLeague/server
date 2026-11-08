@@ -17,4 +17,12 @@ class DailyPeriodTest {
 		assertThat(DailyPeriod.of(Instant.parse("2026-11-02T14:59:59Z"), SEOUL).key()).isEqualTo("2026-11-02");
 		assertThat(DailyPeriod.of(Instant.parse("2026-11-02T15:00:00Z"), SEOUL).key()).isEqualTo("2026-11-03");
 	}
+
+	@Test
+	void 하루는_한국_시간_자정부터_다음_자정_직전까지다() {
+		DailyPeriod period = DailyPeriod.of(Instant.parse("2026-11-03T03:00:00Z"), SEOUL);
+
+		assertThat(period.start()).isEqualTo(Instant.parse("2026-11-02T15:00:00Z"));
+		assertThat(period.end()).isEqualTo(Instant.parse("2026-11-03T15:00:00Z"));
+	}
 }

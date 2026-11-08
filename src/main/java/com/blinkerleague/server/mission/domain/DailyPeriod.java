@@ -5,9 +5,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 /** 일일 미션 기간. 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. */
-public record DailyPeriod(String key) {
+public record DailyPeriod(String key, Instant start, Instant end) {
 
 	public static DailyPeriod of(Instant instant, ZoneId zone) {
-		return new DailyPeriod(LocalDate.ofInstant(instant, zone).toString());
+		return new DailyPeriod(LocalDate.ofInstant(instant, zone).toString(), null, null);
 	}
 }
