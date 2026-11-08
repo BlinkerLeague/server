@@ -2,6 +2,7 @@ package com.blinkerleague.server.report.application.service;
 
 import java.time.ZoneId;
 import java.util.Map;
+import java.util.Optional;
 
 import com.blinkerleague.server.report.application.port.out.LoadWeekDrivingPort;
 import com.blinkerleague.server.report.application.port.out.LoadWeeklyMissionTemplatesPort;
@@ -32,6 +33,10 @@ public class GenerateWeeklyReportService {
 	private final ZoneId zone;
 
 	public WeeklyReportView generate(Long driverId, ReportWeek week) {
+		Optional<String> stored = weeklyReportStore.findReport(driverId, week.key());
+		if (stored.isPresent()) {
+			return fromJson(stored.get());
+		}
 		WeekDriving thisWeek = load(driverId, week);
 		Map<ScoreItem, Integer> averages = WeeklyAverages.of(thisWeek.metrics());
 		WeeklyComparison comparison = WeeklyComparison.of(averages,
@@ -72,6 +77,14 @@ public class GenerateWeeklyReportService {
 	private static MissionView view(WeeklyMission mission) {
 		return new MissionView(mission.getWeekKey(), mission.getMetric(), mission.getTitle(), mission.getTarget(),
 			mission.getMinDistanceKm(), mission.getStatus());
+	}
+
+	private static WeeklyReportView fromJson(String json) {
+		try {
+			return MAPPER.readValue(json, WeeklyReportView.class);
+		} catch (JsonProcessingException e) {
+			throw new IllegalStateException("저장된 주간 리포트를 읽지 못했습니다.", e);
+		}
 	}
 
 	private static String toJson(WeeklyReportView report) {
