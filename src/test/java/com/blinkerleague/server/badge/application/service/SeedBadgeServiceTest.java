@@ -31,4 +31,13 @@ class SeedBadgeServiceTest {
 
 		assertThat(saved).hasSize(3);
 	}
+
+	@Test
+	void 이미_배지가_있으면_넣지_않는다() {
+		saved.add(AwardBadgesServiceTest.CATALOG.get(0));
+
+		new SeedBadgeService(port).seedIfAbsent(AwardBadgesServiceTest.CATALOG);
+
+		assertThat(saved).hasSize(1);
+	}
 }
