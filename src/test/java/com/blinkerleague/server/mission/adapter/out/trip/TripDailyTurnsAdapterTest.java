@@ -57,6 +57,14 @@ class TripDailyTurnsAdapterTest {
 		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(1, 1));
 	}
 
+	@Test
+	void payload가_없는_회전은_깜빡이를_안_켠_회전으로_센다() {
+		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0,
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, null));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(1, 0));
+	}
+
 	private void save(String tripId, Long driverId, Instant endedAt, double distanceKm, RecordedEvent... events) {
 		Instant startedAt = endedAt.minusSeconds(1800);
 		List<RecordedEvent> timed = java.util.Arrays.stream(events)
