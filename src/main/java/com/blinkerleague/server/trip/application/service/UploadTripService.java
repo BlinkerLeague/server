@@ -14,6 +14,7 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
+import com.blinkerleague.server.trip.application.port.out.TripBadgePort;
 import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.application.port.out.TripPointPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlreadyExistsException;
@@ -33,6 +34,7 @@ public class UploadTripService {
 	private final ThresholdProvider thresholdProvider;
 	private final TripMissionPort tripMissionPort;
 	private final TripPointPort tripPointPort;
+	private final TripBadgePort tripBadgePort;
 	private final ScoreCalculator scoreCalculator = new ScoreCalculator();
 
 	public Result upload(Long driverId, Command command) {

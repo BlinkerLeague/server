@@ -34,6 +34,7 @@ class UploadTripServiceTest {
 	private final InMemoryTripRepository trips = new InMemoryTripRepository();
 	private final List<Object[]> missionCalls = new ArrayList<>();
 	private final List<Object[]> pointCalls = new ArrayList<>();
+	private final List<Long> badgeCalls = new ArrayList<>();
 	private final UploadTripService service = new UploadTripService(trips, trips,
 		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)),
 		new TripMissionPort() {
@@ -48,7 +49,8 @@ class UploadTripServiceTest {
 				throw new AssertionError("업로드는 판정을 기록해야 한다");
 			}
 		},
-		(driverId, tripId, distanceKm, score) -> pointCalls.add(new Object[] {driverId, tripId, distanceKm, score}));
+		(driverId, tripId, distanceKm, score) -> pointCalls.add(new Object[] {driverId, tripId, distanceKm, score}),
+		badgeCalls::add);
 
 	@Test
 	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {
@@ -201,5 +203,12 @@ class UploadTripServiceTest {
 		assertThat(trips.findById("short").orElseThrow().getStatus()).isEqualTo(TripStatus.EXCLUDED_SHORT);
 		assertThat(trips.findById("no-turn").orElseThrow().getStatus()).isEqualTo(TripStatus.NO_TURN);
 		assertThat(pointCalls).isEmpty();
+	}
+
+	@Test
+	void 운행을_올리면_배지를_판정한다() {
+		service.upload(1L, command("trip-1", 12.3));
+
+		assertThat(badgeCalls).containsExactly(1L);
 	}
 }
