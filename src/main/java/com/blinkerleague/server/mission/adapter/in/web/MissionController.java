@@ -33,7 +33,7 @@ public class MissionController {
 		static TodayMissionResponse from(TodayMission today) {
 			return new TodayMissionResponse(today.missionId(), today.title(), today.periodKey(), today.status(),
 				today.rewardPoint(),
-				new Progress(today.turns().turns(), today.turns().successTurns(), today.requiredTurns()),
+				new Progress(today.shownRound().turns(), today.shownRound().successTurns(), today.requiredTurns()),
 				today.conditions());
 		}
 	}

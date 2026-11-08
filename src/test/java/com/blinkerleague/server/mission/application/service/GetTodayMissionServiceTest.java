@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
-import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
+import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService.TodayMission;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
 import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
@@ -44,7 +44,7 @@ class GetTodayMissionServiceTest {
 		assertThat(today.periodKey()).isEqualTo("2026-11-03");
 		assertThat(today.status()).isEqualTo(MissionStatus.IN_PROGRESS);
 		assertThat(today.rewardPoint()).isEqualTo(20);
-		assertThat(today.turns()).isEqualTo(new RoundTurns(2, 2));
+		assertThat(today.shownRound()).isEqualTo(new RoundTurns(2, 2));
 		assertThat(today.requiredTurns()).isEqualTo(3);
 		assertThat(today.conditions()).containsExactly(
 			new ConditionProgress(ConditionType.TURN_COUNT, 2, 3),
@@ -71,11 +71,11 @@ class GetTodayMissionServiceTest {
 		TodayMission today = service.today(1L);
 
 		assertThat(today.status()).isEqualTo(MissionStatus.ACHIEVED);
-		assertThat(today.turns()).isEqualTo(new RoundTurns(3, 3));
+		assertThat(today.shownRound()).isEqualTo(new RoundTurns(3, 3));
 	}
 
 	/** 요청 받은 운전자와 기간을 기록하는 가짜 포트. */
-	private static final class RecordingTurns implements LoadDailyTurnsPort {
+	private static final class RecordingTurns implements LoadDailyRoundsPort {
 
 		private final List<RoundTurns> rounds;
 		private Long driverId;
@@ -86,16 +86,8 @@ class GetTodayMissionServiceTest {
 			this.rounds = rounds;
 		}
 
-		// 라운드를 나누기 전 동작: 그날 회전 합계
 		@Override
-		public RoundTurns load(Long driverId, Instant from, Instant to) {
-			record(driverId, from, to);
-			return new RoundTurns(rounds.stream().mapToInt(RoundTurns::turns).sum(),
-				rounds.stream().mapToInt(RoundTurns::successTurns).sum());
-		}
-
-		@Override
-		public List<RoundTurns> loadRounds(Long driverId, Instant from, Instant to) {
+		public List<RoundTurns> load(Long driverId, Instant from, Instant to) {
 			record(driverId, from, to);
 			return rounds;
 		}

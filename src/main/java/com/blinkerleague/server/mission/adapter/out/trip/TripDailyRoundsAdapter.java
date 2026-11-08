@@ -10,29 +10,19 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Component;
 
-import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
+import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
-/** 저장된 운행의 TURN 이벤트(payload.signalOn)로 그날 회전 결과를 센다. */
+/** 저장된 운행(라운드)마다 TURN 이벤트(payload.signalOn)로 회전 결과를 센다. */
 @Component
 @RequiredArgsConstructor
-public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
+public class TripDailyRoundsAdapter implements LoadDailyRoundsPort {
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
-
-	private static final String TURN_PAYLOADS = """
-		select e.payload
-		  from trip_event e
-		  join trip t on t.trip_id = e.trip_id
-		 where t.driver_id = ?
-		   and t.ended_at >= ? and t.ended_at < ?
-		   and t.status <> 'EXCLUDED_SHORT'
-		   and e.type = 'TURN'
-		""";
 
 	// 회전이 없는 운행도 라운드이므로 trip 기준 left join이다.
 	private static final String ROUND_TURNS = """
@@ -48,15 +38,7 @@ public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
 	private final JdbcTemplate jdbcTemplate;
 
 	@Override
-	public RoundTurns load(Long driverId, Instant from, Instant to) {
-		List<String> payloads = jdbcTemplate.queryForList(TURN_PAYLOADS, String.class,
-			driverId, Timestamp.from(from), Timestamp.from(to));
-		int success = (int)payloads.stream().filter(TripDailyTurnsAdapter::signalOn).count();
-		return new RoundTurns(payloads.size(), success);
-	}
-
-	@Override
-	public List<RoundTurns> loadRounds(Long driverId, Instant from, Instant to) {
+	public List<RoundTurns> load(Long driverId, Instant from, Instant to) {
 		Map<String, int[]> rounds = new LinkedHashMap<>();
 		jdbcTemplate.query(ROUND_TURNS, (RowCallbackHandler)row -> {
 			int[] counts = rounds.computeIfAbsent(row.getString("trip_id"), id -> new int[2]);

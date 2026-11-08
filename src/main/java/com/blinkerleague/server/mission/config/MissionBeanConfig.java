@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
-import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
+import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.application.port.out.SaveMissionPort;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService;
 import com.blinkerleague.server.mission.application.service.SeedMissionService;
@@ -17,8 +17,8 @@ public class MissionBeanConfig {
 
 	@Bean
 	public GetTodayMissionService getTodayMissionService(LoadActiveMissionPort loadActiveMissionPort,
-		LoadDailyTurnsPort loadDailyTurnsPort, Clock clock) {
-		return new GetTodayMissionService(loadActiveMissionPort, loadDailyTurnsPort, clock);
+		LoadDailyRoundsPort loadDailyRoundsPort, Clock clock) {
+		return new GetTodayMissionService(loadActiveMissionPort, loadDailyRoundsPort, clock);
 	}
 
 	@Bean

@@ -8,7 +8,7 @@ import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
 
 class TurnSignalConditionTest {
 
-	// 시드 미션 "회전 깜빡이 완벽": 회전 3회 이상, 깜빡이 사용률 100%
+	// 라운드 1건 판정. 시드 미션 "회전 깜빡이 완벽": 회전 3회 이상, 깜빡이 사용률 100%
 	private final TurnSignalCondition condition = new TurnSignalCondition(3, 100);
 
 	@Test
@@ -22,7 +22,7 @@ class TurnSignalConditionTest {
 	}
 
 	@Test
-	void 깜빡이를_안_켠_회전이_한_번이라도_있으면_FAILED다() {
+	void 라운드에서_깜빡이를_안_켠_회전이_한_번이라도_있으면_그_라운드는_FAILED다() {
 		assertThat(condition.judge(new RoundTurns(1, 0)).status()).isEqualTo(MissionStatus.FAILED);
 	}
 
@@ -34,7 +34,7 @@ class TurnSignalConditionTest {
 	}
 
 	@Test
-	void 오늘_회전이_없으면_IN_PROGRESS이고_사용률은_0이다() {
+	void 회전이_없는_라운드는_IN_PROGRESS이고_사용률은_0이다() {
 		MissionJudgement judgement = condition.judge(new RoundTurns(0, 0));
 
 		assertThat(judgement.status()).isEqualTo(MissionStatus.IN_PROGRESS);

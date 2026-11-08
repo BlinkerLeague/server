@@ -6,7 +6,7 @@ import java.util.List;
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
-import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
+import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
 import com.blinkerleague.server.mission.domain.DailyPeriod;
 import com.blinkerleague.server.mission.domain.DayJudgement;
@@ -21,20 +21,21 @@ import lombok.RequiredArgsConstructor;
 public class GetTodayMissionService {
 
 	private final LoadActiveMissionPort loadActiveMissionPort;
-	private final LoadDailyTurnsPort loadDailyTurnsPort;
+	private final LoadDailyRoundsPort loadDailyRoundsPort;
 	private final Clock clock;
 
 	public TodayMission today(Long driverId) {
 		DailyPeriod period = DailyPeriod.of(clock.instant(), clock.getZone());
 		Mission mission = loadActiveMissionPort.findActiveDaily(period.date())
 			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "오늘 운영 중인 미션이 없습니다."));
-		List<RoundTurns> rounds = loadDailyTurnsPort.loadRounds(driverId, period.start(), period.end());
+		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
 		DayJudgement day = mission.getCondition().judgeDay(rounds);
 		return new TodayMission(mission.getId(), mission.getTitle(), period.key(), day.status(),
 			mission.getRewardPoint(), day.shownRound(), mission.getCondition().requiredTurns(), day.conditions());
 	}
 
+	/** shownRound는 진행 링에 보여 줄 라운드다(달성했으면 달성한 라운드, 아니면 가장 최근 라운드). */
 	public record TodayMission(Long missionId, String title, String periodKey, MissionStatus status,
-		int rewardPoint, RoundTurns turns, int requiredTurns, List<ConditionProgress> conditions) {
+		int rewardPoint, RoundTurns shownRound, int requiredTurns, List<ConditionProgress> conditions) {
 	}
 }

@@ -23,29 +23,20 @@ import com.blinkerleague.server.trip.domain.TripEventType;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({TripDailyTurnsAdapter.class, JpaAuditingConfig.class, TimeConfig.class})
-class TripDailyTurnsAdapterTest {
+@Import({TripDailyRoundsAdapter.class, JpaAuditingConfig.class, TimeConfig.class})
+class TripDailyRoundsAdapterTest {
 
 	// 2026-11-03 KST 하루
 	private static final Instant DAY_START = Instant.parse("2026-11-02T15:00:00Z");
 	private static final Instant DAY_END = Instant.parse("2026-11-03T15:00:00Z");
 
 	@Autowired
-	TripDailyTurnsAdapter adapter;
+	TripDailyRoundsAdapter adapter;
 
 	@Autowired
 	TestEntityManager entityManager;
 
 	private int eventSeq;
-
-	@Test
-	void 그날_운행들의_회전_수와_깜빡이를_켠_회전_수를_합한다() {
-		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true), turn(false),
-			new RecordedEvent(nextEventId(), TripEventType.HARSH_BRAKE, null, null));
-		save("trip-2", 1L, Instant.parse("2026-11-03T05:00:00Z"), 8.0, turn(true));
-
-		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(3, 2));
-	}
 
 	@Test
 	void 다른_운전자_다른_날_3km_미만_운행의_회전은_세지_않는다() {
@@ -54,7 +45,7 @@ class TripDailyTurnsAdapterTest {
 		save("next-day", 1L, DAY_END, 12.0, turn(true));
 		save("short", 1L, Instant.parse("2026-11-03T01:00:00Z"), 2.9, turn(true));
 
-		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(1, 1));
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(new RoundTurns(1, 1));
 	}
 
 	@Test
@@ -62,7 +53,7 @@ class TripDailyTurnsAdapterTest {
 		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0,
 			new RecordedEvent(nextEventId(), TripEventType.TURN, null, null));
 
-		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(1, 0));
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(new RoundTurns(1, 0));
 	}
 
 	@Test
@@ -72,7 +63,7 @@ class TripDailyTurnsAdapterTest {
 		save("no-turn", 1L, Instant.parse("2026-11-03T03:00:00Z"), 12.0,
 			new RecordedEvent(nextEventId(), TripEventType.HARSH_BRAKE, null, null));
 
-		assertThat(adapter.loadRounds(1L, DAY_START, DAY_END)).containsExactly(
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(
 			new RoundTurns(2, 1), new RoundTurns(0, 0), new RoundTurns(1, 1));
 	}
 
