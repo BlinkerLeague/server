@@ -24,7 +24,7 @@ public class PointLedgerPersistenceAdapter implements LoadPointLedgerPort, SaveP
 
 	@Override
 	public int sumEarned(Long driverId, Instant from, Instant to) {
-		throw new UnsupportedOperationException();
+		return repository.sumAmount(driverId, from, to);
 	}
 
 	@Override
