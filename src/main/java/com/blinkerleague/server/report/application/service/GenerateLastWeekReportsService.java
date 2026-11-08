@@ -3,6 +3,7 @@ package com.blinkerleague.server.report.application.service;
 import java.time.Clock;
 
 import com.blinkerleague.server.report.application.port.out.LoadWeekDriversPort;
+import com.blinkerleague.server.report.domain.ReportWeek;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,6 +17,17 @@ public class GenerateLastWeekReportsService {
 
 	/** 만든 리포트 수. 한 운전자가 실패해도 나머지는 계속 만든다. */
 	public int generate() {
-		throw new UnsupportedOperationException();
+		ReportWeek lastWeek = ReportWeek.containing(clock.instant(), clock.getZone()).previous();
+		int generated = 0;
+		for (Long driverId : loadWeekDriversPort.driversWithTrips(lastWeek.start(clock.getZone()),
+			lastWeek.end(clock.getZone()))) {
+			try {
+				generateWeeklyReportService.generate(driverId, lastWeek);
+				generated++;
+			} catch (RuntimeException e) {
+				// 만들지 못한 운전자는 조회할 때 다시 만든다(GetWeeklyReportService). 나머지 운전자는 계속 만든다.
+			}
+		}
+		return generated;
 	}
 }
