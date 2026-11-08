@@ -31,7 +31,7 @@ class GetTodayMissionServiceTest {
 	private final Mission seed = Mission.daily("회전 깜빡이 완벽", new TurnSignalCondition(3, 100), 20,
 		LocalDate.of(2026, 1, 1), LocalDate.of(2099, 12, 31));
 
-	private final RecordingTurns turns = new RecordingTurns(new RoundTurns(2, 2));
+	private final RecordingTurns turns = new RecordingTurns(List.of(new RoundTurns(2, 2)));
 
 	private final GetTodayMissionService service = new GetTodayMissionService(
 		date -> Optional.of(seed), turns, clock);
@@ -63,29 +63,47 @@ class GetTodayMissionServiceTest {
 			.extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
 	}
 
+	@Test
+	void 실패한_라운드_뒤에_달성한_라운드가_있으면_ACHIEVED이고_진행도는_달성한_라운드다() {
+		GetTodayMissionService service = new GetTodayMissionService(date -> Optional.of(seed),
+			new RecordingTurns(List.of(new RoundTurns(1, 0), new RoundTurns(3, 3))), clock);
+
+		TodayMission today = service.today(1L);
+
+		assertThat(today.status()).isEqualTo(MissionStatus.ACHIEVED);
+		assertThat(today.turns()).isEqualTo(new RoundTurns(3, 3));
+	}
+
 	/** 요청 받은 운전자와 기간을 기록하는 가짜 포트. */
 	private static final class RecordingTurns implements LoadDailyTurnsPort {
 
-		private final RoundTurns result;
+		private final List<RoundTurns> rounds;
 		private Long driverId;
 		private Instant from;
 		private Instant to;
 
-		RecordingTurns(RoundTurns result) {
-			this.result = result;
+		RecordingTurns(List<RoundTurns> rounds) {
+			this.rounds = rounds;
 		}
 
+		// 라운드를 나누기 전 동작: 그날 회전 합계
 		@Override
 		public RoundTurns load(Long driverId, Instant from, Instant to) {
-			this.driverId = driverId;
-			this.from = from;
-			this.to = to;
-			return result;
+			record(driverId, from, to);
+			return new RoundTurns(rounds.stream().mapToInt(RoundTurns::turns).sum(),
+				rounds.stream().mapToInt(RoundTurns::successTurns).sum());
 		}
 
 		@Override
 		public List<RoundTurns> loadRounds(Long driverId, Instant from, Instant to) {
-			throw new UnsupportedOperationException();
+			record(driverId, from, to);
+			return rounds;
+		}
+
+		private void record(Long driverId, Instant from, Instant to) {
+			this.driverId = driverId;
+			this.from = from;
+			this.to = to;
 		}
 	}
 }
