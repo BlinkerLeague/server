@@ -42,7 +42,7 @@ public class ScoreCalculator {
 
 	private static Outcome measure(ScoreItem item, TripFacts facts, Thresholds thresholds) {
 		return switch (item) {
-			case TURN_SIGNAL -> turnSignal(facts, thresholds.turn());
+			case TURN_SIGNAL -> turnSignal(facts, thresholds.turn(), minSamples(thresholds, ScoreItem.TURN_SIGNAL));
 			case SMOOTH_DRIVING -> smoothDriving(facts, thresholds.harsh());
 			case SAFETY_WARNING -> safetyWarning(facts, thresholds.safetyWarning());
 			case NIGHT_HEADLIGHT -> nightHeadlight(facts);
@@ -61,10 +61,13 @@ public class ScoreCalculator {
 	// 회전마다 제때 1 · 늦게 lateSignalScore · 반대 방향 · 안 켬 0의 평균(D18).
 	// signalTiming이 없는 P0 payload는 signalOn으로 2단계(켬 1 · 안 켬 0) 판정한다.
 	// 회전이 없으면 이 항목만 빼고 나머지로 평점한다(plan.md 4.1).
-	private static Outcome turnSignal(TripFacts facts, Thresholds.Turn rule) {
+	private static Outcome turnSignal(TripFacts facts, Thresholds.Turn rule, int minSamples) {
 		List<DrivingEvent> turns = ofType(facts, TripEventType.TURN);
 		if (turns.isEmpty()) {
 			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_TURN");
+		}
+		if (turns.size() < minSamples) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "TOO_FEW_SAMPLES");
 		}
 		int onTime = 0;
 		int late = 0;
@@ -130,6 +133,11 @@ public class ScoreCalculator {
 			.filter(Objects::nonNull)
 			.mapToInt(Integer::intValue)
 			.sum();
+	}
+
+	// 항목별 최소 표본(기준값 minSamples, 없으면 1). 1~2번의 우연으로 점수가 흔들리지 않게 한다(D18 · D27).
+	private static int minSamples(Thresholds thresholds, ScoreItem item) {
+		return thresholds.minSamples() == null ? 1 : thresholds.minSamples().getOrDefault(item, 1);
 	}
 
 	private static List<DrivingEvent> ofType(TripFacts facts, TripEventType type) {
