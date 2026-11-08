@@ -12,6 +12,7 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -22,6 +23,7 @@ public class ThresholdController {
 	private final ThresholdProvider thresholdProvider;
 
 	/** 앱이 시작할 때 내려받는다. 앱은 version이 바뀐 경우에만 갱신한다. */
+	@SecurityRequirements // 공개 API: 인증 없음
 	@GetMapping("/thresholds")
 	public ThresholdsResponse thresholds() {
 		return ThresholdsResponse.from(thresholdProvider.current());

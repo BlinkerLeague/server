@@ -9,6 +9,7 @@ import com.blinkerleague.server.auth.application.service.TokenReissueService;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -18,6 +19,7 @@ public class AuthController {
 
 	private final TokenReissueService tokenReissueService;
 
+	@SecurityRequirements // 공개 API: 인증 없음
 	@PostMapping("/refresh")
 	public TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
 		TokenReissueService.TokenPair pair = tokenReissueService.reissue(request.refreshToken());

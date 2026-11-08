@@ -14,6 +14,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -23,6 +24,7 @@ public class DriverController {
 
 	private final RegisterDriverService registerDriverService;
 
+	@SecurityRequirements // 공개 API: 인증 없음
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public RegisterDriverResponse register(@Valid @RequestBody RegisterDriverRequest request) {
