@@ -1,6 +1,7 @@
 package com.blinkerleague.server.mission.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 
@@ -13,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
 import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.domain.DriverMission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 
@@ -43,5 +45,13 @@ class DriverMissionPersistenceAdapterTest {
 			assertThat(found.getAchievedAt()).isEqualTo(ACHIEVED_AT);
 		});
 		assertThat(adapter.find(2L, 10L, "2026-11-03")).isEmpty();
+	}
+
+	@Test
+	void 같은_운전자_미션_날짜의_새_기록을_또_저장하면_이미_있다고_알린다() {
+		adapter.save(DriverMission.start(1L, 10L, "2026-11-03"));
+
+		assertThatThrownBy(() -> adapter.save(DriverMission.start(1L, 10L, "2026-11-03")))
+			.isInstanceOf(DriverMissionAlreadyExistsException.class);
 	}
 }
