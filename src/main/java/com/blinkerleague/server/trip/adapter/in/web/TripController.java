@@ -148,7 +148,7 @@ public class TripController {
 		}
 	}
 
-	/** 이 운행을 반영한 그날 미션 판정. status는 IN_PROGRESS 또는 ACHIEVED. */
+	/** 이 운행을 반영한 그날 미션 판정. status는 IN_PROGRESS · ACHIEVED · FAILED(끝난 날의 미달성, D25). */
 	public record MissionResult(Long missionId, String status) {
 
 		static MissionResult from(TripMissionPort.TripMission mission) {
