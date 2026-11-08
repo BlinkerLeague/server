@@ -13,4 +13,9 @@ class TurnSignalConditionTest {
 	void 회전_3회를_모두_깜빡이_켜고_하면_ACHIEVED다() {
 		assertThat(condition.judge(new DailyTurns(3, 3)).status()).isEqualTo(MissionStatus.ACHIEVED);
 	}
+
+	@Test
+	void 회전이_2회뿐이면_모두_성공해도_IN_PROGRESS다() {
+		assertThat(condition.judge(new DailyTurns(2, 2)).status()).isEqualTo(MissionStatus.IN_PROGRESS);
+	}
 }
