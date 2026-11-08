@@ -16,3 +16,22 @@ spring:
       hibernate:
         format_sql: true
     show-sql: true
+
+# API 문서: http://localhost:8080/swagger-ui.html , 명세 JSON: /v3/api-docs (local에서만)
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# 로컬 실행 로그를 콘솔과 함께 파일로도 남긴다(서버를 재시작해도 이전 오류를 볼 수 있게).
+# logs/는 gitignore. 토큰 · secret · 요청 본문은 원래 로그에 남기지 않는다(CLAUDE.md 보안 규칙).
+# show-sql은 콘솔(System.out)에만 찍혀 파일에는 들어가지 않는다.
+logging:
+  file:
+    name: logs/server.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      total-size-cap: 100MB
