@@ -6,10 +6,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
+import com.blinkerleague.server.mission.application.port.out.LoadAchievedDaysPort;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.application.port.out.MissionRewardPort;
 import com.blinkerleague.server.mission.application.port.out.SaveMissionPort;
+import com.blinkerleague.server.mission.application.service.GetStreakService;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService;
 import com.blinkerleague.server.mission.application.service.RecordMissionAfterTripService;
 import com.blinkerleague.server.mission.application.service.SeedMissionService;
@@ -35,5 +37,10 @@ public class MissionBeanConfig {
 		MissionRewardPort missionRewardPort, Clock clock) {
 		return new RecordMissionAfterTripService(loadActiveMissionPort, loadDailyRoundsPort, driverMissionStore,
 			missionRewardPort, clock);
+	}
+
+	@Bean
+	public GetStreakService getStreakService(LoadAchievedDaysPort loadAchievedDaysPort, Clock clock) {
+		return new GetStreakService(loadAchievedDaysPort, clock);
 	}
 }
