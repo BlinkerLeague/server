@@ -121,4 +121,27 @@ class RecordMissionAfterTripServiceTest {
 			assertThat(saved.getStatus()).isEqualTo(MissionStatus.FAILED);
 		});
 	}
+
+	@Test
+	void 끝난_날을_판정만_해도_달성하지_못했으면_FAILED다() {
+		rounds.add(new RoundTurns(2, 2));
+
+		assertThat(service.judgeDay(1L, YESTERDAY_TRIP).map(MissionOutcome::status)).contains(MissionStatus.FAILED);
+		assertThat(store.saved).isEmpty();
+	}
+
+	@Test
+	void FAILED가_된_날의_운행을_늦게_올려_조건을_채우면_ACHIEVED로_바꾼다() {
+		rounds.add(new RoundTurns(2, 2));
+		service.recordAfterTrip(1L, YESTERDAY_TRIP);
+		rounds.add(new RoundTurns(3, 3));
+
+		Optional<MissionOutcome> outcome = service.recordAfterTrip(1L, YESTERDAY_TRIP.plusSeconds(600));
+
+		assertThat(outcome.map(MissionOutcome::status)).contains(MissionStatus.ACHIEVED);
+		assertThat(store.saved).singleElement().satisfies(saved -> {
+			assertThat(saved.getStatus()).isEqualTo(MissionStatus.ACHIEVED);
+			assertThat(saved.getAchievedAt()).isEqualTo(NOW);
+		});
+	}
 }
