@@ -47,6 +47,7 @@ public class ScoreCalculator {
 			case SAFETY_WARNING -> safetyWarning(facts, thresholds.safetyWarning());
 			case NIGHT_HEADLIGHT -> nightHeadlight(facts);
 			case SIGNAL_CANCEL -> signalCancel(facts, thresholds.signalCancel());
+			case SEAT_BELT -> seatBelt(facts, thresholds.seatBelt());
 			case TURN_SPEED -> turnSpeed(facts, thresholds.turn(), minSamples(thresholds, ScoreItem.TURN_SPEED));
 			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
@@ -133,6 +134,20 @@ public class ScoreCalculator {
 		}
 		long within = speeds.stream().filter(speed -> speed <= rule.turnSpeedKmh()).count();
 		return Outcome.of((double) within / speeds.size(), Map.of("turns", speeds.size(), "withinLimit", (int) within));
+	}
+
+	// 출발 시 미착용 −departurePenalty, 주행 중 미착용 1분마다 −perMinutePenalty, 최소 0(D18). 운행당 1건.
+	private static Outcome seatBelt(TripFacts facts, Thresholds.SeatBelt rule) {
+		List<DrivingEvent> records = ofType(facts, TripEventType.SEAT_BELT);
+		if (records.isEmpty()) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
+		}
+		EventPayload belt = records.get(records.size() - 1).payload();
+		boolean buckled = !Boolean.FALSE.equals(belt.buckledAtDeparture());
+		int unbuckledSec = belt.unbuckledMovingSec() == null ? 0 : belt.unbuckledMovingSec();
+		int penalty = (buckled ? 0 : rule.departurePenalty()) + rule.perMinutePenalty() * (unbuckledSec / 60);
+		return Outcome.of(Math.max(0, 100 - penalty) / 100.0,
+			Map.of("buckledAtDeparture", buckled ? 1 : 0, "unbuckledMovingSec", unbuckledSec));
 	}
 
 	// max(0, 100 − penalty × 깜빡이 끄기를 잊은 횟수) (D18)

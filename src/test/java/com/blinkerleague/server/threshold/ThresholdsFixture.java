@@ -28,6 +28,7 @@ public final class ThresholdsFixture {
 			new Thresholds.Harsh(10, 10),
 			new Thresholds.SafetyWarning(10, 20),
 			new Thresholds.SignalCancel(20, 30, 25),
+			new Thresholds.SeatBelt(50, 10),
 			Map.of(ScoreItem.TURN_SIGNAL, 0.4, ScoreItem.SMOOTH_DRIVING, 0.3,
 				ScoreItem.SAFETY_WARNING, 0.2, ScoreItem.NIGHT_HEADLIGHT, 0.1),
 			Map.of(ScoreItem.TURN_SIGNAL, 1),
@@ -43,13 +44,13 @@ public final class ThresholdsFixture {
 	public static Thresholds withMinDistanceKm(double minDistanceKm) {
 		Thresholds base = planExample();
 		return new Thresholds(new Thresholds.Trip(minDistanceKm, base.trip().parkEndMinutes()), base.turn(),
-			base.harsh(), base.safetyWarning(), base.signalCancel(), base.weights(), base.minSamples(), base.point(), base.grades(), base.tips());
+			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.weights(), base.minSamples(), base.point(), base.grades(), base.tips());
 	}
 
 	/** 같은 구조에서 항목별 최소 표본만 바꾼 값. */
 	public static Thresholds withMinSamples(Map<ScoreItem, Integer> minSamples) {
 		Thresholds base = planExample();
-		return new Thresholds(base.trip(), base.turn(), base.harsh(), base.safetyWarning(), base.signalCancel(), base.weights(), minSamples,
+		return new Thresholds(base.trip(), base.turn(), base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.weights(), minSamples,
 			base.point(), base.grades(), base.tips());
 	}
 }
