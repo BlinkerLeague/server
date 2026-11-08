@@ -2,6 +2,9 @@ package com.blinkerleague.server.badge.adapter.out.persistence;
 
 import java.util.List;
 
+import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
@@ -37,11 +40,30 @@ public class BadgePersistenceAdapter implements LoadBadgeCatalogPort, SaveBadgeC
 
 	@Override
 	public List<BadgeAward> findByDriver(Long driverId) {
-		throw new UnsupportedOperationException();
+		return awardRepository.findByDriverIdOrderByAwardedAtAsc(driverId);
 	}
 
 	@Override
 	public void saveIfAbsent(BadgeAward award) {
-		throw new UnsupportedOperationException();
+		if (awardRepository.existsByDriverIdAndBadgeCode(award.getDriverId(), award.getBadgeCode())) {
+			return;
+		}
+		try {
+			awardRepository.saveAndFlush(award);
+		} catch (DataIntegrityViolationException e) {
+			// 같은 배지를 동시에 판정해 먼저 저장됐다. 그 기록이 기준이다.
+			if (!isUniqueViolation(e)) {
+				throw e;
+			}
+		}
+	}
+
+	private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+		for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+			if (cause instanceof ConstraintViolationException violation) {
+				return violation.getKind() == ConstraintKind.UNIQUE;
+			}
+		}
+		return false;
 	}
 }
