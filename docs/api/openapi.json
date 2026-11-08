@@ -102,7 +102,7 @@
             "type": "string"
           },
           "payload": {
-            "description": "이벤트 타입별 추가 정보(선택). 서버는 해석하지 않고 JSON 그대로 저장한다. TURN: { \"direction\": \"LEFT\" | \"RIGHT\", \"signalOn\": true | false } (깜빡이 점수는 signalOn으로 계산한다). 다른 타입의 형식은 아직 정해지지 않아 저장만 한다.",
+            "description": "이벤트 타입별 추가 정보(선택). 서버는 JSON 그대로 저장하고 점수에 쓰는 값만 읽는다(plan.md 4.1). TURN: { direction: LEFT|RIGHT, signalOn, signalTiming: ON_TIME|LATE|WRONG_DIRECTION|NONE, leadDistanceM, maxSpeedKmh } (signalTiming이 있으면 4단계, 없으면 signalOn으로 2단계 판정) / SIGNAL_LEFT_ON: { durationSec } / SEAT_BELT(운행당 1건): { buckledAtDeparture, unbuckledMovingSec } / NIGHT_SEGMENT: { durationSec, headlightOffSec } / RAIN_SEGMENT: { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec } / HARSH_ACCEL · HARSH_BRAKE · SAFETY_WARNING · LANE_CHANGE: 형식 없음(횟수만 셈). 원시 위치 좌표는 넣지 않는다.",
             "example": {
               "direction": "LEFT",
               "signalOn": true
@@ -116,7 +116,10 @@
               "HARSH_ACCEL",
               "HARSH_BRAKE",
               "SAFETY_WARNING",
-              "NIGHT_SEGMENT"
+              "NIGHT_SEGMENT",
+              "SIGNAL_LEFT_ON",
+              "SEAT_BELT",
+              "RAIN_SEGMENT"
             ],
             "type": "string"
           }
@@ -145,24 +148,44 @@
           "deltaKmhPerSec": {
             "format": "int32",
             "type": "integer"
+          },
+          "penaltyPer10Km": {
+            "format": "double",
+            "type": "number"
           }
         },
         "type": "object"
       },
       "MetricResult": {
         "properties": {
+          "detail": {
+            "additionalProperties": {
+              "type": "object"
+            },
+            "type": "object"
+          },
           "metric": {
             "enum": [
               "TURN_SIGNAL",
               "SMOOTH_DRIVING",
               "SAFETY_WARNING",
-              "NIGHT_HEADLIGHT"
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
             ],
+            "type": "string"
+          },
+          "reason": {
             "type": "string"
           },
           "score": {
             "format": "int32",
             "type": "integer"
+          },
+          "status": {
+            "type": "string"
           },
           "value": {
             "format": "double",
@@ -207,7 +230,10 @@
               "HARSH_ACCEL",
               "HARSH_BRAKE",
               "SAFETY_WARNING",
-              "NIGHT_SEGMENT"
+              "NIGHT_SEGMENT",
+              "SIGNAL_LEFT_ON",
+              "SEAT_BELT",
+              "RAIN_SEGMENT"
             ],
             "type": "string"
           }
@@ -271,6 +297,19 @@
           "turns": {
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Rain": {
+        "properties": {
+          "minWiperSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "speedRatio": {
+            "format": "double",
+            "type": "number"
           }
         },
         "type": "object"
@@ -362,6 +401,40 @@
           "mergeWindowSec": {
             "format": "int32",
             "type": "integer"
+          },
+          "penaltyPer100Km": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "SeatBelt": {
+        "properties": {
+          "departurePenalty": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "perMinutePenalty": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SignalCancel": {
+        "properties": {
+          "forgetSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minSpeedKmh": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "penalty": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -406,11 +479,27 @@
           "harsh": {
             "$ref": "#/components/schemas/Harsh"
           },
+          "minSamples": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
           "point": {
             "$ref": "#/components/schemas/Point"
           },
+          "rain": {
+            "$ref": "#/components/schemas/Rain"
+          },
           "safetyWarning": {
             "$ref": "#/components/schemas/SafetyWarning"
+          },
+          "seatBelt": {
+            "$ref": "#/components/schemas/SeatBelt"
+          },
+          "signalCancel": {
+            "$ref": "#/components/schemas/SignalCancel"
           },
           "tips": {
             "additionalProperties": {
@@ -545,6 +634,10 @@
       },
       "Turn": {
         "properties": {
+          "lateSignalScore": {
+            "format": "double",
+            "type": "number"
+          },
           "minAngleDeg": {
             "format": "int32",
             "type": "integer"
@@ -553,7 +646,15 @@
             "format": "int32",
             "type": "integer"
           },
+          "signalLeadDistanceM": {
+            "format": "int32",
+            "type": "integer"
+          },
           "signalLeadSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "turnSpeedKmh": {
             "format": "int32",
             "type": "integer"
           },
@@ -607,7 +708,11 @@
                 "TURN_SIGNAL",
                 "SMOOTH_DRIVING",
                 "SAFETY_WARNING",
-                "NIGHT_HEADLIGHT"
+                "NIGHT_HEADLIGHT",
+                "SIGNAL_CANCEL",
+                "TURN_SPEED",
+                "SEAT_BELT",
+                "RAIN_DRIVING"
               ],
               "type": "string"
             },
@@ -1003,7 +1108,7 @@
                 }
               }
             },
-            "description": "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 회전이 없으면 NO_TURN(score=null), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult"
+            "description": "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 측정할 수 있는 항목이 하나도 없으면 NO_TURN(score=null, D28), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult"
           },
           "400": {
             "content": {
