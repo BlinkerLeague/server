@@ -43,6 +43,7 @@ class ThresholdControllerTest {
 			.andExpect(jsonPath("$.turn.steeringEnterDeg").value(90))
 			.andExpect(jsonPath("$.turn.steeringExitDeg").value(20))
 			.andExpect(jsonPath("$.turn.mergeGapSec").value(3))
+			.andExpect(jsonPath("$.turn.steeringRightPositive").value(false))
 			.andExpect(jsonPath("$.turn.lateSignalScore").value(0.5))
 			.andExpect(jsonPath("$.turn.turnSpeedKmh").value(30))
 			.andExpect(jsonPath("$.harsh.penaltyPer10Km").value(10.0))
