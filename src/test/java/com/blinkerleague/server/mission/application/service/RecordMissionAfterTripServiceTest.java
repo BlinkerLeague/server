@@ -57,4 +57,27 @@ class RecordMissionAfterTripServiceTest {
 			assertThat(saved.getAchievedAt()).isEqualTo(NOW);
 		});
 	}
+
+	@Test
+	void 같은_날_다시_판정하면_기존_기록을_갱신하고_달성은_유지한다() {
+		Instant endedAt = Instant.parse("2026-11-03T00:00:00Z");
+		rounds.add(new RoundTurns(3, 3));
+		service.recordAfterTrip(1L, endedAt);
+		rounds.add(new RoundTurns(3, 1));
+
+		Optional<MissionOutcome> outcome = service.recordAfterTrip(1L, endedAt.plusSeconds(3600));
+
+		assertThat(outcome.map(MissionOutcome::status)).contains(MissionStatus.ACHIEVED);
+		assertThat(store.saved).singleElement()
+			.satisfies(saved -> assertThat(saved.getStatus()).isEqualTo(MissionStatus.ACHIEVED));
+	}
+
+	@Test
+	void 그날_운영_중인_미션이_없으면_기록하지_않고_빈_결과를_돌려준다() {
+		RecordMissionAfterTripService noMission = new RecordMissionAfterTripService(date -> Optional.empty(),
+			(driverId, from, to) -> rounds, store, Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+
+		assertThat(noMission.recordAfterTrip(1L, NOW)).isEmpty();
+		assertThat(store.saved).isEmpty();
+	}
 }
