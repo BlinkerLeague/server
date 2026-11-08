@@ -92,4 +92,16 @@ class ApiDocsTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.paths['" + path + "']." + method + ".summary").value(summary));
 	}
+
+	@ParameterizedTest(name = "{0} {1} → {2}")
+	@CsvSource({
+		"/api/drivers,           post, 운전자",
+		"/api/auth/refresh,      post, 인증",
+		"/api/config/thresholds, get,  설정",
+		"/api/trips,             post, 운행"})
+	void API를_기능별_한글_태그로_묶는다(String path, String method, String tag) throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['" + path + "']." + method + ".tags[0]").value(tag));
+	}
 }
