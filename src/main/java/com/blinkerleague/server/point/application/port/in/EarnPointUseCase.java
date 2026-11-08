@@ -9,4 +9,7 @@ public interface EarnPointUseCase {
 	int earnForTrip(Long driverId, String tripId, double distanceKm, int score);
 
 	int earnForMission(Long driverId, String refId, int rewardPoint);
+
+	/** 연속 달성 보상(기준값 point.streakRewardPoint). refId는 운전자 · 보상받는 날마다 하나다. */
+	int earnForStreak(Long driverId, String refId);
 }

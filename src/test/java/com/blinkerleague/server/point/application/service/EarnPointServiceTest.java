@@ -99,4 +99,16 @@ class EarnPointServiceTest {
 				assertThat(entry.getEarnedAt()).isEqualTo(NOW);
 			});
 	}
+
+	@Test
+	void 연속_달성_보상은_기준값의_포인트를_STREAK_7로_적립한다() {
+		int earned = service.earnForStreak(1L, "1:2026-11-03");
+
+		assertThat(earned).isEqualTo(50);
+		assertThat(ledger.entries()).singleElement().satisfies(entry -> {
+			assertThat(entry.getReason()).isEqualTo(PointReason.STREAK_7);
+			assertThat(entry.getRefId()).isEqualTo("1:2026-11-03");
+			assertThat(entry.getAmount()).isEqualTo(50);
+		});
+	}
 }
