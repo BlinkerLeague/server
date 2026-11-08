@@ -9,6 +9,7 @@ import com.blinkerleague.server.point.application.port.out.DriverPointLockPort;
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
 import com.blinkerleague.server.point.application.service.EarnPointService;
+import com.blinkerleague.server.point.application.service.GetPointsService;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 
 /** point 유스케이스에 포트 구현(어댑터)을 연결한다. */
@@ -21,5 +22,11 @@ public class PointBeanConfig {
 		DriverPointLockPort driverPointLockPort, Clock clock) {
 		return new EarnPointService(loadPointLedgerPort, savePointEntryPort, thresholdProvider, driverPointLockPort,
 			clock);
+	}
+
+	@Bean
+	public GetPointsService getPointsService(LoadPointLedgerPort loadPointLedgerPort,
+		ThresholdProvider thresholdProvider, Clock clock) {
+		return new GetPointsService(loadPointLedgerPort, thresholdProvider, clock);
 	}
 }
