@@ -50,7 +50,6 @@ public class ScoreCalculator {
 			case SEAT_BELT -> seatBelt(facts, thresholds.seatBelt());
 			case RAIN_DRIVING -> rainDriving(facts);
 			case TURN_SPEED -> turnSpeed(facts, thresholds.turn(), minSamples(thresholds, ScoreItem.TURN_SPEED));
-			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
 	}
 
