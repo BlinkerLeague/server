@@ -26,7 +26,7 @@ public class DriverMissionPersistenceAdapter implements DriverMissionStore {
 
 	@Override
 	public Optional<DriverMission> findLatestBefore(Long driverId, String periodKey) {
-		throw new UnsupportedOperationException();
+		return repository.findFirstByDriverIdAndPeriodKeyLessThanOrderByPeriodKeyDesc(driverId, periodKey);
 	}
 
 	@Override
