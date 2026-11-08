@@ -6,6 +6,7 @@ import java.util.List;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
@@ -39,7 +40,7 @@ public class PointLedgerPersistenceAdapter implements LoadPointLedgerPort, SaveP
 
 	@Override
 	public List<PointEntry> findRecent(Long driverId, int limit) {
-		throw new UnsupportedOperationException();
+		return repository.findByDriverIdOrderByEarnedAtDescIdDesc(driverId, PageRequest.of(0, limit));
 	}
 
 	@Override
