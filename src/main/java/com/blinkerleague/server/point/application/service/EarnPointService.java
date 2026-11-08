@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
 import com.blinkerleague.server.point.domain.PointEntry;
+import com.blinkerleague.server.point.domain.PointReason;
 import com.blinkerleague.server.point.domain.PointRules;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.Thresholds;
@@ -24,6 +25,10 @@ public class EarnPointService {
 
 	/** 운행 점수로 적립하고, 실제로 적립한 포인트를 돌려준다. */
 	public int earnForTrip(Long driverId, String tripId, double distanceKm, int score) {
+		// 같은 운행은 한 번만 적립한다(운행 재전송 · 재계산).
+		if (loadPointLedgerPort.exists(PointReason.TRIP, tripId)) {
+			return 0;
+		}
 		Thresholds.Point rule = thresholdProvider.current().thresholds().point();
 		Instant now = clock.instant();
 		int requested = PointRules.tripPoints(distanceKm, score, rule.tripMaxKm());
