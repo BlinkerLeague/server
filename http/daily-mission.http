@@ -1,0 +1,315 @@
+### 오늘의 미션 API 로컬 수동 테스트 (IntelliJ HTTP Client)
+# 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
+# 환경: 고르지 않아도 된다. 0번 요청이 서버 주소(host)를 저장하고 다음 요청이 그 값을 쓴다.
+#       http-client.env.json의 "local"을 골라도 같은 주소라 그대로 동작한다.
+# 위에서부터 순서대로 실행한다. 0-A에서 받은 토큰과 오늘 · 어제 날짜를 다음 요청이 이어받는다.
+#
+# 규칙(plan.md 3.6): 시동을 켜고 끄기까지의 운행 1건이 1라운드다.
+#   - 미션 "회전 깜빡이 완벽"(회전 3회 이상, 깜빡이 100%, 20P)은 라운드 1건 안에서 판정한다.
+#   - 그날(한국 날짜, 운행 종료 시각 기준) 라운드 하나라도 채우면 ACHIEVED로 확정, 뒤에 실패해도 그대로다.
+#   - 실패 라운드가 있어도 그날은 IN_PROGRESS, 다음 라운드에서 다시 도전한다.
+#   - progress · conditions는 달성했으면 달성한 라운드, 아니면 가장 최근 라운드다.
+#
+# 미션은 서버의 실제 오늘 날짜로 판정하므로, 운행 시각은 0-A 응답 스크립트가 계산한 오늘(today) 날짜를 쓴다.
+# 운전자 A는 매번 새로 등록하므로 몇 번을 다시 실행해도 처음 상태(라운드 없음)에서 시작한다.
+# 저장 결과 확인: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa)
+#   select * from mission;  select * from trip;  select * from trip_event;
+
+### 0. 서버 주소 설정 + 서버 동작 확인 → 200 (환경을 고르지 않아도 다음 요청의 host가 채워지게 한다)
+GET http://localhost:8080/api/config/thresholds
+
+> {%
+    client.test("서버 응답 200", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+    });
+    client.global.set("host", "http://localhost:8080");
+%}
+
+### 0-A. 운전자 A 등록 → 201 (accessToken, 오늘 · 어제 날짜 저장)
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "미션A{{$randomInt}}",
+  "regionCode": "11440"
+}
+
+> {%
+    client.test("201 Created", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+    });
+    client.global.set("missionAToken", response.body.accessToken);
+    // 한국 시간(UTC+9) 기준 오늘 · 어제 날짜(yyyy-MM-dd)
+    var kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    var kstYesterday = new Date(kstNow.getTime() - 24 * 60 * 60 * 1000);
+    client.global.set("today", kstNow.toISOString().substring(0, 10));
+    client.global.set("yesterday", kstYesterday.toISOString().substring(0, 10));
+%}
+
+### 1. 라운드 없음 → 200 IN_PROGRESS, 진행도 0, periodKey = 오늘
+GET {{host}}/api/missions/today
+Authorization: Bearer {{missionAToken}}
+
+> {%
+    client.test("200 IN_PROGRESS · 진행도 0", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.title === "회전 깜빡이 완벽", "title: " + response.body.title);
+        client.assert(response.body.periodKey === client.global.get("today"), "periodKey: " + response.body.periodKey);
+        client.assert(response.body.status === "IN_PROGRESS", "status: " + response.body.status);
+        client.assert(response.body.rewardPoint === 20, "rewardPoint: " + response.body.rewardPoint);
+        client.assert(response.body.progress.turns === 0, "turns: " + response.body.progress.turns);
+        client.assert(response.body.progress.requiredTurns === 3, "requiredTurns: " + response.body.progress.requiredTurns);
+    });
+%}
+
+### 2. 1라운드(07시): 회전 1회, 깜빡이 안 켬 → 201 UPLOADED
+POST {{host}}/api/trips
+Authorization: Bearer {{missionAToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{today}}T07:00:00+09:00",
+  "endedAt": "{{today}}T07:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T07:10:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": false } }
+  ]
+}
+
+> {%
+    client.test("201 UPLOADED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.status === "UPLOADED", "status: " + response.body.status);
+    });
+%}
+
+### 3. 1라운드 실패 뒤 → 그날은 끝나지 않고 IN_PROGRESS, 진행도는 1라운드(회전 1 · 성공 0 · 사용률 0%)
+GET {{host}}/api/missions/today
+Authorization: Bearer {{missionAToken}}
+
+> {%
+    client.test("200 IN_PROGRESS · 최근 라운드 진행도", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.status === "IN_PROGRESS", "status: " + response.body.status);
+        client.assert(response.body.progress.turns === 1, "turns: " + response.body.progress.turns);
+        client.assert(response.body.progress.successTurns === 0, "successTurns: " + response.body.progress.successTurns);
+        client.assert(response.body.conditions[1].type === "SIGNAL_RATE", "type: " + response.body.conditions[1].type);
+        client.assert(response.body.conditions[1].current === 0, "signalRate: " + response.body.conditions[1].current);
+    });
+%}
+
+### 4. 2라운드(08시): 회전 2회, 모두 깜빡이 켬 → 201 UPLOADED
+POST {{host}}/api/trips
+Authorization: Bearer {{missionAToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{today}}T08:00:00+09:00",
+  "endedAt": "{{today}}T08:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T08:10:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T08:20:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": true } }
+  ]
+}
+
+> {%
+    client.test("201 UPLOADED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+    });
+%}
+
+### 5. 회전 2회뿐 → IN_PROGRESS, 진행도는 2라운드(회전 2/3 · 사용률 100%). 라운드끼리 합산하지 않는다
+GET {{host}}/api/missions/today
+Authorization: Bearer {{missionAToken}}
+
+> {%
+    client.test("200 IN_PROGRESS · 회전 2/3", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.status === "IN_PROGRESS", "status: " + response.body.status);
+        client.assert(response.body.progress.turns === 2, "turns: " + response.body.progress.turns);
+        client.assert(response.body.progress.successTurns === 2, "successTurns: " + response.body.progress.successTurns);
+        client.assert(response.body.conditions[0].type === "TURN_COUNT", "type: " + response.body.conditions[0].type);
+        client.assert(response.body.conditions[0].current === 2, "turnCount: " + response.body.conditions[0].current);
+        client.assert(response.body.conditions[0].target === 3, "target: " + response.body.conditions[0].target);
+        client.assert(response.body.conditions[1].current === 100, "signalRate: " + response.body.conditions[1].current);
+    });
+%}
+
+### 6. 3라운드(09시): 회전 3회, 모두 깜빡이 켬 → 201 UPLOADED
+POST {{host}}/api/trips
+Authorization: Bearer {{missionAToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{today}}T09:00:00+09:00",
+  "endedAt": "{{today}}T09:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T09:10:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T09:20:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T09:30:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } }
+  ]
+}
+
+> {%
+    client.test("201 UPLOADED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+    });
+%}
+
+### 7. 3라운드 달성 → ACHIEVED, 진행도 3/3 · 100%
+GET {{host}}/api/missions/today
+Authorization: Bearer {{missionAToken}}
+
+> {%
+    client.test("200 ACHIEVED", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.status === "ACHIEVED", "status: " + response.body.status);
+        client.assert(response.body.progress.turns === 3, "turns: " + response.body.progress.turns);
+        client.assert(response.body.progress.successTurns === 3, "successTurns: " + response.body.progress.successTurns);
+        client.assert(response.body.conditions[1].current === 100, "signalRate: " + response.body.conditions[1].current);
+    });
+%}
+
+### 8. 4라운드(10시): 회전 1회, 깜빡이 안 켬 → 201 UPLOADED
+POST {{host}}/api/trips
+Authorization: Bearer {{missionAToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{today}}T10:00:00+09:00",
+  "endedAt": "{{today}}T10:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T10:10:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": false } }
+  ]
+}
+
+> {%
+    client.test("201 UPLOADED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+    });
+%}
+
+### 9. 달성 뒤 실패 라운드 → 여전히 ACHIEVED, 진행도는 달성한 3라운드(3/3)
+GET {{host}}/api/missions/today
+Authorization: Bearer {{missionAToken}}
+
+> {%
+    client.test("200 ACHIEVED 유지", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.status === "ACHIEVED", "status: " + response.body.status);
+        client.assert(response.body.progress.turns === 3, "turns: " + response.body.progress.turns);
+        client.assert(response.body.progress.successTurns === 3, "successTurns: " + response.body.progress.successTurns);
+    });
+%}
+
+### 10-A. 운전자 B 등록 → 201 (집계 제외 확인용)
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "미션B{{$randomInt}}",
+  "regionCode": "11440"
+}
+
+> {%
+    client.test("201 Created", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+    });
+    client.global.set("missionBToken", response.body.accessToken);
+%}
+
+### 10-B. B: 오늘 2.9km 운행에서 회전 3회 성공 → 201 EXCLUDED_SHORT (3km 미만은 미션 집계 제외)
+POST {{host}}/api/trips
+Authorization: Bearer {{missionBToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{today}}T07:00:00+09:00",
+  "endedAt": "{{today}}T07:10:00+09:00",
+  "distanceKm": 2.9,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T07:02:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T07:05:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T07:08:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } }
+  ]
+}
+
+> {%
+    client.test("201 EXCLUDED_SHORT", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.status === "EXCLUDED_SHORT", "status: " + response.body.status);
+    });
+%}
+
+### 10-C. B: 어제 운행에서 회전 3회 성공 → 201 UPLOADED (어제 날짜라 오늘 미션에 안 들어감)
+POST {{host}}/api/trips
+Authorization: Bearer {{missionBToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{yesterday}}T20:00:00+09:00",
+  "endedAt": "{{yesterday}}T20:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T20:10:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T20:20:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T20:30:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } }
+  ]
+}
+
+> {%
+    client.test("201 UPLOADED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.status === "UPLOADED", "status: " + response.body.status);
+    });
+%}
+
+### 10-D. B의 오늘 미션 → IN_PROGRESS, 진행도 0 (3km 미만 · 어제 운행은 세지 않음. A의 달성도 섞이지 않음)
+GET {{host}}/api/missions/today
+Authorization: Bearer {{missionBToken}}
+
+> {%
+    client.test("200 IN_PROGRESS · 진행도 0", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+        client.assert(response.body.status === "IN_PROGRESS", "status: " + response.body.status);
+        client.assert(response.body.progress.turns === 0, "turns: " + response.body.progress.turns);
+    });
+%}
+
+### 11. 토큰 없이 조회 → 401 UNAUTHORIZED
+GET {{host}}/api/missions/today
+
+> {%
+    client.test("401 UNAUTHORIZED", function () {
+        client.assert(response.status === 401, "status: " + response.status);
+        client.assert(response.body.code === "UNAUTHORIZED", "code: " + response.body.code);
+    });
+%}

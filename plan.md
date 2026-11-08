@@ -14,7 +14,7 @@
 | D3 | 운영 DB | H2 인메모리만 있음 | MVP 시연까지 H2(파일 모드 또는 인메모리), 2차에서 MySQL/PostgreSQL을 docker-compose에 추가 |
 | D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
 | D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | 시즌 내 지역 운전자들의 운행 점수 평균(거리 가중). 2차 착수 전 확정 |
-| D6 | 홈(SCR-01) 연승 표시 | 화면은 P0 홈에 "5일 연승"을 보여주지만 연승 계산은 P1 `feat/streak-badge` | **미정.** A) P0 `feat/daily-mission` 응답에 `streakDays` 추가 / B) P0 동안 화면에서 연승 카드를 숨김(plan 변경 없음) |
+| D6 | 홈(SCR-01) 연승 표시 | 화면은 P0 홈에 "5일 연승"을 보여주지만 연승 계산은 P1 `feat/streak-badge` | **결정(11.8): B) P0 동안 화면에서 연승 카드를 숨김.** `GET /api/missions/today`에 `streakDays`를 넣지 않는다. 연승은 P1 `feat/streak-badge`에서 계산하고 그때 카드를 다시 보여 준다 |
 | D7 | 주간 리포트(SCR-07) "퀘스트 수락" 버튼 | plan은 맞춤 미션을 배치로 자동 생성 | **미정.** A) 수락 API와 미수락 상태 추가 / B) 화면을 "다음 주 퀘스트로 등록됨" 안내로 변경(plan 변경 없음) |
 | D8 | 설정(SCR-08) "리그 순위 공개" 토글 | 개발 기획서 · plan 어디에도 없음 | **미정.** A) `driver`에 공개 여부 컬럼과 리그 집계 제외 로직 추가 / B) 화면에서 제거(plan 변경 없음) |
 | D9 | "측정 누락 구간" 예외 상태 | 서버는 누락 구간을 알 수 없음 | **미정.** A) 업로드 요청에 누락 구간 필드 추가 / B) 앱에서만 표시하는 문구로 둠(plan 변경 없음) |
@@ -30,6 +30,10 @@
 | D19 | 리그 비교 점수 | 차량마다 측정 가능한 항목이 달라, 항목이 적은 차가 리그에서 유리할 수 있음(4.4 "같은 측정 항목 집단끼리 비교") | **제안(11.4): 리그 순위 · 안전지수는 모든 차가 측정하는 공통 항목 점수로**, 운행 점수 · 포인트는 전체 항목 점수로. 공통 항목 목록은 기준값 설정에 둠. `feat/region-league` 착수 전 확정 |
 | D20 | 오토라이트 · 비상등 규칙 | Vehicle SDK 2.3.2에 오토라이트 상태 · 비상등 API가 없음(에뮬레이터 확인) | **제안(11.4): 4.1의 "오토라이트면 100점"과 `NIGHT_SEGMENT.autoLight` 삭제**, 하향등 상태로만 판정. 앱 회전 제외 규칙의 비상등 조건도 적용 불가. 실차에서 경고등으로 비상등이 오면 재검토 |
 | D21 | 새 이벤트 종류 · 항목 이름 수용 | `TripEventType` · `ScoreItem`이 enum이라 모르는 값이 오면 `POST /api/trips`가 400. 앱은 4xx를 재전송하지 않고 `REJECTED`로 멈추므로 운행 전체가 버려짐 | **미정.** A) 서버 P1 반영(enum 추가)이 배포된 뒤에만 앱이 새 값을 보냄(기준값 `version`으로 앱이 판단) / B) 모르는 이벤트 종류는 저장만 하고 무시, 모르는 `supported` 이름은 버림. 기본 제안 A |
+| D22 | 경기 요약(`summary`) · 경기 기록(`plays`) 정의 | 3.5에 제안만 있고 화면 기획서와 확정 전 | **결정(11.5):** 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 점수에 쓰지 않으므로 항상 0). `plays`는 저장된 **모든 이벤트**를 시각순으로 담고, `TURN`만 `result`(`GOAL`/`CONCEDED`)가 있으며 나머지(`LANE_CHANGE` 등)는 `result: null` |
+| D23 | `TURN` payload의 `signalOn` 해석 불가 | 업로드는 payload를 해석하지 않고 저장하므로 `signalOn`이 없거나 boolean이 아닐 수 있음 | **결정(11.5): 깜빡이를 켜지 않은 회전으로 판정.** `signalOn`이 `true`일 때만 성공. 업로드(400)로 막지 않는다 |
+| D24 | 최근 경기 목록 `limit` | 3.5에서 "착수 시 확정" | **결정(11.5): 기본 10, 최대 50.** 50을 넘으면 50으로 자른다 |
+| D25 | 달성하지 못한 날의 미션 상태 · 홈 표시 | 3.6은 "그날이 끝날 때까지 달성하지 못하면 FAILED"만 있고 시점 · 화면 표시가 없음 | **결정(11.8): 끝난 날의 미달성은 `FAILED`.** 배치 없이 판정할 때(업로드 · 조회) 정한다. **오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날의 최종 상태(`ACHIEVED` · `FAILED`)를 계속 보여 주고**, 오늘 운행을 올리면 오늘 미션으로 새로 시작한다. 그날 끝난 운행을 늦게 올려(오프라인 후) 조건을 채우면 `FAILED`에서 `ACHIEVED`로 바꾼다. `ACHIEVED`는 되돌리지 않는다 |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -243,6 +247,8 @@ API: `POST /api/trips` (인증 필요. 요청 형식은 아래 제안 형식, D1
 
 ### 3.5 `feat/trip-score` — 점수 엔진 (FR-03, FR-05)
 
+상태: 완료. 순수 점수 엔진은 `score.domain`(`ScoreCalculator`, `WeightRedistribution`, `MatchReport`)에 있고, `POST /api/trips`가 업로드하면서 점수를 매긴다(별도 배치 없음). 항목별 점수는 `trip_metric`에 저장한다(`value`가 H2 예약어라 컬럼 이름은 `metric_value`). `summary` · `plays` · `turns`는 저장하지 않고 조회할 때 이벤트에서 계산한다. 결정: 경기 요약 · 기록 D22, `signalOn` 해석 불가 D23, 목록 `limit` D24. `limit`이 1 미만이면 400(500 방지). 응답 시간은 회전 300회 운행 업로드가 3초 안에 끝나는지 통합 테스트로 확인(로컬 0.2초). 남은 항목: `mission`은 3.6에서 채운다. 기준값(가중치)이 바뀌어도 이미 저장된 점수는 다시 계산하지 않는다(등급만 조회 시점 기준으로 계산).
+
 API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 구조(`TripResult`)
 
 ```json
@@ -265,8 +271,8 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 ```
 
 - `grade`: 3.3 `grades` 기준으로 점수에서 계산(SCR-02). 점수가 없으면 `null`
-- `summary`: 경기 비유 집계(SCR-02a). 제안: 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0). 정의는 화면 기획서와 확정
-- `plays`: 운행 중 이벤트를 시각순으로(SCR-02a). `result`는 `summary`와 같은 정의
+- `summary`: 경기 비유 집계(SCR-02a). 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0). D22로 결정
+- `plays`: 운행 중 모든 이벤트를 시각순으로(SCR-02a). `TURN`의 `result`는 `summary`와 같은 정의, 그 외 이벤트는 `result: null`(D22). `signalOn`을 해석할 수 없는 회전은 실점(D23)
 - `mission`: 이 운행을 반영한 그날 미션 판정 결과(SCR-02, VOC-02). `feat/daily-mission` 전까지는 `null`
 
 작업:
@@ -276,13 +282,15 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 - `trip_metric` 테이블: `trip_id`, `metric`, `value`, `score`, `weight`
 - 회전 0회 → `status=NO_TURN`, `score=null` (앱은 "측정할 회전이 없었어요" 표시). P0은 측정 항목이 깜빡이뿐이라 이렇게 두고, 4.1에서 깜빡이 항목의 제외 사유로 바꾼다
 - 남의 운행 조회 시 404
-- **최근 경기 목록** `GET /api/trips?limit=2`(SCR-01): 내 운행을 종료 시각 최신순으로. 항목은 `tripId`, `endedAt`, `distanceKm`, `status`, `score`, `grade`. `limit` 기본 · 최댓값은 착수 시 확정
+- **최근 경기 목록** `GET /api/trips?limit=2`(SCR-01): 내 운행을 종료 시각 최신순으로. 항목은 `tripId`, `endedAt`, `distanceKm`, `status`, `score`, `grade`. `limit` 기본 10, 최대 50(넘으면 50으로 자름, D24)
 
 테스트: 회전 4회 중 3회 성공 → 75점, 회전 0회 → `NO_TURN`, 재분배 계산(가중치 합 1) 단위 테스트, 점수별 `grade`, `summary` · `plays` 집계, 최근 경기 목록 정렬 · `limit` · 남의 운행 제외. 응답 시간 3초 목표는 통합 테스트에서 대략 확인.
 
 ### 3.6 `feat/daily-mission` — 오늘의 미션 (FR-06)
 
 API: `GET /api/missions/today`
+
+상태: 완료(11.8, PR #33). 판정은 라운드 단위(운행 1건 = 1라운드, 그날 하나라도 채우면 `ACHIEVED`)이고, 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. `POST /api/trips`가 저장한 뒤 그날 판정을 `driver_mission`에 기록하고(한 번 달성한 날은 되돌리지 않음, 같은 날 동시 업로드는 유니크 충돌 후 다시 읽어 반영) 응답 `mission`에 `{ missionId, status }`를 담는다. 같은 운행 재전송도 `mission`을 담는다. `GET /api/trips/{tripId}/score`는 기록하지 않고 그날 판정만 계산해 담는다. 회전 집계는 점수와 같은 기준(D23, `signalOn`이 boolean `true`일 때만 켠 회전). 끝난 날의 미달성은 `FAILED`(D25): 배치 없이 판정할 때 정하고, 오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날(`driver_mission`의 가장 최근 이전 기록)의 최종 상태를 보여 준다. 늦게 올린 운행으로 그날 조건을 채우면 `FAILED` → `ACHIEVED`. 저장된 `driver_mission.status`는 그날 이후 다시 판정될 때 `FAILED`로 바뀌므로, 지난 날 행이 `IN_PROGRESS`로 남아 있으면 `FAILED`로 읽는다. **남은 항목:** 달성 시 20P 적립은 `feat/point-ledger`(#37)에 연결한다.
 
 ```json
 {
@@ -301,16 +309,19 @@ API: `GET /api/missions/today`
 
 - `rewardPoint`: 달성 시 지급 포인트(SCR-03). 실제 지급은 `feat/point-ledger`
 - `conditions`: 조건별 진행도(SCR-01 진행 링, SCR-03). 회전 수와 깜빡이 사용률(%)
-- 홈 연승 표시(`streakDays`)를 여기에 넣을지는 D6 결정에 따름
+- 홈 연승 표시(`streakDays`)는 넣지 않음(D6 결정 B, P1 `feat/streak-badge`에서)
 
 작업:
 - `mission` 테이블: `mission_id`, `type`, `period`(`DAILY`/`WEEKLY`), `condition`(JSON), `reward_point`, `active_from`, `active_to`. "회전 깜빡이 완벽"(회전 3회 이상, 사용률 100%, 20P) 시드
 - `driver_mission` 테이블: `driver_id`, `mission_id`, `period_key`, `status`(`IN_PROGRESS`/`ACHIEVED`/`FAILED`), `achieved_at`. (`driver_id`, `mission_id`, `period_key`) 유니크
-- 운행 업로드 후 그날(Asia/Seoul) 점수 대상 운행들의 회전을 합산해 판정. 한 번이라도 실패 회전이 있으면 그날은 `FAILED`
+- **라운드 단위 판정(11.8 결정):** 시동을 켜고 끄기까지의 운행 1건이 1라운드다. 미션 조건(회전 3회 이상, 사용률 100%)은 라운드 1건 안에서 판정한다. 회전을 하루 동안 합산하지 않는다
+- 그날(Asia/Seoul, 운행 **종료 시각** 기준) 라운드 중 **하나라도** 조건을 채우면 그날 미션은 `ACHIEVED`로 확정한다. 이후 실패한 라운드가 있어도 바뀌지 않는다
+- 실패한 라운드(깜빡이를 안 켠 회전 포함)가 있어도 그날은 `IN_PROGRESS`로 남아 다음 라운드에서 다시 도전한다. 그날이 끝날 때까지 달성하지 못하면 `FAILED`(`driver_mission` 기록)
+- 진행도(`progress`, `conditions`): 달성했으면 달성한 라운드, 아니면 가장 최근 라운드. 라운드가 없으면 0
 - `EXCLUDED_SHORT` 운행은 집계에서 제외
 - 포인트 지급은 P1(`feat/point-ledger`)에서 연결. 지금은 달성 상태만 기록
 
-테스트: 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 1회 포함 → `FAILED`, 자정 경계 운행의 period_key, 조건별 진행도(회전 수 · 사용률)와 `rewardPoint` 응답.
+테스트: 한 라운드에서 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 라운드 뒤 달성 라운드 → `ACHIEVED`, 달성 뒤 실패 라운드 → `ACHIEVED` 유지, 달성 라운드 없음 → `IN_PROGRESS`(최근 라운드 진행도), 자정 경계 운행의 period_key, 조건별 진행도(회전 수 · 사용률)와 `rewardPoint` 응답.
 
 ### P0 마무리 (11.9 ~ 11.15)
 - 차량 앱과 실제 연동 확인(에뮬레이터 시나리오: 좌회전 성공 → 우회전 실패 → 운행 종료 점수 · 미션)

@@ -1,6 +1,26 @@
 {
   "components": {
     "schemas": {
+      "ConditionProgress": {
+        "properties": {
+          "current": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "target": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "TURN_COUNT",
+              "SIGNAL_RATE"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Description": {
         "properties": {
           "distanceKm": {
@@ -106,6 +126,71 @@
         },
         "type": "object"
       },
+      "MetricResult": {
+        "properties": {
+          "metric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT"
+            ],
+            "type": "string"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "value": {
+            "format": "double",
+            "type": "number"
+          },
+          "weight": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "MissionResult": {
+        "properties": {
+          "missionId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PlayItem": {
+        "properties": {
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "GOAL",
+              "CONCEDED"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "TURN",
+              "LANE_CHANGE",
+              "HARSH_ACCEL",
+              "HARSH_BRAKE",
+              "SAFETY_WARNING",
+              "NIGHT_SEGMENT"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Point": {
         "properties": {
           "dailyCap": {
@@ -138,6 +223,55 @@
           "todayEarned": {
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Progress": {
+        "properties": {
+          "requiredTurns": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "successTurns": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "turns": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "RecentTripResult": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "endedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "grade": {
+            "type": "string"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "UPLOADED",
+              "SCORED",
+              "NO_TURN",
+              "EXCLUDED_SHORT"
+            ],
+            "type": "string"
+          },
+          "tripId": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -201,6 +335,23 @@
         },
         "type": "object"
       },
+      "SummaryResult": {
+        "properties": {
+          "conceded": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "fouls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "goals": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "ThresholdsResponse": {
         "properties": {
           "grades": {
@@ -244,6 +395,42 @@
         },
         "type": "object"
       },
+      "TodayMissionResponse": {
+        "properties": {
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionProgress"
+            },
+            "type": "array"
+          },
+          "missionId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "periodKey": {
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          },
+          "rewardPoint": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "IN_PROGRESS",
+              "ACHIEVED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TokenResponse": {
         "properties": {
           "accessToken": {
@@ -270,6 +457,28 @@
       },
       "TripResult": {
         "properties": {
+          "grade": {
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricResult"
+            },
+            "type": "array"
+          },
+          "mission": {
+            "$ref": "#/components/schemas/MissionResult"
+          },
+          "plays": {
+            "items": {
+              "$ref": "#/components/schemas/PlayItem"
+            },
+            "type": "array"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          },
           "status": {
             "enum": [
               "UPLOADED",
@@ -279,8 +488,14 @@
             ],
             "type": "string"
           },
+          "summary": {
+            "$ref": "#/components/schemas/SummaryResult"
+          },
           "tripId": {
             "type": "string"
+          },
+          "turns": {
+            "$ref": "#/components/schemas/TurnsResult"
           }
         },
         "type": "object"
@@ -304,6 +519,19 @@
             "type": "integer"
           },
           "windowSec": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "TurnsResult": {
+        "properties": {
+          "success": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
             "format": "int32",
             "type": "integer"
           }
@@ -504,6 +732,48 @@
         ]
       }
     },
+    "/api/missions/today": {
+      "get": {
+        "description": "오늘(Asia/Seoul) 운영 중인 일일 미션과 내 진행도. 운행 1건이 1라운드이고, 그날 라운드 중 하나라도 조건을 채우면 ACHIEVED로 확정된다. progress는 달성했으면 달성한 라운드, 아니면 가장 최근 라운드의 회전 수다. 최소 거리 미만 운행은 세지 않는다. 그날이 끝날 때까지 달성하지 못하면 FAILED이고, 오늘 첫 운행 전에는 마지막 미션 날의 최종 상태(ACHIEVED · FAILED)를 그 날의 periodKey로 보여 준다(D25).",
+        "operationId": "today",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayMissionResponse"
+                }
+              }
+            },
+            "description": "오늘의 미션과 진행도(status: IN_PROGRESS · ACHIEVED · FAILED). 오늘 운행 전이면 마지막 미션 날의 최종 상태"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 오늘 운영 중인 미션이 없음"
+          }
+        },
+        "summary": "오늘의 미션 조회",
+        "tags": [
+          "미션"
+        ]
+      }
+    },
     "/api/points": {
       "get": {
         "description": "잔액(전체 적립 합계), 오늘(Asia/Seoul) 적립 합계와 일일 상한, 최근 원장 20건(최근 것부터). 운행 적립은 적립 당시의 거리 · 점수를 description에 담는다.",
@@ -537,6 +807,60 @@
       }
     },
     "/api/trips": {
+      "get": {
+        "description": "내 운행을 종료 시각 최신순으로 돌려준다(SCR-01). limit은 기본 10, 최대 50이며 50을 넘으면 50건으로 자른다(D24). 점수가 없는 운행은 score · grade가 null이다.",
+        "operationId": "recent",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentTripResult"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "내 운행 목록(최신순)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: limit이 1 미만이거나 숫자가 아님"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "최근 경기 목록",
+        "tags": [
+          "운행"
+        ]
+      },
       "post": {
         "description": "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.",
         "operationId": "upload",
@@ -569,7 +893,7 @@
                 }
               }
             },
-            "description": "새로 저장함. 최소 거리 미만이면 status=EXCLUDED_SHORT, 아니면 UPLOADED"
+            "description": "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 회전이 없으면 NO_TURN(score=null), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult"
           },
           "400": {
             "content": {
@@ -607,6 +931,58 @@
           "운행"
         ]
       }
+    },
+    "/api/trips/{tripId}/score": {
+      "get": {
+        "description": "업로드 응답과 같은 TripResult(총점 · 등급 · 항목별 점수 · 회전 수 · 경기 요약 · 시각순 경기 기록). mission은 오늘의 미션 연결 전까지 null이다.",
+        "operationId": "score",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripResult"
+                }
+              }
+            },
+            "description": "운행 결과"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 없는 운행이거나 다른 운전자의 운행"
+          }
+        },
+        "summary": "운행 점수 조회",
+        "tags": [
+          "운행"
+        ]
+      }
     }
   },
   "security": [
@@ -630,6 +1006,10 @@
     {
       "description": "운행(라운드) · 이벤트 업로드",
       "name": "운행"
+    },
+    {
+      "description": "오늘의 미션",
+      "name": "미션"
     },
     {
       "description": "포인트 잔액 · 적립 원장",
