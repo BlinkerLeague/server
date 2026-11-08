@@ -22,6 +22,7 @@ import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlrea
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripEventType;
+import com.blinkerleague.server.trip.domain.TripMetric;
 import com.blinkerleague.server.trip.domain.TripStatus;
 
 @DataJpaTest
@@ -74,6 +75,24 @@ class TripPersistenceAdapterTest {
 			.isInstanceOf(TripAlreadyExistsException.class);
 		entityManager.clear();
 		assertThat(adapter.findById("trip-1").orElseThrow().getDriverId()).isEqualTo(1L);
+	}
+
+	@Test
+	void 점수를_매긴_운행은_항목별_점수와_함께_저장하고_다시_읽는다() {
+		Trip trip = trip("trip-1", 1L,
+			new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600), "{\"signalOn\":true}"));
+		trip.applyScore(75, List.of(new TripMetric(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0)));
+		adapter.saveNew(trip);
+		entityManager.flush();
+		entityManager.clear();
+
+		Trip loaded = adapter.findById("trip-1").orElseThrow();
+
+		assertThat(loaded.getStatus()).isEqualTo(TripStatus.SCORED);
+		assertThat(loaded.getScore()).isEqualTo(75);
+		assertThat(loaded.getMetrics())
+			.extracting(TripMetric::getMetric, TripMetric::getValue, TripMetric::getScore, TripMetric::getWeight)
+			.containsExactly(tuple(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0));
 	}
 
 	private static Trip trip(String tripId, Long driverId, RecordedEvent... events) {
