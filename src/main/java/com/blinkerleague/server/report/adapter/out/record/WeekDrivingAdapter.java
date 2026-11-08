@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import com.blinkerleague.server.report.application.port.out.LoadWeekDriversPort;
 import com.blinkerleague.server.report.application.port.out.LoadWeekDrivingPort;
 import com.blinkerleague.server.report.domain.TripMetricRecord;
 import com.blinkerleague.server.report.domain.WeekDriving;
@@ -17,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 /** 저장된 운행(trip)과 항목별 점수(trip_metric)를 읽어 한 주 기록을 만든다. */
 @Component
 @RequiredArgsConstructor
-public class WeekDrivingAdapter implements LoadWeekDrivingPort {
+public class WeekDrivingAdapter implements LoadWeekDrivingPort, LoadWeekDriversPort {
 
 	// 최소 거리 미만 운행은 점수 · 미션과 같이 세지 않는다.
 	private static final String TOTALS = """
@@ -48,5 +49,10 @@ public class WeekDrivingAdapter implements LoadWeekDrivingPort {
 				row.getInt("score"), row.getDouble("distance_km")),
 			driverId, start, end);
 		return new WeekDriving(totals.trips(), totals.distanceKm(), metrics);
+	}
+
+	@Override
+	public List<Long> driversWithTrips(Instant from, Instant to) {
+		throw new UnsupportedOperationException();
 	}
 }
