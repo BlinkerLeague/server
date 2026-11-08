@@ -174,4 +174,19 @@ class ScoreCalculatorTest {
 		boolean on = timing == SignalTiming.ON_TIME || timing == SignalTiming.LATE;
 		return new DrivingEvent(TripEventType.TURN, AT, new EventPayload(on, timing, null, null, null, null, null, null, null));
 	}
+
+	@Test
+	void 회전이_최소_표본보다_적으면_깜빡이_항목은_표본_부족으로_측정하지_않는다() {
+		Thresholds minThree = ThresholdsFixture.withMinSamples(java.util.Map.of(ScoreItem.TURN_SIGNAL, 3));
+
+		ScoreResult two = calculator.calculate(new TripFacts(Set.of(ScoreItem.TURN_SIGNAL), 12.0,
+			List.of(turn(true), turn(true))), minThree);
+		ScoreResult three = calculator.calculate(new TripFacts(Set.of(ScoreItem.TURN_SIGNAL), 12.0,
+			List.of(turn(true), turn(true), turn(false))), minThree);
+
+		assertThat(two.score()).isNull();
+		assertThat(two.metrics()).filteredOn(m -> m.metric() == ScoreItem.TURN_SIGNAL).singleElement()
+			.satisfies(m -> assertThat(m.reason()).isEqualTo("TOO_FEW_SAMPLES"));
+		assertThat(three.score()).isEqualTo(67);
+	}
 }

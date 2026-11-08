@@ -15,6 +15,7 @@ public record Thresholds(
 	Harsh harsh,
 	SafetyWarning safetyWarning,
 	Map<ScoreItem, Double> weights,
+	Map<ScoreItem, Integer> minSamples,
 	Point point,
 	List<GradeRule> grades,
 	Map<ScoreItem, String> tips) {
