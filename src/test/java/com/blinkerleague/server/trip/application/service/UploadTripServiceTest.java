@@ -149,4 +149,14 @@ class UploadTripServiceTest {
 			.satisfies(call -> assertThat(call).containsExactly(1L, ENDED_AT));
 		assertThat(result.trip().mission()).isEqualTo(new TripMissionPort.TripMission(7L, "ACHIEVED"));
 	}
+
+	@Test
+	void 같은_운행을_다시_올려도_그날_미션_판정을_결과에_담는다() {
+		service.upload(1L, command("trip-1", 12.3));
+
+		UploadTripService.Result retried = service.upload(1L, command("trip-1", 12.3));
+
+		assertThat(retried.created()).isFalse();
+		assertThat(retried.trip().mission()).isEqualTo(new TripMissionPort.TripMission(7L, "ACHIEVED"));
+	}
 }
