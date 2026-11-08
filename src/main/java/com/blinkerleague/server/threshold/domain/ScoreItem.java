@@ -5,5 +5,7 @@ public enum ScoreItem {
 	TURN_SIGNAL,
 	SMOOTH_DRIVING,
 	SAFETY_WARNING,
-	NIGHT_HEADLIGHT
+	NIGHT_HEADLIGHT,
+	/** 깜빡이를 켠 채 회전 없이 달림(D18) */
+	SIGNAL_CANCEL
 }

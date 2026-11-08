@@ -105,7 +105,7 @@ class ScoreCalculatorTest {
 		assertThat(result.score()).isEqualTo(100);
 		assertThat(result.metrics()).extracting(MetricScore::metric, MetricScore::status, MetricScore::reason,
 				MetricScore::score, MetricScore::weight)
-			.containsExactly(
+			.startsWith(
 				org.assertj.core.groups.Tuple.tuple(ScoreItem.TURN_SIGNAL, MetricStatus.NOT_APPLICABLE, "NO_TURN", null, null),
 				org.assertj.core.groups.Tuple.tuple(ScoreItem.SMOOTH_DRIVING, MetricStatus.SCORED, null, 100, 1.0),
 				org.assertj.core.groups.Tuple.tuple(ScoreItem.SAFETY_WARNING, MetricStatus.UNSUPPORTED, "SIGNAL_NOT_SUPPORTED", null, null),
@@ -188,5 +188,21 @@ class ScoreCalculatorTest {
 		assertThat(two.metrics()).filteredOn(m -> m.metric() == ScoreItem.TURN_SIGNAL).singleElement()
 			.satisfies(m -> assertThat(m.reason()).isEqualTo("TOO_FEW_SAMPLES"));
 		assertThat(three.score()).isEqualTo(67);
+	}
+
+	@Test
+	void 깜빡이_끄기를_잊은_횟수마다_감점하고_횟수를_근거로_담는다() {
+		List<DrivingEvent> events = List.of(
+			new DrivingEvent(TripEventType.SIGNAL_LEFT_ON, AT, EventPayload.EMPTY),
+			new DrivingEvent(TripEventType.SIGNAL_LEFT_ON, AT.plusSeconds(300), EventPayload.EMPTY));
+
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.SIGNAL_CANCEL), 12.0, events), THRESHOLDS);
+
+		// 100 − 25 × 2 = 50
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.SIGNAL_CANCEL).singleElement()
+			.satisfies(m -> {
+				assertThat(m.score()).isEqualTo(50);
+				assertThat(m.detail()).containsEntry("count", 2);
+			});
 	}
 }

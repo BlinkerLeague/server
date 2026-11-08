@@ -10,5 +10,7 @@ public enum TripEventType {
 	HARSH_ACCEL,
 	HARSH_BRAKE,
 	SAFETY_WARNING,
-	NIGHT_SEGMENT
+	NIGHT_SEGMENT,
+	/** 깜빡이를 켠 채 회전 없이 signalCancel.forgetSec 넘게 달림. payload { durationSec } */
+	SIGNAL_LEFT_ON
 }
