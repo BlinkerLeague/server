@@ -191,6 +191,21 @@ class RecordMissionAfterTripServiceTest {
 			.satisfies(call -> assertThat(call).containsExactly(1L, "1:2026-11-03"));
 	}
 
+	@Test
+	void 연속_달성이_7의_배수가_아니면_연속_달성_보상을_요청하지_않는다() {
+		for (int i = 1; i <= 5; i++) {
+			DriverMission past = DriverMission.start(1L, seed.getId(), LocalDate.of(2026, 11, 3).minusDays(i).toString());
+			past.apply(MissionStatus.ACHIEVED, NOW);
+			store.save(past);
+		}
+		rounds.add(new RoundTurns(3, 3));
+
+		service.recordAfterTrip(1L, Instant.parse("2026-11-03T00:00:00Z"));
+
+		assertThat(rewards).hasSize(1);
+		assertThat(streakRewards).isEmpty();
+	}
+
 	private final class RecordingRewards implements MissionRewardPort {
 
 		@Override
