@@ -41,4 +41,15 @@ class DayJudgementTest {
 			new ConditionProgress(ConditionType.TURN_COUNT, 4, 3),
 			new ConditionProgress(ConditionType.SIGNAL_RATE, 75, 100));
 	}
+
+	@Test
+	void 오늘_라운드가_없으면_IN_PROGRESS이고_진행도는_0이다() {
+		DayJudgement day = condition.judgeDay(List.of());
+
+		assertThat(day.status()).isEqualTo(MissionStatus.IN_PROGRESS);
+		assertThat(day.shownRound()).isEqualTo(new RoundTurns(0, 0));
+		assertThat(day.conditions()).containsExactly(
+			new ConditionProgress(ConditionType.TURN_COUNT, 0, 3),
+			new ConditionProgress(ConditionType.SIGNAL_RATE, 0, 100));
+	}
 }
