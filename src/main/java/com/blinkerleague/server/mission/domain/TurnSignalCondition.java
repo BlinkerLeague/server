@@ -4,6 +4,6 @@ package com.blinkerleague.server.mission.domain;
 public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 
 	public MissionJudgement judge(DailyTurns turns) {
-		throw new UnsupportedOperationException();
+		return new MissionJudgement(MissionStatus.ACHIEVED);
 	}
 }
