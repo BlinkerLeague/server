@@ -58,7 +58,8 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 
 	private MissionStatus judge(Mission mission, Long driverId, DailyPeriod period) {
 		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
-		return mission.getCondition().judgeDay(rounds).status();
+		boolean dayEnded = !clock.instant().isBefore(period.end());
+		return mission.getCondition().judgeDay(rounds).status().settle(dayEnded);
 	}
 
 	private DriverMission applyAndSave(Long driverId, Long missionId, String periodKey, MissionStatus judged) {
