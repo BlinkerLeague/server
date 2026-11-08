@@ -37,8 +37,7 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 			return Optional.empty();
 		}
 		Mission mission = active.get();
-		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
-		MissionStatus judged = mission.getCondition().judgeDay(rounds).status();
+		MissionStatus judged = judge(mission, driverId, period);
 		DriverMission record;
 		try {
 			record = applyAndSave(driverId, mission.getId(), period.key(), judged);
