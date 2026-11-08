@@ -18,8 +18,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "설정", description = "판정 기준값 · 점수 가중치 · 등급")
 @RestController
 @RequestMapping("/api/config")
 @RequiredArgsConstructor
