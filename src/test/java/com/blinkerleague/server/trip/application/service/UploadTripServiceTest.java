@@ -191,4 +191,15 @@ class UploadTripServiceTest {
 		assertThat(pointCalls).hasSize(2)
 			.allSatisfy(call -> assertThat(call).containsExactly(1L, "trip-1", 12.3, 100));
 	}
+
+	@Test
+	void 점수가_없는_운행_최소_거리_미만_회전_없음은_적립하지_않는다() {
+		service.upload(1L, command("short", 2.0,
+			new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600), "{\"signalOn\":true}")));
+		service.upload(1L, command("no-turn", 12.3));
+
+		assertThat(trips.findById("short").orElseThrow().getStatus()).isEqualTo(TripStatus.EXCLUDED_SHORT);
+		assertThat(trips.findById("no-turn").orElseThrow().getStatus()).isEqualTo(TripStatus.NO_TURN);
+		assertThat(pointCalls).isEmpty();
+	}
 }
