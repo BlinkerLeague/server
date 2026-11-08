@@ -53,7 +53,7 @@ public class TripController {
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
 	@Operation(summary = "운행 · 이벤트 업로드",
 		description = "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.")
-	@ApiResponse(responseCode = "201", description = "새로 저장함. 최소 거리 미만이면 status=EXCLUDED_SHORT, 아니면 UPLOADED")
+	@ApiResponse(responseCode = "201", description = "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 회전이 없으면 NO_TURN(score=null), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult")
 	@ApiResponse(responseCode = "200", description = "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다")
 	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null",
 		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
@@ -70,12 +70,26 @@ public class TripController {
 	}
 
 	/** 최근 경기 목록(SCR-01). 종료 시각 최신순. */
+	@Operation(summary = "최근 경기 목록",
+		description = "내 운행을 종료 시각 최신순으로 돌려준다(SCR-01). limit은 기본 10, 최대 50이며 50을 넘으면 50건으로 자른다(D24). 점수가 없는 운행은 score · grade가 null이다.")
+	@ApiResponse(responseCode = "200", description = "내 운행 목록(최신순)")
+	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: limit이 1 미만이거나 숫자가 아님",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@GetMapping
 	public List<RecentTripResult> recent(@CurrentDriver Long driverId,
 		@RequestParam(required = false) Integer limit) {
 		return listRecentTripsService.list(driverId, limit).stream().map(RecentTripResult::from).toList();
 	}
 
+	@Operation(summary = "운행 점수 조회",
+		description = "업로드 응답과 같은 TripResult(총점 · 등급 · 항목별 점수 · 회전 수 · 경기 요약 · 시각순 경기 기록). mission은 오늘의 미션 연결 전까지 null이다.")
+	@ApiResponse(responseCode = "200", description = "운행 결과")
+	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "NOT_FOUND: 없는 운행이거나 다른 운전자의 운행",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@GetMapping("/{tripId}/score")
 	public TripResult score(@CurrentDriver Long driverId, @PathVariable String tripId) {
 		return TripResult.from(getTripScoreService.get(driverId, tripId));
