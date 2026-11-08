@@ -18,12 +18,12 @@ public class WeeklyPersistenceAdapter implements WeeklyMissionStore, WeeklyRepor
 
 	@Override
 	public Optional<WeeklyMission> find(Long driverId, String weekKey) {
-		throw new UnsupportedOperationException();
+		return missionRepository.findByDriverIdAndWeekKey(driverId, weekKey);
 	}
 
 	@Override
 	public void save(WeeklyMission mission) {
-		throw new UnsupportedOperationException();
+		missionRepository.save(mission);
 	}
 
 	@Override
