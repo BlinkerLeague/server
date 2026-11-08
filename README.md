@@ -47,6 +47,22 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 
 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.
 
+### API 명세 (OpenAPI · Swagger)
+
+요청 · 응답 필드, 상태 코드, 오류 코드 전체는 OpenAPI 명세에 있습니다. 컨트롤러에서 자동으로 만들어집니다(springdoc-openapi).
+
+- **Swagger UI**: `local` 프로필로 서버를 띄운 뒤 <http://localhost:8080/swagger-ui.html>. 오른쪽 위 `Authorize`에 Access 토큰을 넣으면 보호된 API도 바로 호출할 수 있습니다.
+- **명세 JSON**: <http://localhost:8080/v3/api-docs>
+- **전달용 파일**: [`docs/api/openapi.json`](docs/api/openapi.json). 서버 없이 [Swagger Editor](https://editor.swagger.io/), Postman, IntelliJ에서 열 수 있습니다.
+- 배포 환경에서는 노출하지 않습니다(`springdoc.*.enabled`는 기본 `false`, `local` 프로필에서만 `true`).
+
+API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합니다(`servers`는 지워 실행 포트가 박히지 않게 합니다).
+
+```bash
+./gradlew bootRun   # 다른 터미널에서
+curl -s http://localhost:8080/v3/api-docs | jq 'del(.servers)' > docs/api/openapi.json
+```
+
 ## Docker 설정 (Redis)
 
 Redis는 Refresh 토큰(SHA-256 해시)만 저장합니다. 서버 세션은 쓰지 않습니다(JWT, stateless).
