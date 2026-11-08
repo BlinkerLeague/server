@@ -6,8 +6,8 @@ public enum MissionStatus {
 	ACHIEVED,
 	FAILED;
 
-	/** 그날이 끝났는지에 따라 최종 상태로 정한다. */
+	/** 그날이 끝날 때까지 달성하지 못했으면 FAILED다(배치 없이 판정할 때 정한다). */
 	public MissionStatus settle(boolean dayEnded) {
-		throw new UnsupportedOperationException();
+		return dayEnded && this == IN_PROGRESS ? FAILED : this;
 	}
 }
