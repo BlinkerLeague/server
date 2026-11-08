@@ -289,6 +289,8 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 
 API: `GET /api/missions/today`
 
+상태: 완료(11.8, PR #33). 판정은 라운드 단위(운행 1건 = 1라운드, 그날 하나라도 채우면 `ACHIEVED`)이고, 운행은 종료 시각이 속한 날(Asia/Seoul)에 집계한다. `POST /api/trips`가 저장한 뒤 그날 판정을 `driver_mission`에 기록하고(한 번 달성한 날은 되돌리지 않음, 같은 날 동시 업로드는 유니크 충돌 후 다시 읽어 반영) 응답 `mission`에 `{ missionId, status }`를 담는다. 같은 운행 재전송도 `mission`을 담는다. `GET /api/trips/{tripId}/score`는 기록하지 않고 그날 판정만 계산해 담는다. 회전 집계는 점수와 같은 기준(D23, `signalOn`이 boolean `true`일 때만 켠 회전). **남은 항목:** 그날이 끝날 때까지 달성하지 못한 날을 `FAILED`로 바꾸는 시점(자정 배치 또는 다음 조회 시 판단)은 미정이라 지금은 `IN_PROGRESS`로 남는다. 달성 시 20P 적립은 `feat/point-ledger`(#37)에 연결한다.
+
 ```json
 {
   "missionId": 1,
