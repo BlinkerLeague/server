@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
+import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
