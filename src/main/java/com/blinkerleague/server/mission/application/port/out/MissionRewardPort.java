@@ -7,4 +7,7 @@ package com.blinkerleague.server.mission.application.port.out;
 public interface MissionRewardPort {
 
 	void reward(Long driverId, String refId, int rewardPoint);
+
+	/** 연속 달성 보상(plan.md 4.3). refId는 운전자 · 보상받는 날마다 하나다. */
+	void rewardStreak(Long driverId, String refId);
 }

@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.blinkerleague.server.mission.application.port.in.RecordMissionAfterTripUseCase;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
+import com.blinkerleague.server.mission.application.port.out.LoadAchievedDaysPort;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
@@ -18,6 +19,8 @@ import com.blinkerleague.server.mission.domain.Mission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 import com.blinkerleague.server.mission.domain.RoundTurns;
 
+import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
+
 import lombok.RequiredArgsConstructor;
 
 /** 운행 업로드 후 그날 미션 판정을 driver_mission에 남긴다(plan.md 3.6). */
@@ -28,6 +31,8 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 	private final LoadDailyRoundsPort loadDailyRoundsPort;
 	private final DriverMissionStore driverMissionStore;
 	private final MissionRewardPort missionRewardPort;
+	private final LoadAchievedDaysPort loadAchievedDaysPort;
+	private final ThresholdProvider thresholdProvider;
 	private final Clock clock;
 
 	@Override

@@ -18,6 +18,9 @@ import com.blinkerleague.server.mission.domain.Mission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.blinkerleague.server.mission.domain.TurnSignalCondition;
+import com.blinkerleague.server.mission.application.port.out.MissionRewardPort;
+import com.blinkerleague.server.threshold.ThresholdsFixture;
+import com.blinkerleague.server.threshold.domain.VersionedThresholds;
 
 class RecordMissionAfterTripServiceTest {
 
@@ -30,6 +33,7 @@ class RecordMissionAfterTripServiceTest {
 	private final List<Instant[]> loadedRanges = new ArrayList<>();
 	private final InMemoryDriverMissionStore store = new InMemoryDriverMissionStore();
 	private final List<Object[]> rewards = new ArrayList<>();
+	private final List<Object[]> streakRewards = new ArrayList<>();
 
 	private final RecordMissionAfterTripService service = new RecordMissionAfterTripService(
 		date -> Optional.of(seed),
@@ -37,7 +41,8 @@ class RecordMissionAfterTripServiceTest {
 			loadedRanges.add(new Instant[] {from, to});
 			return rounds;
 		},
-		store, (driverId, refId, rewardPoint) -> rewards.add(new Object[] {driverId, refId, rewardPoint}),
+		store, new RecordingRewards(), store,
+		() -> new VersionedThresholds(1, ThresholdsFixture.planExample()),
 		Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
 
 	@Test
@@ -78,7 +83,8 @@ class RecordMissionAfterTripServiceTest {
 	@Test
 	void 그날_운영_중인_미션이_없으면_기록하지_않고_빈_결과를_돌려준다() {
 		RecordMissionAfterTripService noMission = new RecordMissionAfterTripService(date -> Optional.empty(),
-			(driverId, from, to) -> rounds, store, (driverId, refId, rewardPoint) -> rewards.add(new Object[0]),
+			(driverId, from, to) -> rounds, store, new RecordingRewards(), store,
+			() -> new VersionedThresholds(1, ThresholdsFixture.planExample()),
 			Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
 
 		assertThat(noMission.recordAfterTrip(1L, NOW)).isEmpty();
@@ -168,5 +174,33 @@ class RecordMissionAfterTripServiceTest {
 		service.judgeDay(1L, Instant.parse("2026-11-03T00:00:00Z"));
 
 		assertThat(rewards).isEmpty();
+	}
+
+	@Test
+	void 달성으로_연속_달성이_7의_배수가_되면_그날_연속_달성_보상을_요청한다() {
+		for (int i = 1; i <= 6; i++) {
+			DriverMission past = DriverMission.start(1L, seed.getId(), LocalDate.of(2026, 11, 3).minusDays(i).toString());
+			past.apply(MissionStatus.ACHIEVED, NOW);
+			store.save(past);
+		}
+		rounds.add(new RoundTurns(3, 3));
+
+		service.recordAfterTrip(1L, Instant.parse("2026-11-03T00:00:00Z"));
+
+		assertThat(streakRewards).singleElement()
+			.satisfies(call -> assertThat(call).containsExactly(1L, "1:2026-11-03"));
+	}
+
+	private final class RecordingRewards implements MissionRewardPort {
+
+		@Override
+		public void reward(Long driverId, String refId, int rewardPoint) {
+			rewards.add(new Object[] {driverId, refId, rewardPoint});
+		}
+
+		@Override
+		public void rewardStreak(Long driverId, String refId) {
+			streakRewards.add(new Object[] {driverId, refId});
+		}
 	}
 }

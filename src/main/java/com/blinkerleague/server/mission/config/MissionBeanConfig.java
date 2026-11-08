@@ -15,6 +15,7 @@ import com.blinkerleague.server.mission.application.service.GetStreakService;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService;
 import com.blinkerleague.server.mission.application.service.RecordMissionAfterTripService;
 import com.blinkerleague.server.mission.application.service.SeedMissionService;
+import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 
 /** mission 유스케이스에 포트 구현(어댑터)을 연결한다. */
 @Configuration
@@ -34,9 +35,10 @@ public class MissionBeanConfig {
 	@Bean
 	public RecordMissionAfterTripService recordMissionAfterTripService(LoadActiveMissionPort loadActiveMissionPort,
 		LoadDailyRoundsPort loadDailyRoundsPort, DriverMissionStore driverMissionStore,
-		MissionRewardPort missionRewardPort, Clock clock) {
+		MissionRewardPort missionRewardPort, LoadAchievedDaysPort loadAchievedDaysPort,
+		ThresholdProvider thresholdProvider, Clock clock) {
 		return new RecordMissionAfterTripService(loadActiveMissionPort, loadDailyRoundsPort, driverMissionStore,
-			missionRewardPort, clock);
+			missionRewardPort, loadAchievedDaysPort, thresholdProvider, clock);
 	}
 
 	@Bean
