@@ -53,6 +53,11 @@ public class WeekDrivingAdapter implements LoadWeekDrivingPort, LoadWeekDriversP
 
 	@Override
 	public List<Long> driversWithTrips(Instant from, Instant to) {
-		throw new UnsupportedOperationException();
+		return jdbcTemplate.queryForList("""
+			select distinct driver_id
+			  from trip
+			 where ended_at >= ? and ended_at < ? and status <> 'EXCLUDED_SHORT'
+			 order by driver_id
+			""", Long.class, Timestamp.from(from), Timestamp.from(to));
 	}
 }
