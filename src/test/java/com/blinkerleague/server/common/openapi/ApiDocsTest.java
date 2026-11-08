@@ -34,4 +34,18 @@ class ApiDocsTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.paths['/api/trips'].post.parameters").doesNotExist());
 	}
+
+	@Test
+	void 기본은_Bearer_JWT_인증이고_공개_API는_인증이_없다고_표시한다() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.bearerFormat").value("JWT"))
+			.andExpect(jsonPath("$.security[0].bearerAuth").exists())
+			.andExpect(jsonPath("$.paths['/api/drivers'].post.security").isEmpty())
+			.andExpect(jsonPath("$.paths['/api/auth/refresh'].post.security").isEmpty())
+			.andExpect(jsonPath("$.paths['/api/config/thresholds'].get.security").isEmpty())
+			.andExpect(jsonPath("$.paths['/api/trips'].post.security").doesNotExist());
+	}
 }
