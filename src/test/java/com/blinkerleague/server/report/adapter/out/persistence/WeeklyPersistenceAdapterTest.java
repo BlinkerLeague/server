@@ -41,4 +41,14 @@ class WeeklyPersistenceAdapterTest {
 		});
 		assertThat(adapter.find(1L, "2026-W47")).isEmpty();
 	}
+
+	@Test
+	void 주간_리포트_JSON을_운전자_주별로_저장하고_다시_읽는다() {
+		adapter.saveReport(1L, "2026-W45", "{\"week\":\"2026-W45\"}");
+		entityManager.flush();
+		entityManager.clear();
+
+		assertThat(adapter.findReport(1L, "2026-W45")).contains("{\"week\":\"2026-W45\"}");
+		assertThat(adapter.findReport(2L, "2026-W45")).isEmpty();
+	}
 }
