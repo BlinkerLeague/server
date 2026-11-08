@@ -93,4 +93,16 @@ class RecordMissionAfterTripServiceTest {
 		assertThat(store.saved).singleElement()
 			.satisfies(saved -> assertThat(saved.getStatus()).isEqualTo(MissionStatus.ACHIEVED));
 	}
+
+	@Test
+	void 판정만_하면_기록하지_않고_그날_미션_결과를_돌려준다() {
+		rounds.add(new RoundTurns(3, 3));
+
+		Optional<MissionOutcome> outcome = service.judgeDay(1L, Instant.parse("2026-11-02T16:00:00Z"));
+
+		assertThat(outcome).contains(new MissionOutcome(seed.getId(), MissionStatus.ACHIEVED));
+		assertThat(loadedRanges).singleElement()
+			.satisfies(range -> assertThat(range[0]).isEqualTo(Instant.parse("2026-11-02T15:00:00Z")));
+		assertThat(store.saved).isEmpty();
+	}
 }

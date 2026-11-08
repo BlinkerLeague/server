@@ -49,6 +49,11 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
 	}
 
+	@Override
+	public Optional<MissionOutcome> judgeDay(Long driverId, Instant tripEndedAt) {
+		throw new UnsupportedOperationException();
+	}
+
 	private DriverMission applyAndSave(Long driverId, Long missionId, String periodKey, MissionStatus judged) {
 		DriverMission record = driverMissionStore.find(driverId, missionId, periodKey)
 			.orElseGet(() -> DriverMission.start(driverId, missionId, periodKey));

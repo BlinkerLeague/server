@@ -13,6 +13,9 @@ public interface RecordMissionAfterTripUseCase {
 
 	Optional<MissionOutcome> recordAfterTrip(Long driverId, Instant tripEndedAt);
 
+	/** 기록하지 않고 그날 판정만 돌려준다(운행 점수 조회용). */
+	Optional<MissionOutcome> judgeDay(Long driverId, Instant tripEndedAt);
+
 	record MissionOutcome(Long missionId, MissionStatus status) {
 	}
 }
