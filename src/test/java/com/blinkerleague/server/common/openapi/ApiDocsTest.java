@@ -113,4 +113,14 @@ class ApiDocsTest {
 				.value("#/components/schemas/TripResult"))
 			.andExpect(jsonPath("$.paths['/api/drivers'].post.responses['201'].content['application/json']").exists());
 	}
+
+	@Test
+	void 이벤트_payload는_자유_형식_객체이고_TURN의_signalOn을_안내한다() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.components.schemas.EventRequest.properties.payload.type").value("object"))
+			.andExpect(jsonPath("$.components.schemas.EventRequest.properties.payload.description")
+				.value(org.hamcrest.Matchers.containsString("signalOn")))
+			.andExpect(jsonPath("$.components.schemas.JsonNode").doesNotExist());
+	}
 }
