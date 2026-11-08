@@ -20,6 +20,11 @@ public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 		return new MissionJudgement(MissionStatus.ACHIEVED, conditions);
 	}
 
+	/** rounds는 종료 시각 순서다. */
+	public DayJudgement judgeDay(List<RoundTurns> rounds) {
+		throw new UnsupportedOperationException();
+	}
+
 	// 내림해서 모든 회전이 성공하기 전에는 100%로 보이지 않게 한다. 회전이 없으면 0%.
 	private static int signalRate(RoundTurns turns) {
 		return turns.turns() == 0 ? 0 : turns.successTurns() * 100 / turns.turns();
