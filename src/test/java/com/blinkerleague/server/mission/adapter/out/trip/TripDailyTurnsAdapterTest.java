@@ -47,6 +47,16 @@ class TripDailyTurnsAdapterTest {
 		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(3, 2));
 	}
 
+	@Test
+	void 다른_운전자_다른_날_3km_미만_운행의_회전은_세지_않는다() {
+		save("mine", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true));
+		save("other-driver", 2L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true));
+		save("next-day", 1L, DAY_END, 12.0, turn(true));
+		save("short", 1L, Instant.parse("2026-11-03T01:00:00Z"), 2.9, turn(true));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(1, 1));
+	}
+
 	private void save(String tripId, Long driverId, Instant endedAt, double distanceKm, RecordedEvent... events) {
 		Instant startedAt = endedAt.minusSeconds(1800);
 		List<RecordedEvent> timed = java.util.Arrays.stream(events)
