@@ -56,6 +56,9 @@ public class UploadTripService {
 			// 확인과 저장 사이에 같은 tripId가 먼저 저장된 동시 업로드. 먼저 저장된 운행이 기준이다.
 			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
+		if (trip.getScore() != null) {
+			tripPointPort.earnForTrip(driverId, trip.getId(), trip.getDistanceKm(), trip.getScore());
+		}
 		return new Result(withMission(TripScoreView.of(trip, thresholds), trip), true);
 	}
 
