@@ -29,7 +29,7 @@ public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 			}
 		}
 		// 달성 전에는 실패한 라운드가 있어도 그날은 끝나지 않는다. 진행 링은 가장 최근 라운드를 보여 준다.
-		RoundTurns latest = rounds.get(rounds.size() - 1);
+		RoundTurns latest = rounds.isEmpty() ? new RoundTurns(0, 0) : rounds.get(rounds.size() - 1);
 		return new DayJudgement(MissionStatus.IN_PROGRESS, latest, judge(latest).conditions());
 	}
 
