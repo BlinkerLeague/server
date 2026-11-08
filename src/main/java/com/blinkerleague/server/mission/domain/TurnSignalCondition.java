@@ -4,6 +4,9 @@ package com.blinkerleague.server.mission.domain;
 public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 
 	public MissionJudgement judge(DailyTurns turns) {
+		if (turns.turns() < requiredTurns) {
+			return new MissionJudgement(MissionStatus.IN_PROGRESS);
+		}
 		return new MissionJudgement(MissionStatus.ACHIEVED);
 	}
 }
