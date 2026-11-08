@@ -56,6 +56,76 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 - **전달용 파일**: [`docs/api/openapi.json`](docs/api/openapi.json). 서버 없이 [Swagger Editor](https://editor.swagger.io/), Postman, IntelliJ에서 열 수 있습니다.
 - 배포 환경에서는 노출하지 않습니다(`springdoc.*.enabled`는 기본 `false`, `local` 프로필에서만 `true`).
 
+### Swagger 접속 방법
+
+Swagger는 내 PC에서 띄운 서버(`local` 프로필)에서만 열립니다. 공용 주소는 없습니다.
+
+**1. 서버 실행 준비** (처음 한 번)
+
+```bash
+git clone https://github.com/BlinkerLeague/server.git
+cd server
+cp .env.example .env
+openssl rand -base64 48       # 출력값을 .env의 JWT_SECRET= 뒤에 붙여 넣기
+docker compose up -d          # Redis (Docker 엔진이 켜져 있어야 함)
+```
+
+- JDK 17이 필요합니다.
+- Docker 설치는 아래 "Docker 설정"을 참고하세요.
+- Redis가 없어도 서버와 Swagger는 뜹니다. 다만 운전자 등록과 토큰 재발급이 실패해서 보호된 API를 호출할 수 없습니다.
+
+**2. 서버 실행**
+
+```bash
+./gradlew bootRun
+```
+
+- 로그에 `Started ServerApplication`이 나오면 준비된 것입니다.
+- 프로필을 지정하지 않으면 `local`로 실행됩니다.
+
+**3. 브라우저에서 열기**
+
+- Swagger UI: <http://localhost:8080/swagger-ui.html> (`/swagger-ui/index.html`로 이동합니다)
+- 명세 JSON: <http://localhost:8080/v3/api-docs>
+
+**4. 토큰 받기**
+
+1. Swagger UI에서 `POST /api/drivers`를 펼칩니다.
+2. `Try it out`을 누릅니다.
+3. 아래 본문을 넣고 `Execute`를 누릅니다.
+
+   ```json
+   { "nickname": "테스트01", "regionCode": "11680" }
+   ```
+
+   - 닉네임은 2~12자이고, 이미 있는 닉네임이면 409가 납니다.
+   - 지역 코드는 시군구 5자리 숫자입니다.
+4. 응답의 `accessToken` 값을 복사합니다.
+
+**5. 인증하기**
+
+1. 오른쪽 위 `Authorize`를 누릅니다.
+2. `bearerAuth` 칸에 `accessToken` 값만 붙여 넣습니다. `Bearer `는 붙이지 않습니다.
+3. `Authorize` → `Close`를 누릅니다.
+
+이제 자물쇠가 표시된 API(예: `POST /api/trips`)도 `Try it out`으로 호출할 수 있습니다.
+
+**6. 토큰이 만료되면**
+
+- Access 토큰은 1시간짜리입니다. 만료되면 `POST /api/auth/refresh`에 `{ "refreshToken": "..." }`를 보내 새 토큰을 받고, 다시 `Authorize`합니다.
+- 서버를 재시작하면 DB(H2 메모리)가 비워져서 등록한 운전자와 운행이 사라집니다. 이전 토큰은 서명상 유효해도 가리키는 운전자가 없으니, 4번부터 다시 등록하세요.
+
+**문제가 생기면**
+
+| 증상 | 원인 · 해결 |
+| --- | --- |
+| `/swagger-ui.html`이 401 `UNAUTHORIZED` 또는 404 | Swagger가 없는 코드로 서버가 떠 있습니다. `git pull`로 최신 `develop`을 받고 서버를 **완전히 재시작**하세요(IntelliJ devtools 자동 재시작으로는 새 라이브러리가 반영되지 않음). `local`이 아닌 프로필로 띄워도 꺼져 있습니다. |
+| 서버가 시작되지 않고 `JWT_SECRET` 오류 | `.env`가 없거나 `JWT_SECRET`이 비었거나 32바이트보다 짧습니다. 1번을 다시 하세요. |
+| `Port 8080 was already in use` | 이미 서버가 떠 있습니다. 기존 프로세스를 끄거나 `SERVER_PORT=8081 ./gradlew bootRun`으로 띄우고 주소의 포트를 바꾸세요. |
+| 등록 · 토큰 재발급이 500 `INTERNAL_ERROR` | Redis가 꺼져 있습니다. `docker compose up -d` 후 다시 시도하세요. |
+| 보호된 API가 401 `UNAUTHORIZED` | `Authorize`를 하지 않았습니다. 5번을 보세요. |
+| 보호된 API가 401 `INVALID_TOKEN` | Access 토큰이 만료됐거나(6번), `.env`의 `JWT_SECRET`을 바꾼 뒤 이전 토큰을 쓰고 있습니다(4번부터 다시). |
+
 API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합니다(`servers`는 지워 실행 포트가 박히지 않게 합니다).
 
 ```bash
