@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.mission.application.port.in.RecordMissionAfterTripUseCase.MissionOutcome;
+import com.blinkerleague.server.mission.domain.DriverMission;
 import com.blinkerleague.server.mission.domain.Mission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 import com.blinkerleague.server.mission.domain.RoundTurns;
@@ -79,5 +80,17 @@ class RecordMissionAfterTripServiceTest {
 
 		assertThat(noMission.recordAfterTrip(1L, NOW)).isEmpty();
 		assertThat(store.saved).isEmpty();
+	}
+
+	@Test
+	void 확인과_저장_사이에_같은_날_기록이_먼저_생기면_그_기록에_판정을_반영한다() {
+		store.saveConcurrentlyBeforeNextInsert(DriverMission.start(1L, seed.getId(), "2026-11-03"));
+		rounds.add(new RoundTurns(3, 3));
+
+		Optional<MissionOutcome> outcome = service.recordAfterTrip(1L, Instant.parse("2026-11-03T00:00:00Z"));
+
+		assertThat(outcome.map(MissionOutcome::status)).contains(MissionStatus.ACHIEVED);
+		assertThat(store.saved).singleElement()
+			.satisfies(saved -> assertThat(saved.getStatus()).isEqualTo(MissionStatus.ACHIEVED));
 	}
 }
