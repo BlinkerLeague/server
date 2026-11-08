@@ -1,12 +1,16 @@
 package com.blinkerleague.server.mission.application.service;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
+import com.blinkerleague.server.mission.domain.DailyPeriod;
 import com.blinkerleague.server.mission.domain.DailyTurns;
+import com.blinkerleague.server.mission.domain.Mission;
+import com.blinkerleague.server.mission.domain.MissionJudgement;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 
 import lombok.RequiredArgsConstructor;
@@ -20,7 +24,12 @@ public class GetTodayMissionService {
 	private final Clock clock;
 
 	public TodayMission today(Long driverId) {
-		throw new UnsupportedOperationException();
+		DailyPeriod period = DailyPeriod.of(clock.instant(), clock.getZone());
+		Mission mission = loadActiveMissionPort.findActiveDaily(LocalDate.parse(period.key())).orElseThrow();
+		DailyTurns turns = loadDailyTurnsPort.load(driverId, period.start(), period.end());
+		MissionJudgement judgement = mission.getCondition().judge(turns);
+		return new TodayMission(mission.getId(), mission.getTitle(), period.key(), judgement.status(),
+			mission.getRewardPoint(), turns, mission.getCondition().requiredTurns(), judgement.conditions());
 	}
 
 	public record TodayMission(Long missionId, String title, String periodKey, MissionStatus status,
