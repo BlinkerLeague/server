@@ -1,6 +1,7 @@
 package com.blinkerleague.server.mission.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -10,6 +11,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService.TodayMission;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
@@ -48,6 +51,15 @@ class GetTodayMissionServiceTest {
 		assertThat(turns.driverId).isEqualTo(1L);
 		assertThat(turns.from).isEqualTo(Instant.parse("2026-11-02T15:00:00Z"));
 		assertThat(turns.to).isEqualTo(Instant.parse("2026-11-03T15:00:00Z"));
+	}
+
+	@Test
+	void 오늘_운영_중인_미션이_없으면_NOT_FOUND다() {
+		GetTodayMissionService noMission = new GetTodayMissionService(date -> Optional.empty(), turns, clock);
+
+		assertThatThrownBy(() -> noMission.today(1L))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
 	}
 
 	/** 요청 받은 운전자와 기간을 기록하는 가짜 포트. */
