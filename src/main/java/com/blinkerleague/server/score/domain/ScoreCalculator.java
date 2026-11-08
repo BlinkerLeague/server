@@ -46,6 +46,7 @@ public class ScoreCalculator {
 			case SMOOTH_DRIVING -> smoothDriving(facts, thresholds.harsh());
 			case SAFETY_WARNING -> safetyWarning(facts, thresholds.safetyWarning());
 			case NIGHT_HEADLIGHT -> nightHeadlight(facts);
+			case SIGNAL_CANCEL -> signalCancel(facts, thresholds.signalCancel());
 			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
 	}
@@ -114,6 +115,12 @@ public class ScoreCalculator {
 		double per100Km = count / facts.distanceKm() * 100;
 		double value = Math.max(0, 1 - rule.penaltyPer100Km() * per100Km / 100);
 		return Outcome.of(value, Map.of("count", count, "per100Km", oneDecimal(per100Km)));
+	}
+
+	// max(0, 100 − penalty × 깜빡이 끄기를 잊은 횟수) (D18)
+	private static Outcome signalCancel(TripFacts facts, Thresholds.SignalCancel rule) {
+		int count = ofType(facts, TripEventType.SIGNAL_LEFT_ON).size();
+		return Outcome.of(Math.max(0, 1 - rule.penalty() * count / 100.0), Map.of("count", count));
 	}
 
 	// (1 − 꺼짐 비율) × 100. 야간 구간이 없으면 측정하지 않는다. 오토라이트 규칙은 없다(D20).

@@ -3,6 +3,7 @@
   "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5, "lateSignalScore": 0.5 },
   "harsh": { "deltaKmhPerSec": 10, "penaltyPer10Km": 10 },
   "safetyWarning": { "mergeWindowSec": 10, "penaltyPer100Km": 20 },
+  "signalCancel": { "forgetSec": 20, "minSpeedKmh": 30, "penalty": 25 },
   "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
   "minSamples": { "TURN_SIGNAL": 1 },
   "point": { "tripMaxKm": 50, "dailyCap": 150, "streakRewardDays": 7, "streakRewardPoint": 50 },

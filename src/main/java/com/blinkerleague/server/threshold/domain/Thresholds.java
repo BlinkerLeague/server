@@ -14,6 +14,7 @@ public record Thresholds(
 	Turn turn,
 	Harsh harsh,
 	SafetyWarning safetyWarning,
+	SignalCancel signalCancel,
 	Map<ScoreItem, Double> weights,
 	Map<ScoreItem, Integer> minSamples,
 	Point point,
@@ -46,6 +47,10 @@ public record Thresholds(
 	}
 
 	/** 운행 적립 최대 거리, 일일 상한, 연속 달성 보상(streakRewardDays일마다 streakRewardPoint, plan.md 4.3). */
+	/** 앱의 깜빡이 끄기 판정(forgetSec 넘게, minSpeedKmh 이상)과 서버의 1회당 감점(penalty). */
+	public record SignalCancel(int forgetSec, int minSpeedKmh, int penalty) {
+	}
+
 	public record Point(int tripMaxKm, int dailyCap, int streakRewardDays, int streakRewardPoint) {
 	}
 
