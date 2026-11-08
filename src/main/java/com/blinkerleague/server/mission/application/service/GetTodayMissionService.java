@@ -3,6 +3,8 @@ package com.blinkerleague.server.mission.application.service;
 import java.time.Clock;
 import java.util.List;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
@@ -24,7 +26,8 @@ public class GetTodayMissionService {
 
 	public TodayMission today(Long driverId) {
 		DailyPeriod period = DailyPeriod.of(clock.instant(), clock.getZone());
-		Mission mission = loadActiveMissionPort.findActiveDaily(period.date()).orElseThrow();
+		Mission mission = loadActiveMissionPort.findActiveDaily(period.date())
+			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "오늘 운영 중인 미션이 없습니다."));
 		DailyTurns turns = loadDailyTurnsPort.load(driverId, period.start(), period.end());
 		MissionJudgement judgement = mission.getCondition().judge(turns);
 		return new TodayMission(mission.getId(), mission.getTitle(), period.key(), judgement.status(),
