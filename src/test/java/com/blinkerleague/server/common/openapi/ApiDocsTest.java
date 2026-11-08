@@ -138,7 +138,11 @@ class ApiDocsTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.components.schemas.EventRequest.properties.payload.type").value("object"))
 			.andExpect(jsonPath("$.components.schemas.EventRequest.properties.payload.description")
-				.value(org.hamcrest.Matchers.containsString("signalOn")))
+				.value(org.hamcrest.Matchers.allOf(
+					org.hamcrest.Matchers.containsString("signalOn"),
+					org.hamcrest.Matchers.containsString("signalTiming"),
+					org.hamcrest.Matchers.containsString("SEAT_BELT"),
+					org.hamcrest.Matchers.containsString("RAIN_SEGMENT"))))
 			.andExpect(jsonPath("$.components.schemas.JsonNode").doesNotExist());
 	}
 }
