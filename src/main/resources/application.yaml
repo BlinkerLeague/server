@@ -20,6 +20,8 @@ spring:
 springdoc:
   # 전역 예외 처리기의 응답(400 · 404 · 405 · 500)을 모든 API에 붙이지 않고, 컨트롤러의 @ApiResponse만 쓴다.
   override-with-generic-response: false
+  # 응답은 모두 JSON이다. 문서 표시만 바꾸며 실제 Accept 처리는 그대로다.
+  default-produces-media-type: application/json
   api-docs:
     enabled: false
   swagger-ui:
