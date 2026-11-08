@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.blinkerleague.server.threshold.ThresholdsFixture;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
@@ -226,5 +228,26 @@ class ScoreCalculatorTest {
 
 	private static DrivingEvent turnAt(Double maxSpeedKmh) {
 		return new DrivingEvent(TripEventType.TURN, AT, new EventPayload(true, null, maxSpeedKmh, null, null, null, null, null, null));
+	}
+
+	@ParameterizedTest(name = "출발 시 착용 {0}, 주행 중 미착용 {1}초 → {2}점")
+	@CsvSource({"true, 0, 100", "false, 0, 50", "true, 150, 80", "false, 600, 0"})
+	void 안전벨트는_출발_시_미착용과_주행_중_미착용_분마다_감점하고_0점_아래로_내려가지_않는다(boolean buckled,
+		int unbuckledSec, int expected) {
+		DrivingEvent belt = new DrivingEvent(TripEventType.SEAT_BELT, AT,
+			new EventPayload(false, null, null, null, null, null, null, buckled, unbuckledSec));
+
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.SEAT_BELT), 12.0, List.of(belt)), THRESHOLDS);
+
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.SEAT_BELT).singleElement()
+			.satisfies(m -> assertThat(m.score()).isEqualTo(expected));
+	}
+
+	@Test
+	void 안전벨트_기록이_없으면_측정하지_않는다() {
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.SEAT_BELT), 12.0, List.of()), THRESHOLDS);
+
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.SEAT_BELT).singleElement()
+			.satisfies(m -> assertThat(m.reason()).isEqualTo("NO_DATA"));
 	}
 }

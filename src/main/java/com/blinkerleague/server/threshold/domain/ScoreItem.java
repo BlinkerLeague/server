@@ -9,5 +9,7 @@ public enum ScoreItem {
 	/** 깜빡이를 켠 채 회전 없이 달림(D18) */
 	SIGNAL_CANCEL,
 	/** 회전 중 최고 속도(D18) */
-	TURN_SPEED
+	TURN_SPEED,
+	/** 출발 시 · 주행 중 안전벨트(D18) */
+	SEAT_BELT
 }

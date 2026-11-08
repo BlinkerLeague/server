@@ -12,5 +12,7 @@ public enum TripEventType {
 	SAFETY_WARNING,
 	NIGHT_SEGMENT,
 	/** 깜빡이를 켠 채 회전 없이 signalCancel.forgetSec 넘게 달림. payload { durationSec } */
-	SIGNAL_LEFT_ON
+	SIGNAL_LEFT_ON,
+	/** 운행당 1건. payload { buckledAtDeparture, unbuckledMovingSec } */
+	SEAT_BELT
 }
