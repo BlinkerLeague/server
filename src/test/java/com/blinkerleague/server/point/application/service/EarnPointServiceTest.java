@@ -48,4 +48,16 @@ class EarnPointServiceTest {
 		assertThat(ledger.entries()).filteredOn(entry -> entry.getRefId().equals("trip-1"))
 			.singleElement().satisfies(entry -> assertThat(entry.getAmount()).isEqualTo(5));
 	}
+
+	@Test
+	void 일일_상한은_한국_시간_자정을_기준으로_오늘_적립만_센다() {
+		// 한국 시간 어제 23:59:59(상한까지 적립)와 오늘 00:00(145P), 다른 운전자의 오늘 적립
+		ledger.saveNew(PointEntry.trip(1L, "yesterday", 150, 50.0, 100, Instant.parse("2026-11-02T14:59:59Z")));
+		ledger.saveNew(PointEntry.trip(1L, "midnight", 145, 50.0, 100, Instant.parse("2026-11-02T15:00:00Z")));
+		ledger.saveNew(PointEntry.trip(2L, "other", 150, 50.0, 100, NOW.minusSeconds(60)));
+
+		int earned = service.earnForTrip(1L, "trip-1", 12.3, 86);
+
+		assertThat(earned).isEqualTo(5);
+	}
 }
