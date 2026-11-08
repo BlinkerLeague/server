@@ -14,6 +14,9 @@ public class SeedBadgeService {
 	private final SaveBadgeCatalogPort saveBadgeCatalogPort;
 
 	public void seedIfAbsent(List<Badge> defaults) {
+		if (saveBadgeCatalogPort.existsAny()) {
+			return;
+		}
 		saveBadgeCatalogPort.saveAll(defaults);
 	}
 }
