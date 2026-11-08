@@ -66,4 +66,20 @@ class DriverMissionPersistenceAdapterTest {
 			.hasValueSatisfying(found -> assertThat(found.getPeriodKey()).isEqualTo("2026-11-01"));
 		assertThat(adapter.findLatestBefore(1L, "2026-10-30")).isEmpty();
 	}
+
+	@Test
+	void 운전자가_달성한_날들만_읽는다() {
+		DriverMission achieved = DriverMission.start(1L, 10L, "2026-11-02");
+		achieved.apply(MissionStatus.ACHIEVED, ACHIEVED_AT);
+		adapter.save(achieved);
+		DriverMission failed = DriverMission.start(1L, 10L, "2026-11-03");
+		failed.apply(MissionStatus.FAILED, ACHIEVED_AT);
+		adapter.save(failed);
+		adapter.save(DriverMission.start(1L, 10L, "2026-11-04"));
+		DriverMission other = DriverMission.start(2L, 10L, "2026-11-04");
+		other.apply(MissionStatus.ACHIEVED, ACHIEVED_AT);
+		adapter.save(other);
+
+		assertThat(adapter.achievedDays(1L)).containsExactly(java.time.LocalDate.of(2026, 11, 2));
+	}
 }

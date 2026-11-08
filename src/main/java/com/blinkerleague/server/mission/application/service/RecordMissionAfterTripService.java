@@ -2,11 +2,13 @@ package com.blinkerleague.server.mission.application.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import com.blinkerleague.server.mission.application.port.in.RecordMissionAfterTripUseCase;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
+import com.blinkerleague.server.mission.application.port.out.LoadAchievedDaysPort;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
@@ -17,6 +19,9 @@ import com.blinkerleague.server.mission.domain.DriverMission;
 import com.blinkerleague.server.mission.domain.Mission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 import com.blinkerleague.server.mission.domain.RoundTurns;
+import com.blinkerleague.server.mission.domain.Streak;
+
+import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,6 +33,8 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 	private final LoadDailyRoundsPort loadDailyRoundsPort;
 	private final DriverMissionStore driverMissionStore;
 	private final MissionRewardPort missionRewardPort;
+	private final LoadAchievedDaysPort loadAchievedDaysPort;
+	private final ThresholdProvider thresholdProvider;
 	private final Clock clock;
 
 	@Override
@@ -50,6 +57,7 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 		if (record.getStatus() == MissionStatus.ACHIEVED) {
 			// 다시 판정해 불러도 같은 ref_id라 한 번만 적립된다. 첫 적립이 실패했으면 다음 업로드에서 복구된다.
 			missionRewardPort.reward(driverId, record.rewardRefId(), mission.getRewardPoint());
+			rewardStreak(driverId, period.date());
 		}
 		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
 	}
@@ -66,6 +74,15 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
 		boolean dayEnded = !clock.instant().isBefore(period.end());
 		return mission.getCondition().judgeDay(rounds).status().settle(dayEnded);
+	}
+
+	// 이 날로 끝나는 연속 달성이 기준값(point.streakRewardDays)의 배수면 그날 연속 달성 보상을 준다(plan.md 4.3).
+	private void rewardStreak(Long driverId, LocalDate day) {
+		int every = thresholdProvider.current().thresholds().point().streakRewardDays();
+		int streak = Streak.endingAt(loadAchievedDaysPort.achievedDays(driverId), day);
+		if (streak > 0 && streak % every == 0) {
+			missionRewardPort.rewardStreak(driverId, driverId + ":" + day);
+		}
 	}
 
 	private DriverMission applyAndSave(Long driverId, Long missionId, String periodKey, MissionStatus judged) {

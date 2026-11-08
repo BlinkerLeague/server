@@ -4,7 +4,7 @@
   "harsh": { "deltaKmhPerSec": 10 },
   "safetyWarning": { "mergeWindowSec": 10 },
   "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
-  "point": { "tripMaxKm": 50, "dailyCap": 150 },
+  "point": { "tripMaxKm": 50, "dailyCap": 150, "streakRewardDays": 7, "streakRewardPoint": 50 },
   "grades": [
     { "grade": "S", "minScore": 95 },
     { "grade": "A", "minScore": 85 },

@@ -40,7 +40,8 @@ public record Thresholds(
 	public record SafetyWarning(int mergeWindowSec) {
 	}
 
-	public record Point(int tripMaxKm, int dailyCap) {
+	/** 운행 적립 최대 거리, 일일 상한, 연속 달성 보상(streakRewardDays일마다 streakRewardPoint, plan.md 4.3). */
+	public record Point(int tripMaxKm, int dailyCap, int streakRewardDays, int streakRewardPoint) {
 	}
 
 	public record GradeRule(String grade, int minScore) {

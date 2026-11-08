@@ -29,7 +29,7 @@ public final class ThresholdsFixture {
 			new Thresholds.SafetyWarning(10),
 			Map.of(ScoreItem.TURN_SIGNAL, 0.4, ScoreItem.SMOOTH_DRIVING, 0.3,
 				ScoreItem.SAFETY_WARNING, 0.2, ScoreItem.NIGHT_HEADLIGHT, 0.1),
-			new Thresholds.Point(50, 150),
+			new Thresholds.Point(50, 150, 7, 50),
 			grades,
 			Map.of(ScoreItem.TURN_SIGNAL, "회전 5초 전에 깜빡이를 켜 보세요.",
 				ScoreItem.SMOOTH_DRIVING, "천천히 출발하고 미리 감속해 보세요.",

@@ -1,6 +1,9 @@
 package com.blinkerleague.server.mission.adapter.out.persistence;
 
+import java.time.LocalDate;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
@@ -8,14 +11,16 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
+import com.blinkerleague.server.mission.application.port.out.LoadAchievedDaysPort;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.domain.DriverMission;
+import com.blinkerleague.server.mission.domain.MissionStatus;
 
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class DriverMissionPersistenceAdapter implements DriverMissionStore {
+public class DriverMissionPersistenceAdapter implements DriverMissionStore, LoadAchievedDaysPort {
 
 	private final DriverMissionJpaRepository repository;
 
@@ -27,6 +32,13 @@ public class DriverMissionPersistenceAdapter implements DriverMissionStore {
 	@Override
 	public Optional<DriverMission> findLatestBefore(Long driverId, String periodKey) {
 		return repository.findFirstByDriverIdAndPeriodKeyLessThanOrderByPeriodKeyDesc(driverId, periodKey);
+	}
+
+	@Override
+	public Set<LocalDate> achievedDays(Long driverId) {
+		return repository.findByDriverIdAndStatus(driverId, MissionStatus.ACHIEVED).stream()
+			.map(record -> LocalDate.parse(record.getPeriodKey()))
+			.collect(Collectors.toSet());
 	}
 
 	@Override

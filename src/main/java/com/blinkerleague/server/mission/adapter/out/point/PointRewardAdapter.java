@@ -18,4 +18,9 @@ public class PointRewardAdapter implements MissionRewardPort {
 	public void reward(Long driverId, String refId, int rewardPoint) {
 		earnPointUseCase.earnForMission(driverId, refId, rewardPoint);
 	}
+
+	@Override
+	public void rewardStreak(Long driverId, String refId) {
+		earnPointUseCase.earnForStreak(driverId, refId);
+	}
 }

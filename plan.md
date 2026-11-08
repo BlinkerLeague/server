@@ -34,6 +34,7 @@
 | D23 | `TURN` payload의 `signalOn` 해석 불가 | 업로드는 payload를 해석하지 않고 저장하므로 `signalOn`이 없거나 boolean이 아닐 수 있음 | **결정(11.5): 깜빡이를 켜지 않은 회전으로 판정.** `signalOn`이 `true`일 때만 성공. 업로드(400)로 막지 않는다 |
 | D24 | 최근 경기 목록 `limit` | 3.5에서 "착수 시 확정" | **결정(11.5): 기본 10, 최대 50.** 50을 넘으면 50으로 자른다 |
 | D25 | 달성하지 못한 날의 미션 상태 · 홈 표시 | 3.6은 "그날이 끝날 때까지 달성하지 못하면 FAILED"만 있고 시점 · 화면 표시가 없음 | **결정(11.8): 끝난 날의 미달성은 `FAILED`.** 배치 없이 판정할 때(업로드 · 조회) 정한다. **오늘 첫 운행 전에는 `GET /api/missions/today`가 마지막 미션 날의 최종 상태(`ACHIEVED` · `FAILED`)를 계속 보여 주고**, 오늘 운행을 올리면 오늘 미션으로 새로 시작한다. 그날 끝난 운행을 늦게 올려(오프라인 후) 조건을 채우면 `FAILED`에서 `ACHIEVED`로 바꾼다. `ACHIEVED`는 되돌리지 않는다 |
+| D26 | 연속 기록 · 배지 세부 | 4.3은 "배지 목록 · 조건은 착수 시 확정" | **결정(11.8): 기본 배지 3종** `FIRST_TRIP`(점수가 난 첫 운행), `STREAK_7`(미션 7일 연속 달성, 최장 연속 기준), `SIGNAL_100`(깜빡이를 켠 회전 누적 100회). 카탈로그는 `badges/default-badges.json`(조건 종류 `rule` + 목표 `target`)으로 두어 코드 수정 없이 늘린다. 연속 보상은 기준값 `point.streakRewardDays`(7)일마다 `point.streakRewardPoint`(50P) |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -400,6 +401,12 @@ API: `GET /api/points` (잔액 + 최근 원장 20건)
 ### 4.3 `feat/streak-badge` — 연속 기록 · 배지 (FR-11)
 
 API: `GET /api/streak`
+
+상태: 완료(11.8, `feat/streak-badge`). D26대로 구현했다.
+- `GET /api/streak` → `{ streakDays, todayAchieved }`. 오늘 달성했으면 오늘부터, 아니면 어제부터 거꾸로 센 `driver_mission.status = ACHIEVED` 연속 일수(조회 시 계산, `driver_streak` 캐시 테이블은 두지 않음)
+- 연속 보상: 그날 미션이 `ACHIEVED`가 될 때 그날로 끝나는 연속이 `point.streakRewardDays`의 배수면 `STREAK_7`로 `point.streakRewardPoint` 적립(`ref_id = 운전자ID:달성일`, 일일 상한 안)
+- `GET /api/badges` → 전체 카탈로그(진열 순서) `[{ code, name, condition, earned, awardedAt }]`. 배지는 운행 업로드 때(적립 · 미션 판정 다음) 누적 기록(점수가 난 운행 수, 최장 연속 달성 일수, 깜빡이 켠 회전 수, D23 기준)으로 판정해 `badge_award`(운전자 · 배지 유니크)에 남긴다
+- 남은 항목: 확장 항목 배지(D18)는 `feat/score-full-metrics` 이후 카탈로그에 추가
 
 - 연속 기록 = 오늘(또는 어제)부터 거꾸로 `driver_mission.status = ACHIEVED`인 연속 일수. 조회 시 계산하거나 `driver_streak` 캐시 테이블 유지
 - 7일마다 50P (`reason=STREAK_7`, `ref_id = driverId:달성일`)

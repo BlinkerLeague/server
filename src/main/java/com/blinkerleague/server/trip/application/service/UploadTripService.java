@@ -14,6 +14,7 @@ import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
+import com.blinkerleague.server.trip.application.port.out.TripBadgePort;
 import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.application.port.out.TripPointPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlreadyExistsException;
@@ -33,6 +34,7 @@ public class UploadTripService {
 	private final ThresholdProvider thresholdProvider;
 	private final TripMissionPort tripMissionPort;
 	private final TripPointPort tripPointPort;
+	private final TripBadgePort tripBadgePort;
 	private final ScoreCalculator scoreCalculator = new ScoreCalculator();
 
 	public Result upload(Long driverId, Command command) {
@@ -56,8 +58,15 @@ public class UploadTripService {
 			// 확인과 저장 사이에 같은 tripId가 먼저 저장된 동시 업로드. 먼저 저장된 운행이 기준이다.
 			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
+		return new Result(afterUpload(trip, thresholds), true);
+	}
+
+	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 순서다(배지는 연속 달성 · 누적 기록을 본다).
+	private TripScoreView afterUpload(Trip trip, Thresholds thresholds) {
 		earnPoints(trip);
-		return new Result(withMission(TripScoreView.of(trip, thresholds), trip), true);
+		TripScoreView view = withMission(TripScoreView.of(trip, thresholds), trip);
+		tripBadgePort.awardEarned(trip.getDriverId());
+		return view;
 	}
 
 	// 점수가 난 운행만 적립한다(EXCLUDED_SHORT · NO_TURN은 점수가 없다).
@@ -79,8 +88,7 @@ public class UploadTripService {
 		}
 		// 적립은 한 번만 되고 판정 기록은 달성한 날을 되돌리지 않으므로 다시 불러도 안전하다.
 		// 처음 업로드에서 적립 · 기록이 실패했어도 재전송으로 복구된다.
-		earnPoints(existing);
-		return new Result(withMission(TripScoreView.of(existing, thresholds), existing), false);
+		return new Result(afterUpload(existing, thresholds), false);
 	}
 
 	public record Command(String tripId, Instant startedAt, Instant endedAt, double distanceKm,

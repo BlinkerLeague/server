@@ -73,4 +73,8 @@ public class PointEntry extends BaseTimeEntity {
 	public static PointEntry dailyMission(Long driverId, String refId, int amount, Instant earnedAt) {
 		return new PointEntry(driverId, amount, PointReason.DAILY_MISSION, refId, null, null, earnedAt);
 	}
+
+	public static PointEntry streak(Long driverId, String refId, int amount, Instant earnedAt) {
+		return new PointEntry(driverId, amount, PointReason.STREAK_7, refId, null, null, earnedAt);
+	}
 }
