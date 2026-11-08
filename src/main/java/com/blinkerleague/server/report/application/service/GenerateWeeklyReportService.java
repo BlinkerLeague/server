@@ -36,13 +36,23 @@ public class GenerateWeeklyReportService {
 		Map<ScoreItem, Integer> averages = WeeklyAverages.of(thisWeek.metrics());
 		WeeklyComparison comparison = WeeklyComparison.of(averages,
 			WeeklyAverages.of(load(driverId, week.previous()).metrics()));
+		MissionView last = weeklyMissionStore.find(driverId, week.key())
+			.map(mission -> judge(mission, averages, thisWeek.distanceKm()))
+			.orElse(null);
 		ScoreItem weakest = comparison.weakest().orElse(null);
 		MissionView next = weakest == null ? null : assignNext(driverId, week.next(), weakest);
 
 		WeeklyReportView report = new WeeklyReportView(week.key(), thisWeek.trips(), thisWeek.distanceKm(),
-			comparison.metrics(), weakest, null, next);
+			comparison.metrics(), weakest, last, next);
 		weeklyReportStore.saveReport(driverId, week.key(), toJson(report));
 		return report;
+	}
+
+	// 지난 리포트가 이 주에 등록한 미션을 이 주 기록으로 판정한다.
+	private MissionView judge(WeeklyMission mission, Map<ScoreItem, Integer> averages, double distanceKm) {
+		mission.judge(averages.get(mission.getMetric()), distanceKm);
+		weeklyMissionStore.save(mission);
+		return view(mission);
 	}
 
 	// 가장 약한 항목의 미션 틀로 다음 주 미션을 자동 등록한다(D7 B: 수락 단계 없음).
