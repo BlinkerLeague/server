@@ -8,6 +8,7 @@ import com.blinkerleague.server.trip.application.port.out.LoadRecentTripsPort;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
 import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
+import com.blinkerleague.server.trip.application.port.out.TripPointPort;
 import com.blinkerleague.server.trip.application.service.GetTripScoreService;
 import com.blinkerleague.server.trip.application.service.ListRecentTripsService;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
@@ -18,8 +19,8 @@ public class TripBeanConfig {
 
 	@Bean
 	public UploadTripService uploadTripService(LoadTripPort loadTripPort, SaveTripPort saveTripPort,
-		ThresholdProvider thresholdProvider, TripMissionPort tripMissionPort) {
-		return new UploadTripService(loadTripPort, saveTripPort, thresholdProvider, tripMissionPort);
+		ThresholdProvider thresholdProvider, TripMissionPort tripMissionPort, TripPointPort tripPointPort) {
+		return new UploadTripService(loadTripPort, saveTripPort, thresholdProvider, tripMissionPort, tripPointPort);
 	}
 
 	@Bean
