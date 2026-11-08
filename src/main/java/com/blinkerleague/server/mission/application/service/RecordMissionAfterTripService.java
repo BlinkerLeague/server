@@ -51,7 +51,15 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 
 	@Override
 	public Optional<MissionOutcome> judgeDay(Long driverId, Instant tripEndedAt) {
-		throw new UnsupportedOperationException();
+		// 라운드는 사라지지 않고 하루 판정은 한 번 달성하면 ACHIEVED이므로, 다시 계산해도 기록과 같다.
+		DailyPeriod period = DailyPeriod.of(tripEndedAt, clock.getZone());
+		return loadActiveMissionPort.findActiveDaily(period.date())
+			.map(mission -> new MissionOutcome(mission.getId(), judge(mission, driverId, period)));
+	}
+
+	private MissionStatus judge(Mission mission, Long driverId, DailyPeriod period) {
+		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
+		return mission.getCondition().judgeDay(rounds).status();
 	}
 
 	private DriverMission applyAndSave(Long driverId, Long missionId, String periodKey, MissionStatus judged) {
