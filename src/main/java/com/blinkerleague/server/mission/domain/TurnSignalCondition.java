@@ -20,8 +20,8 @@ public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 		return new MissionJudgement(MissionStatus.ACHIEVED, conditions);
 	}
 
-	// 내림해서 모든 회전이 성공하기 전에는 100%로 보이지 않게 한다.
+	// 내림해서 모든 회전이 성공하기 전에는 100%로 보이지 않게 한다. 회전이 없으면 0%.
 	private static int signalRate(DailyTurns turns) {
-		return turns.successTurns() * 100 / turns.turns();
+		return turns.turns() == 0 ? 0 : turns.successTurns() * 100 / turns.turns();
 	}
 }
