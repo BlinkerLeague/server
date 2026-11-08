@@ -19,7 +19,7 @@ public class PointLedgerPersistenceAdapter implements LoadPointLedgerPort, SaveP
 
 	@Override
 	public boolean exists(PointReason reason, String refId) {
-		throw new UnsupportedOperationException();
+		return repository.existsByReasonAndRefId(reason, refId);
 	}
 
 	@Override
@@ -29,6 +29,6 @@ public class PointLedgerPersistenceAdapter implements LoadPointLedgerPort, SaveP
 
 	@Override
 	public void saveNew(PointEntry entry) {
-		throw new UnsupportedOperationException();
+		repository.saveAndFlush(entry);
 	}
 }
