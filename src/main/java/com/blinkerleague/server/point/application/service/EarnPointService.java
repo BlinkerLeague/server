@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.function.BiFunction;
 
+import com.blinkerleague.server.point.application.port.in.EarnPointUseCase;
 import com.blinkerleague.server.point.application.port.out.DriverPointLockPort;
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
@@ -19,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 
 /** 포인트 적립(plan.md 4.2). */
 @RequiredArgsConstructor
-public class EarnPointService {
+public class EarnPointService implements EarnPointUseCase {
 
 	private final LoadPointLedgerPort loadPointLedgerPort;
 	private final SavePointEntryPort savePointEntryPort;
@@ -28,6 +29,7 @@ public class EarnPointService {
 	private final Clock clock;
 
 	/** 운행 점수로 적립하고, 실제로 적립한 포인트를 돌려준다. */
+	@Override
 	public int earnForTrip(Long driverId, String tripId, double distanceKm, int score) {
 		Thresholds.Point rule = thresholdProvider.current().thresholds().point();
 		int requested = PointRules.tripPoints(distanceKm, score, rule.tripMaxKm());
@@ -36,6 +38,7 @@ public class EarnPointService {
 	}
 
 	/** 일일 미션 달성 보상을 적립하고, 실제로 적립한 포인트를 돌려준다. refId는 운전자 · 미션 · 날짜마다 하나다. */
+	@Override
 	public int earnForMission(Long driverId, String refId, int rewardPoint) {
 		return earn(driverId, PointReason.DAILY_MISSION, refId, rewardPoint,
 			(amount, now) -> PointEntry.dailyMission(driverId, refId, amount, now));
