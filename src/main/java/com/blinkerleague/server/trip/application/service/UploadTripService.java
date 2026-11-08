@@ -56,10 +56,15 @@ public class UploadTripService {
 			// 확인과 저장 사이에 같은 tripId가 먼저 저장된 동시 업로드. 먼저 저장된 운행이 기준이다.
 			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
-		if (trip.getScore() != null) {
-			tripPointPort.earnForTrip(driverId, trip.getId(), trip.getDistanceKm(), trip.getScore());
-		}
+		earnPoints(trip);
 		return new Result(withMission(TripScoreView.of(trip, thresholds), trip), true);
+	}
+
+	// 점수가 난 운행만 적립한다(EXCLUDED_SHORT · NO_TURN은 점수가 없다).
+	private void earnPoints(Trip trip) {
+		if (trip.getScore() != null) {
+			tripPointPort.earnForTrip(trip.getDriverId(), trip.getId(), trip.getDistanceKm(), trip.getScore());
+		}
 	}
 
 	// 운행을 반영한 그날 미션 판정을 기록하고 결과에 담는다(plan.md 3.5 · 3.6).
@@ -72,7 +77,9 @@ public class UploadTripService {
 		if (!existing.getDriverId().equals(driverId)) {
 			throw new BusinessException(ErrorCode.CONFLICT, "이미 다른 운전자가 사용한 운행 ID입니다.");
 		}
-		// 판정 기록은 한 번 달성한 날을 되돌리지 않으므로 다시 불러도 안전하다.
+		// 적립은 한 번만 되고 판정 기록은 달성한 날을 되돌리지 않으므로 다시 불러도 안전하다.
+		// 처음 업로드에서 적립 · 기록이 실패했어도 재전송으로 복구된다.
+		earnPoints(existing);
 		return new Result(withMission(TripScoreView.of(existing, thresholds), existing), false);
 	}
 
