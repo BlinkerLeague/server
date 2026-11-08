@@ -11,6 +11,15 @@ public final class Streak {
 
 	/** 오늘(달성했으면) 또는 어제부터 거꾸로 이어진 달성 일수. 오늘 아직 달성하지 못한 것은 끊김이 아니다. */
 	public static int current(Set<LocalDate> achievedDays, LocalDate today) {
-		throw new UnsupportedOperationException();
+		return endingAt(achievedDays, today);
+	}
+
+	/** day부터 거꾸로 이어진 달성 일수. day를 달성하지 못했으면 0이다. */
+	public static int endingAt(Set<LocalDate> achievedDays, LocalDate day) {
+		int days = 0;
+		for (LocalDate d = day; achievedDays.contains(d); d = d.minusDays(1)) {
+			days++;
+		}
+		return days;
 	}
 }
