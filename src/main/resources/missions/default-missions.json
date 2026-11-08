@@ -1,0 +1,9 @@
+[
+  {
+    "title": "회전 깜빡이 완벽",
+    "condition": { "requiredTurns": 3, "requiredSignalRate": 100 },
+    "rewardPoint": 20,
+    "activeFrom": "2026-11-01",
+    "activeTo": "2099-12-31"
+  }
+]
