@@ -153,4 +153,25 @@ class ScoreCalculatorTest {
 		return new DrivingEvent(TripEventType.NIGHT_SEGMENT, AT,
 			new EventPayload(false, null, null, durationSec, headlightOffSec, null, null, null, null));
 	}
+
+	@Test
+	void 회전_깜빡이는_제때_1점_늦게_0_5점_반대_방향과_안_켬은_0점의_평균이고_단계가_없으면_켬_여부로_본다() {
+		List<DrivingEvent> turns = List.of(timed(SignalTiming.ON_TIME), timed(SignalTiming.LATE),
+			timed(SignalTiming.WRONG_DIRECTION), timed(SignalTiming.NONE), turn(true));
+
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.TURN_SIGNAL), 12.0, turns), THRESHOLDS);
+
+		// (1 + 0.5 + 0 + 0 + 1) ÷ 5 = 0.5
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.TURN_SIGNAL).singleElement()
+			.satisfies(m -> {
+				assertThat(m.score()).isEqualTo(50);
+				assertThat(m.detail()).containsEntry("turns", 5).containsEntry("onTime", 2)
+					.containsEntry("late", 1).containsEntry("missed", 2);
+			});
+	}
+
+	private static DrivingEvent timed(SignalTiming timing) {
+		boolean on = timing == SignalTiming.ON_TIME || timing == SignalTiming.LATE;
+		return new DrivingEvent(TripEventType.TURN, AT, new EventPayload(on, timing, null, null, null, null, null, null, null));
+	}
 }
