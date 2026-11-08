@@ -13,6 +13,9 @@ interface PointLedgerJpaRepository extends JpaRepository<PointEntry, Long> {
 
 	boolean existsByReasonAndRefId(PointReason reason, String refId);
 
+	@Query("select coalesce(sum(e.amount), 0) from PointEntry e where e.driverId = :driverId")
+	int sumAmount(@Param("driverId") Long driverId);
+
 	@Query("""
 		select coalesce(sum(e.amount), 0) from PointEntry e
 		where e.driverId = :driverId and e.earnedAt >= :from and e.earnedAt < :to
