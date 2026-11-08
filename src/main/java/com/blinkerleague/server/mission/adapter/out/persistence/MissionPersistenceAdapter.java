@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.domain.Mission;
+import com.blinkerleague.server.mission.domain.MissionPeriod;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,6 +19,8 @@ public class MissionPersistenceAdapter implements LoadActiveMissionPort {
 
 	@Override
 	public Optional<Mission> findActiveDaily(LocalDate date) {
-		throw new UnsupportedOperationException();
+		// P0은 일일 미션이 하나다. 여럿이 겹치면 먼저 만든 미션을 쓴다.
+		return repository.findFirstByPeriodAndActiveFromLessThanEqualAndActiveToGreaterThanEqualOrderByIdAsc(
+			MissionPeriod.DAILY, date, date);
 	}
 }
