@@ -80,4 +80,16 @@ class ApiDocsTest {
 				.value(ERROR_SCHEMA));
 		}
 	}
+
+	@ParameterizedTest(name = "{0} {1}")
+	@CsvSource({
+		"/api/drivers,           post, 운전자 등록",
+		"/api/auth/refresh,      post, 토큰 재발급",
+		"/api/config/thresholds, get,  판정 기준값 조회",
+		"/api/trips,             post, 운행 · 이벤트 업로드"})
+	void API마다_요약을_담는다(String path, String method, String summary) throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['" + path + "']." + method + ".summary").value(summary));
+	}
 }
