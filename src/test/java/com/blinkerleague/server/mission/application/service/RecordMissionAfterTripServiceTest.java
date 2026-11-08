@@ -157,4 +157,16 @@ class RecordMissionAfterTripServiceTest {
 		assertThat(rewards).singleElement()
 			.satisfies(call -> assertThat(call).containsExactly(1L, "1:" + seed.getId() + ":2026-11-03", 20));
 	}
+
+	@Test
+	void 달성하지_못한_날과_판정만_한_경우는_보상하지_않는다() {
+		rounds.add(new RoundTurns(2, 2));
+		service.recordAfterTrip(1L, Instant.parse("2026-11-03T00:00:00Z"));
+		service.recordAfterTrip(1L, YESTERDAY_TRIP);
+		rounds.clear();
+		rounds.add(new RoundTurns(3, 3));
+		service.judgeDay(1L, Instant.parse("2026-11-03T00:00:00Z"));
+
+		assertThat(rewards).isEmpty();
+	}
 }
