@@ -47,6 +47,10 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 			// 같은 날 다른 운행의 판정이 먼저 기록됐다. 그 기록을 다시 읽어 반영한다.
 			record = applyAndSave(driverId, mission.getId(), period.key(), judged);
 		}
+		if (record.getStatus() == MissionStatus.ACHIEVED) {
+			// 다시 판정해 불러도 같은 ref_id라 한 번만 적립된다. 첫 적립이 실패했으면 다음 업로드에서 복구된다.
+			missionRewardPort.reward(driverId, record.rewardRefId(), mission.getRewardPoint());
+		}
 		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
 	}
 

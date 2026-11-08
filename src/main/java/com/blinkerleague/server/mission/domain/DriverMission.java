@@ -67,4 +67,9 @@ public class DriverMission extends BaseTimeEntity {
 			this.achievedAt = now;
 		}
 	}
+
+	/** 달성 보상 적립의 ref_id. 운전자 · 미션 · 날짜마다 하나라 같은 날 보상은 한 번만 적립된다. */
+	public String rewardRefId() {
+		return driverId + ":" + missionId + ":" + periodKey;
+	}
 }
