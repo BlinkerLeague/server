@@ -10,4 +10,8 @@ public final class PointRules {
 	public static int tripPoints(double distanceKm, int score, int tripMaxKm) {
 		return (int) Math.floor(Math.min(distanceKm, tripMaxKm) * score / 100);
 	}
+
+	public static int capToDailyLimit(int requested, int todayEarned, int dailyCap) {
+		throw new UnsupportedOperationException();
+	}
 }
