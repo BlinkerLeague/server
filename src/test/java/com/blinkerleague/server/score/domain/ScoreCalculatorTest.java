@@ -205,4 +205,26 @@ class ScoreCalculatorTest {
 				assertThat(m.detail()).containsEntry("count", 2);
 			});
 	}
+
+	@Test
+	void 회전_속도는_기준_속도_이하로_돈_회전_비율이고_속도를_모르는_회전은_세지_않는다() {
+		List<DrivingEvent> turns = List.of(turnAt(25.0), turnAt(30.0), turnAt(45.0), turnAt(null));
+
+		ScoreResult result = calculator.calculate(new TripFacts(Set.of(ScoreItem.TURN_SPEED), 12.0, turns), THRESHOLDS);
+		ScoreResult unknown = calculator.calculate(new TripFacts(Set.of(ScoreItem.TURN_SPEED), 12.0,
+			List.of(turnAt(null))), THRESHOLDS);
+
+		// 속도를 아는 회전 3번 중 30km/h 이하 2번
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.TURN_SPEED).singleElement()
+			.satisfies(m -> {
+				assertThat(m.score()).isEqualTo(67);
+				assertThat(m.detail()).containsEntry("turns", 3).containsEntry("withinLimit", 2);
+			});
+		assertThat(unknown.metrics()).filteredOn(m -> m.metric() == ScoreItem.TURN_SPEED).singleElement()
+			.satisfies(m -> assertThat(m.reason()).isEqualTo("NO_SPEED"));
+	}
+
+	private static DrivingEvent turnAt(Double maxSpeedKmh) {
+		return new DrivingEvent(TripEventType.TURN, AT, new EventPayload(true, null, maxSpeedKmh, null, null, null, null, null, null));
+	}
 }
