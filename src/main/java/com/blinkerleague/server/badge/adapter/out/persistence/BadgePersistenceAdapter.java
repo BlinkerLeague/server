@@ -2,6 +2,7 @@ package com.blinkerleague.server.badge.adapter.out.persistence;
 
 import java.util.List;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.blinkerleague.server.badge.application.port.out.BadgeAwardStore;
@@ -21,17 +22,17 @@ public class BadgePersistenceAdapter implements LoadBadgeCatalogPort, SaveBadgeC
 
 	@Override
 	public List<Badge> findAll() {
-		throw new UnsupportedOperationException();
+		return badgeRepository.findAll(Sort.by("sortOrder"));
 	}
 
 	@Override
 	public boolean existsAny() {
-		throw new UnsupportedOperationException();
+		return badgeRepository.count() > 0;
 	}
 
 	@Override
 	public void saveAll(List<Badge> badges) {
-		throw new UnsupportedOperationException();
+		badgeRepository.saveAll(badges);
 	}
 
 	@Override
