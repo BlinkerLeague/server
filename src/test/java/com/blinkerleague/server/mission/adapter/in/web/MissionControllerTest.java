@@ -53,7 +53,7 @@ class MissionControllerTest {
 	@Test
 	void 오늘_올린_운행의_회전으로_기본_미션_진행도를_돌려준다() throws Exception {
 		Long driverId = 7001L;
-		upload(driverId, true, true).andExpect(status().isCreated());
+		upload(driverId, 8, true, true).andExpect(status().isCreated());
 
 		today(driverId)
 			.andExpect(status().isOk())
@@ -73,27 +73,41 @@ class MissionControllerTest {
 			.andExpect(jsonPath("$.conditions[1].target").value(100));
 	}
 
+	@Test
+	void 라운드_하나라도_달성하면_뒤에_실패한_라운드가_있어도_그날_미션은_ACHIEVED다() throws Exception {
+		Long driverId = 7002L;
+		upload(driverId, 7, false).andExpect(status().isCreated());
+		upload(driverId, 8, true, true, true).andExpect(status().isCreated());
+		upload(driverId, 9, true, false).andExpect(status().isCreated());
+
+		today(driverId)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ACHIEVED"))
+			.andExpect(jsonPath("$.progress.turns").value(3))
+			.andExpect(jsonPath("$.progress.successTurns").value(3));
+	}
+
 	private ResultActions today(Long driverId) throws Exception {
 		return mockMvc.perform(get("/api/missions/today").header(HttpHeaders.AUTHORIZATION, bearer(driverId)));
 	}
 
-	// 2026-11-03 08:00~08:40 KST 운행. signals 하나가 TURN 이벤트 하나(깜빡이 켬 여부)다.
-	private ResultActions upload(Long driverId, boolean... signals) throws Exception {
+	// 2026-11-03 hour:00~hour:40 KST 운행(라운드) 한 건. signals 하나가 TURN 이벤트 하나(깜빡이 켬 여부)다.
+	private ResultActions upload(Long driverId, int hour, boolean... signals) throws Exception {
 		String events = Stream.iterate(0, i -> i + 1).limit(signals.length)
 			.map(i -> """
-				{ "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T08:1%d:00+09:00",
-				  "payload": { "direction": "LEFT", "signalOn": %s } }""".formatted(UUID.randomUUID(), i, signals[i]))
+				{ "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T%02d:1%d:00+09:00",
+				  "payload": { "direction": "LEFT", "signalOn": %s } }""".formatted(UUID.randomUUID(), hour, i, signals[i]))
 			.collect(Collectors.joining(","));
 		String body = """
 			{
 			  "tripId": "%s",
-			  "startedAt": "2026-11-03T08:00:00+09:00",
-			  "endedAt": "2026-11-03T08:40:00+09:00",
+			  "startedAt": "2026-11-03T%02d:00:00+09:00",
+			  "endedAt": "2026-11-03T%02d:40:00+09:00",
 			  "distanceKm": 12.3,
 			  "supported": ["TURN_SIGNAL"],
 			  "events": [%s]
 			}
-			""".formatted(UUID.randomUUID(), events);
+			""".formatted(UUID.randomUUID(), hour, hour, events);
 		return mockMvc.perform(post("/api/trips")
 			.header(HttpHeaders.AUTHORIZATION, bearer(driverId))
 			.contentType(MediaType.APPLICATION_JSON)
