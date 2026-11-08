@@ -60,4 +60,15 @@ class EarnPointServiceTest {
 
 		assertThat(earned).isEqualTo(5);
 	}
+
+	@Test
+	void 같은_운행으로_다시_적립하면_원장에_한_번만_남기고_0을_돌려준다() {
+		service.earnForTrip(1L, "trip-1", 12.3, 86);
+
+		int retried = service.earnForTrip(1L, "trip-1", 12.3, 86);
+
+		assertThat(retried).isZero();
+		assertThat(ledger.entries()).singleElement()
+			.satisfies(entry -> assertThat(entry.getAmount()).isEqualTo(10));
+	}
 }
