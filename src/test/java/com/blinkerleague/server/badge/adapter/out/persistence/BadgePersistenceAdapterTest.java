@@ -11,7 +11,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Instant;
+
 import com.blinkerleague.server.badge.domain.Badge;
+import com.blinkerleague.server.badge.domain.BadgeAward;
 import com.blinkerleague.server.badge.domain.BadgeRule;
 import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
 import com.blinkerleague.server.common.time.TimeConfig;
@@ -39,5 +42,19 @@ class BadgePersistenceAdapterTest {
 		assertThat(adapter.existsAny()).isTrue();
 		assertThat(adapter.findAll()).extracting(Badge::getCode)
 			.containsSubsequence("T_FIRST", "T_SECOND");
+	}
+
+	@Test
+	void 받은_배지를_저장하고_같은_배지를_또_받으면_무시한다() {
+		Instant first = Instant.parse("2026-11-03T03:00:00Z");
+		adapter.saveIfAbsent(new BadgeAward(1L, "FIRST_TRIP", first));
+		adapter.saveIfAbsent(new BadgeAward(1L, "FIRST_TRIP", first.plusSeconds(60)));
+		adapter.saveIfAbsent(new BadgeAward(2L, "FIRST_TRIP", first));
+		entityManager.clear();
+
+		assertThat(adapter.findByDriver(1L)).singleElement().satisfies(award -> {
+			assertThat(award.getBadgeCode()).isEqualTo("FIRST_TRIP");
+			assertThat(award.getAwardedAt()).isEqualTo(first);
+		});
 	}
 }
