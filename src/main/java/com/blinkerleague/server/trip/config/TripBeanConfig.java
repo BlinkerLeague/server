@@ -23,8 +23,9 @@ public class TripBeanConfig {
 	}
 
 	@Bean
-	public GetTripScoreService getTripScoreService(LoadTripPort loadTripPort, ThresholdProvider thresholdProvider) {
-		return new GetTripScoreService(loadTripPort, thresholdProvider);
+	public GetTripScoreService getTripScoreService(LoadTripPort loadTripPort, ThresholdProvider thresholdProvider,
+		TripMissionPort tripMissionPort) {
+		return new GetTripScoreService(loadTripPort, thresholdProvider, tripMissionPort);
 	}
 
 	@Bean

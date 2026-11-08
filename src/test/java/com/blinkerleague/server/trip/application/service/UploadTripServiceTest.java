@@ -35,9 +35,17 @@ class UploadTripServiceTest {
 	private final List<Object[]> missionCalls = new ArrayList<>();
 	private final UploadTripService service = new UploadTripService(trips, trips,
 		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)),
-		(driverId, endedAt) -> {
-			missionCalls.add(new Object[] {driverId, endedAt});
-			return Optional.of(new TripMissionPort.TripMission(7L, "ACHIEVED"));
+		new TripMissionPort() {
+			@Override
+			public Optional<TripMission> recordAfterUpload(Long driverId, Instant endedAt) {
+				missionCalls.add(new Object[] {driverId, endedAt});
+				return Optional.of(new TripMission(7L, "ACHIEVED"));
+			}
+
+			@Override
+			public Optional<TripMission> judgeDay(Long driverId, Instant endedAt) {
+				throw new AssertionError("업로드는 판정을 기록해야 한다");
+			}
 		});
 
 	@Test

@@ -12,6 +12,9 @@ public interface TripMissionPort {
 	/** 운행을 올린 뒤 그날 미션을 판정해 기록하고 결과를 돌려준다. */
 	Optional<TripMission> recordAfterUpload(Long driverId, Instant tripEndedAt);
 
+	/** 기록하지 않고 그날 미션 판정만 돌려준다(점수 조회용). */
+	Optional<TripMission> judgeDay(Long driverId, Instant tripEndedAt);
+
 	record TripMission(Long missionId, String status) {
 	}
 }

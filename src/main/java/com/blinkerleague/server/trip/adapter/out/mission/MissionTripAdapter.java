@@ -22,4 +22,10 @@ public class MissionTripAdapter implements TripMissionPort {
 		return recordMissionAfterTripUseCase.recordAfterTrip(driverId, tripEndedAt)
 			.map(outcome -> new TripMission(outcome.missionId(), outcome.status().name()));
 	}
+
+	@Override
+	public Optional<TripMission> judgeDay(Long driverId, Instant tripEndedAt) {
+		return recordMissionAfterTripUseCase.judgeDay(driverId, tripEndedAt)
+			.map(outcome -> new TripMission(outcome.missionId(), outcome.status().name()));
+	}
 }

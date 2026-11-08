@@ -4,6 +4,7 @@ import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
+import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.domain.Trip;
 
 import lombok.RequiredArgsConstructor;
@@ -14,12 +15,14 @@ public class GetTripScoreService {
 
 	private final LoadTripPort loadTripPort;
 	private final ThresholdProvider thresholdProvider;
+	private final TripMissionPort tripMissionPort;
 
 	public TripScoreView get(Long driverId, String tripId) {
 		// 남의 운행은 있는지도 알리지 않도록 없는 운행과 같이 응답한다.
 		Trip trip = loadTripPort.findById(tripId)
 			.filter(found -> found.getDriverId().equals(driverId))
 			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "운행을 찾을 수 없습니다."));
-		return TripScoreView.of(trip, thresholdProvider.current().thresholds());
+		return TripScoreView.of(trip, thresholdProvider.current().thresholds())
+			.withMission(tripMissionPort.judgeDay(driverId, trip.getEndedAt()).orElse(null));
 	}
 }
