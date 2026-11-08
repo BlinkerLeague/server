@@ -96,4 +96,19 @@ class ScoreCalculatorTest {
 			});
 		assertThat(result.score()).isEqualTo(80);
 	}
+
+	@Test
+	void 측정하지_못한_항목도_상태와_사유를_담고_회전이_없으면_나머지_항목으로_평점한다() {
+		ScoreResult result = calculator.calculate(
+			new TripFacts(Set.of(ScoreItem.TURN_SIGNAL, ScoreItem.SMOOTH_DRIVING), 12.0, List.of()), THRESHOLDS);
+
+		assertThat(result.score()).isEqualTo(100);
+		assertThat(result.metrics()).extracting(MetricScore::metric, MetricScore::status, MetricScore::reason,
+				MetricScore::score, MetricScore::weight)
+			.containsExactly(
+				org.assertj.core.groups.Tuple.tuple(ScoreItem.TURN_SIGNAL, MetricStatus.NOT_APPLICABLE, "NO_TURN", null, null),
+				org.assertj.core.groups.Tuple.tuple(ScoreItem.SMOOTH_DRIVING, MetricStatus.SCORED, null, 100, 1.0),
+				org.assertj.core.groups.Tuple.tuple(ScoreItem.SAFETY_WARNING, MetricStatus.UNSUPPORTED, "SIGNAL_NOT_SUPPORTED", null, null),
+				org.assertj.core.groups.Tuple.tuple(ScoreItem.NIGHT_HEADLIGHT, MetricStatus.UNSUPPORTED, "SIGNAL_NOT_SUPPORTED", null, null));
+	}
 }
