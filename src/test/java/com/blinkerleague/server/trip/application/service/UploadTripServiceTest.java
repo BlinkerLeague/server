@@ -179,4 +179,16 @@ class UploadTripServiceTest {
 		assertThat(pointCalls).singleElement()
 			.satisfies(call -> assertThat(call).containsExactly(1L, "trip-1", 12.3, 100));
 	}
+
+	@Test
+	void 같은_운행을_다시_올리면_적립을_다시_요청한다_적립은_한_번만_되므로_첫_적립_실패를_복구한다() {
+		RecordedEvent turn = new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600),
+			"{\"signalOn\":true}");
+		service.upload(1L, command("trip-1", 12.3, turn));
+
+		service.upload(1L, command("trip-1", 12.3, turn));
+
+		assertThat(pointCalls).hasSize(2)
+			.allSatisfy(call -> assertThat(call).containsExactly(1L, "trip-1", 12.3, 100));
+	}
 }
