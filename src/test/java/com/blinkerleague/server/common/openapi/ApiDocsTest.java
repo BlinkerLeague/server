@@ -104,4 +104,13 @@ class ApiDocsTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.paths['" + path + "']." + method + ".tags[0]").value(tag));
 	}
+
+	@Test
+	void 성공_응답은_JSON_형식으로_표시한다() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paths['/api/trips'].post.responses['201'].content['application/json'].schema['$ref']")
+				.value("#/components/schemas/TripResult"))
+			.andExpect(jsonPath("$.paths['/api/drivers'].post.responses['201'].content['application/json']").exists());
+	}
 }
