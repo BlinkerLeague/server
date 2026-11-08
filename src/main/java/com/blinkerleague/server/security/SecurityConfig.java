@@ -47,6 +47,10 @@ public class SecurityConfig {
 				.requestMatchers(antMatcher(HttpMethod.POST, "/api/auth/refresh")).permitAll()
 				.requestMatchers(antMatcher(HttpMethod.GET, "/api/config/**")).permitAll()
 				.requestMatchers(antMatcher("/h2-console/**")).permitAll()
+				// API 문서(springdoc). local 프로필에서만 켜지고, 꺼져 있으면 이 경로는 존재하지 않는다(404).
+				.requestMatchers(antMatcher(HttpMethod.GET, "/v3/api-docs/**")).permitAll()
+				.requestMatchers(antMatcher(HttpMethod.GET, "/swagger-ui/**")).permitAll()
+				.requestMatchers(antMatcher(HttpMethod.GET, "/swagger-ui.html")).permitAll()
 				.requestMatchers(antMatcher("/error")).permitAll()
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(oauth -> oauth
