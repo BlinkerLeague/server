@@ -94,6 +94,37 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 새_이벤트와_항목을_받아_D18_가중치로_평점한다() throws Exception {
+		String body = """
+			{ "tripId": "%s", "startedAt": "2026-11-03T20:00:00+09:00", "endedAt": "2026-11-03T20:40:00+09:00",
+			  "distanceKm": 20.0,
+			  "supported": ["TURN_SIGNAL", "SIGNAL_CANCEL", "TURN_SPEED", "SMOOTH_DRIVING", "SEAT_BELT",
+			                "SAFETY_WARNING", "NIGHT_HEADLIGHT", "RAIN_DRIVING"],
+			  "events": [
+			    { "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T20:10:00+09:00",
+			      "payload": { "direction": "LEFT", "signalOn": true, "signalTiming": "ON_TIME", "maxSpeedKmh": 25 } },
+			    { "eventId": "%s", "type": "SIGNAL_LEFT_ON", "occurredAt": "2026-11-03T20:15:00+09:00", "payload": { "durationSec": 40 } },
+			    { "eventId": "%s", "type": "SEAT_BELT", "occurredAt": "2026-11-03T20:00:00+09:00",
+			      "payload": { "buckledAtDeparture": false, "unbuckledMovingSec": 0 } },
+			    { "eventId": "%s", "type": "NIGHT_SEGMENT", "occurredAt": "2026-11-03T20:00:00+09:00",
+			      "payload": { "durationSec": 2400, "headlightOffSec": 0 } },
+			    { "eventId": "%s", "type": "RAIN_SEGMENT", "occurredAt": "2026-11-03T20:20:00+09:00",
+			      "payload": { "durationSec": 600, "headlightOffSec": 0, "knownLimitSec": 0, "overRainLimitSec": 0 } } ] }
+			""".formatted(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+			UUID.randomUUID());
+
+		// 깜빡이 100 · 끄기 75 · 회전 속도 100 · 급가감속 100 · 벨트 50 · 경고등 100 · 전조등 100 · 우천 100
+		// 가중치 0.25 · 0.05 · 0.05 · 0.15 · 0.05 · 0.05 · 0.05 · 0.05 (합 0.7로 나눔) → (70 − 1.25 − 2.5) ÷ 0.7 = 94.6
+		upload(1L, body)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.status").value("SCORED"))
+			.andExpect(jsonPath("$.score").value(95))
+			.andExpect(jsonPath("$.metrics[?(@.status == 'SCORED')]").value(org.hamcrest.Matchers.hasSize(8)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'SIGNAL_CANCEL')].score").value(org.hamcrest.Matchers.contains(75)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'SEAT_BELT')].score").value(org.hamcrest.Matchers.contains(50)));
+	}
+
+	@Test
 	void 업로드_응답에_회전_수_경기_요약_시각순_경기_기록을_담는다() throws Exception {
 		String body = """
 			{
