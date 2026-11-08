@@ -171,6 +171,8 @@ API: `POST /api/drivers`
 
 ### 3.3 `feat/threshold-config` — 기준값 · 가중치 설정
 
+앱 요청 1 · 7번 반영(11.9): 차량 앱은 회전을 핸들 각도로 감지한다(실차에서 FusedLocation 미지원). `turn`에 `steeringEnterDeg`(90, 이 각도 이상 꺾이면 회전) · `steeringExitDeg`(20, 이 각도를 넘은 때부터 다시 내려올 때까지가 한 번의 조향) · `mergeGapSec`(3, 이어진 같은 방향 조향을 하나로) · `steeringRightPositive`(false, 음수가 오른쪽. 실차 부호가 반대면 이 값만 바꿈)를 두었다. 서버 점수 계산에는 쓰지 않고 앱이 내려받아 쓴다. 진행 방향 감지용이던 `windowSec` · `minAngleDeg` · `uTurnAngleDeg`는 앱이 쓰지 않지만 호환을 위해 남겼다.
+
 상태: 완료. 기본값은 `src/main/resources/thresholds/default-thresholds.json`이고, 서버 시작 시 저장된 값이 없을 때만 version 1로 시드한다(재시작해도 바꾼 값을 덮어쓰지 않음). `app_config` 테이블의 `thresholds` 행에 JSON으로 저장하며, `value`가 H2 예약어라 컬럼 이름은 `config_value`다. 서버 내부는 `ThresholdProvider`(메모리 캐시, 변경 시 갱신)로 읽는다. 남은 항목: 값 변경용 관리자 API(지금은 `ThresholdService.update`만 있음) · 변경 값 검증(가중치 합 1 등), 50점 미만 등급 표기(지금은 등급 없음), `TURN_SIGNAL` 외 팁 문구 확정, 서버를 여러 대로 늘릴 때 캐시 갱신 전파.
 
 API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
@@ -179,7 +181,8 @@ API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
 {
   "version": 1,
   "trip": { "minDistanceKm": 3.0, "parkEndMinutes": 3 },
-  "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
+  "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5,
+            "steeringEnterDeg": 90, "steeringExitDeg": 20, "mergeGapSec": 3, "steeringRightPositive": false },
   "harsh": { "deltaKmhPerSec": 10 },
   "safetyWarning": { "mergeWindowSec": 10 },
   "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
@@ -266,8 +269,8 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
   "turns": { "total": 4, "success": 3 },
   "summary": { "goals": 3, "conceded": 1, "fouls": 0 },
   "plays": [
-    { "occurredAt": "2026-11-03T08:12:30+09:00", "type": "TURN", "result": "GOAL" },
-    { "occurredAt": "2026-11-03T08:15:02+09:00", "type": "TURN", "result": "CONCEDED" }
+    { "occurredAt": "2026-11-03T08:12:30+09:00", "type": "TURN", "direction": "LEFT", "result": "GOAL" },
+    { "occurredAt": "2026-11-03T08:15:02+09:00", "type": "TURN", "direction": "RIGHT", "result": "CONCEDED" }
   ],
   "mission": { "missionId": 1, "status": "IN_PROGRESS" }
 }
@@ -275,7 +278,7 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 
 - `grade`: 3.3 `grades` 기준으로 점수에서 계산(SCR-02). 점수가 없으면 `null`
 - `summary`: 경기 비유 집계(SCR-02a). 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0). D22로 결정
-- `plays`: 운행 중 모든 이벤트를 시각순으로(SCR-02a). `TURN`의 `result`는 `summary`와 같은 정의, 그 외 이벤트는 `result: null`(D22). `signalOn`을 해석할 수 없는 회전은 실점(D23)
+- `plays`: 운행 중 모든 이벤트를 시각순으로(SCR-02a). `TURN`의 `result`는 `summary`와 같은 정의, 그 외 이벤트는 `result: null`(D22). `signalOn`을 해석할 수 없는 회전은 실점(D23). `TURN`은 앱이 보낸 회전 방향 `direction`(`LEFT` · `RIGHT`)을 함께 담고, 다른 이벤트는 `direction: null`(앱 요청 8번, 11.9)
 - `mission`: 이 운행을 반영한 그날 미션 판정 결과(SCR-02, VOC-02). `feat/daily-mission` 전까지는 `null`
 
 작업:
