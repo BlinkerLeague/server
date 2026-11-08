@@ -1,6 +1,27 @@
 {
   "components": {
     "schemas": {
+      "BadgeResponse": {
+        "properties": {
+          "awardedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "earned": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ConditionProgress": {
         "properties": {
           "current": {
@@ -50,7 +71,8 @@
           "reason": {
             "enum": [
               "TRIP",
-              "DAILY_MISSION"
+              "DAILY_MISSION",
+              "STREAK_7"
             ],
             "type": "string"
           }
@@ -198,6 +220,14 @@
             "format": "int32",
             "type": "integer"
           },
+          "streakRewardDays": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "streakRewardPoint": {
+            "format": "int32",
+            "type": "integer"
+          },
           "tripMaxKm": {
             "format": "int32",
             "type": "integer"
@@ -332,6 +362,18 @@
           "mergeWindowSec": {
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "StreakView": {
+        "properties": {
+          "streakDays": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "todayAchieved": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -657,6 +699,41 @@
         ]
       }
     },
+    "/api/badges": {
+      "get": {
+        "description": "전체 배지 카탈로그를 진열 순서로 돌려주고, 받은 배지는 earned=true와 받은 시각을 담는다(plan.md 4.3, SCR-05). 배지는 운행을 올릴 때 누적 기록(점수가 난 운행 수, 미션 최장 연속 달성 일수, 깜빡이를 켠 회전 수)으로 판정한다.",
+        "operationId": "badges",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BadgeResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "전체 배지(code, name, condition, earned, awardedAt)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "배지 진열장 조회",
+        "tags": [
+          "배지"
+        ]
+      }
+    },
     "/api/config/thresholds": {
       "get": {
         "description": "회전 · 급가감속 판정 기준, 점수 가중치, 포인트 규칙, 등급 기준, 항목별 팁 문구. 앱은 시작할 때 내려받고 version이 바뀐 경우에만 갱신한다.",
@@ -804,6 +881,38 @@
         "summary": "내 포인트 조회",
         "tags": [
           "포인트"
+        ]
+      }
+    },
+    "/api/streak": {
+      "get": {
+        "description": "일일 미션을 연속으로 달성한 일수(plan.md 4.3). 오늘 달성했으면 오늘부터, 아직이면 어제부터 거꾸로 센다(오늘 진행 중인 것은 끊김이 아님). 날짜는 Asia/Seoul 기준.",
+        "operationId": "streak",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreakView"
+                }
+              }
+            },
+            "description": "streakDays(연속 달성 일수), todayAchieved(오늘 달성 여부)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "연속 달성 조회",
+        "tags": [
+          "미션"
         ]
       }
     },
@@ -1007,6 +1116,10 @@
     {
       "description": "운행(라운드) · 이벤트 업로드",
       "name": "운행"
+    },
+    {
+      "description": "배지 진열장",
+      "name": "배지"
     },
     {
       "description": "오늘의 미션",
