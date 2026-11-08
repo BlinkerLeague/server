@@ -14,6 +14,6 @@ public class SeedMissionService {
 	private final SaveMissionPort saveMissionPort;
 
 	public void seedIfAbsent(List<Mission> defaults) {
-		throw new UnsupportedOperationException();
+		saveMissionPort.saveAll(defaults);
 	}
 }
