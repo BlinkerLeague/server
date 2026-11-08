@@ -1,11 +1,10 @@
 package com.blinkerleague.server.point.application.service;
 
 import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
+import com.blinkerleague.server.point.domain.PointDay;
 import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 
@@ -20,10 +19,9 @@ public class GetPointsService {
 	private final Clock clock;
 
 	public Points get(Long driverId) {
-		LocalDate today = LocalDate.ofInstant(clock.instant(), clock.getZone());
-		Instant from = today.atStartOfDay(clock.getZone()).toInstant();
-		Instant to = today.plusDays(1).atStartOfDay(clock.getZone()).toInstant();
-		return new Points(loadPointLedgerPort.balance(driverId), loadPointLedgerPort.sumEarned(driverId, from, to),
+		PointDay today = PointDay.containing(clock.instant(), clock.getZone());
+		return new Points(loadPointLedgerPort.balance(driverId),
+			loadPointLedgerPort.sumEarned(driverId, today.from(), today.to()),
 			thresholdProvider.current().thresholds().point().dailyCap(), List.of());
 	}
 
