@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -65,6 +66,32 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.metrics[0].value").value(1.0))
 			.andExpect(jsonPath("$.metrics[0].score").value(100))
 			.andExpect(jsonPath("$.metrics[0].weight").value(1.0));
+	}
+
+	@Test
+	void 업로드와_점수_조회는_측정_못_한_항목도_상태_사유와_근거_수치를_담는다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		String body = """
+			{ "tripId": "%s", "startedAt": "2026-11-03T08:00:00+09:00", "endedAt": "2026-11-03T08:40:00+09:00",
+			  "distanceKm": 10.0, "supported": ["TURN_SIGNAL", "SMOOTH_DRIVING", "NIGHT_HEADLIGHT"],
+			  "events": [
+			    { "eventId": "%s", "type": "TURN", "occurredAt": "2026-11-03T08:10:00+09:00",
+			      "payload": { "direction": "LEFT", "signalOn": true, "signalTiming": "LATE" } },
+			    { "eventId": "%s", "type": "HARSH_BRAKE", "occurredAt": "2026-11-03T08:20:00+09:00", "payload": {} } ] }
+			""".formatted(tripId, UUID.randomUUID(), UUID.randomUUID());
+
+		for (ResultActions response : List.of(upload(1L, body), getScore(1L, tripId))) {
+			response
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].status").value(org.hamcrest.Matchers.contains("SCORED")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].score").value(org.hamcrest.Matchers.contains(50)))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].detail.late").value(org.hamcrest.Matchers.contains(1)))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'SMOOTH_DRIVING')].detail.per10Km").value(org.hamcrest.Matchers.contains(1.0)))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'NIGHT_HEADLIGHT')].status").value(org.hamcrest.Matchers.contains("NOT_APPLICABLE")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'NIGHT_HEADLIGHT')].reason").value(org.hamcrest.Matchers.contains("NO_NIGHT")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'NIGHT_HEADLIGHT')].score").value(org.hamcrest.Matchers.contains(org.hamcrest.Matchers.nullValue())))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'SEAT_BELT')].status").value(org.hamcrest.Matchers.contains("UNSUPPORTED")))
+				.andExpect(jsonPath("$.metrics[?(@.metric == 'SEAT_BELT')].reason").value(org.hamcrest.Matchers.contains("SIGNAL_NOT_SUPPORTED")));
+		}
 	}
 
 	@Test
