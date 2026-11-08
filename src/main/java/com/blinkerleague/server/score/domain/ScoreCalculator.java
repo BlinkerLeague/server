@@ -48,6 +48,7 @@ public class ScoreCalculator {
 			case NIGHT_HEADLIGHT -> nightHeadlight(facts);
 			case SIGNAL_CANCEL -> signalCancel(facts, thresholds.signalCancel());
 			case SEAT_BELT -> seatBelt(facts, thresholds.seatBelt());
+			case RAIN_DRIVING -> rainDriving(facts);
 			case TURN_SPEED -> turnSpeed(facts, thresholds.turn(), minSamples(thresholds, ScoreItem.TURN_SPEED));
 			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
@@ -165,6 +166,21 @@ public class ScoreCalculator {
 		}
 		return Outcome.of(1 - Math.min(1.0, (double) off / duration),
 			Map.of("durationSec", duration, "headlightOffSec", off));
+	}
+
+	// 비 오는 구간에서 ① 점등 비율과 ② 제한속도의 rain.speedRatio 이하 준수 비율(앱 판정)의 평균. 제한속도를 모르면 ①만(D18).
+	private static Outcome rainDriving(TripFacts facts) {
+		int duration = sum(facts, TripEventType.RAIN_SEGMENT, EventPayload::durationSec);
+		if (duration <= 0) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_RAIN");
+		}
+		int off = sum(facts, TripEventType.RAIN_SEGMENT, EventPayload::headlightOffSec);
+		int known = sum(facts, TripEventType.RAIN_SEGMENT, EventPayload::knownLimitSec);
+		int over = sum(facts, TripEventType.RAIN_SEGMENT, EventPayload::overRainLimitSec);
+		double light = 1 - Math.min(1.0, (double) off / duration);
+		double value = known > 0 ? (light + (1 - Math.min(1.0, (double) over / known))) / 2 : light;
+		return Outcome.of(value, Map.of("durationSec", duration, "headlightOffSec", off,
+			"knownLimitSec", known, "overRainLimitSec", over));
 	}
 
 	private static int sum(TripFacts facts, TripEventType type, Function<EventPayload, Integer> field) {
