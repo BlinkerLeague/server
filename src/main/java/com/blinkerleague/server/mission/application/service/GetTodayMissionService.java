@@ -9,7 +9,7 @@ import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPo
 import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
 import com.blinkerleague.server.mission.domain.DailyPeriod;
-import com.blinkerleague.server.mission.domain.DailyTurns;
+import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.blinkerleague.server.mission.domain.Mission;
 import com.blinkerleague.server.mission.domain.MissionJudgement;
 import com.blinkerleague.server.mission.domain.MissionStatus;
@@ -28,13 +28,13 @@ public class GetTodayMissionService {
 		DailyPeriod period = DailyPeriod.of(clock.instant(), clock.getZone());
 		Mission mission = loadActiveMissionPort.findActiveDaily(period.date())
 			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "오늘 운영 중인 미션이 없습니다."));
-		DailyTurns turns = loadDailyTurnsPort.load(driverId, period.start(), period.end());
+		RoundTurns turns = loadDailyTurnsPort.load(driverId, period.start(), period.end());
 		MissionJudgement judgement = mission.getCondition().judge(turns);
 		return new TodayMission(mission.getId(), mission.getTitle(), period.key(), judgement.status(),
 			mission.getRewardPoint(), turns, mission.getCondition().requiredTurns(), judgement.conditions());
 	}
 
 	public record TodayMission(Long missionId, String title, String periodKey, MissionStatus status,
-		int rewardPoint, DailyTurns turns, int requiredTurns, List<ConditionProgress> conditions) {
+		int rewardPoint, RoundTurns turns, int requiredTurns, List<ConditionProgress> conditions) {
 	}
 }

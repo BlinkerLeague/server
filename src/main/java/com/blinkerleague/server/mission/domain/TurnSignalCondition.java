@@ -7,7 +7,7 @@ import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
 /** 회전 깜빡이 미션 조건: 회전 requiredTurns회 이상, 깜빡이 사용률 requiredSignalRate% 이상. */
 public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 
-	public MissionJudgement judge(DailyTurns turns) {
+	public MissionJudgement judge(RoundTurns turns) {
 		List<ConditionProgress> conditions = List.of(
 			new ConditionProgress(ConditionType.TURN_COUNT, turns.turns(), requiredTurns),
 			new ConditionProgress(ConditionType.SIGNAL_RATE, signalRate(turns), requiredSignalRate));
@@ -21,7 +21,7 @@ public record TurnSignalCondition(int requiredTurns, int requiredSignalRate) {
 	}
 
 	// 내림해서 모든 회전이 성공하기 전에는 100%로 보이지 않게 한다. 회전이 없으면 0%.
-	private static int signalRate(DailyTurns turns) {
+	private static int signalRate(RoundTurns turns) {
 		return turns.turns() == 0 ? 0 : turns.successTurns() * 100 / turns.turns();
 	}
 }

@@ -15,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
 import com.blinkerleague.server.common.time.TimeConfig;
-import com.blinkerleague.server.mission.domain.DailyTurns;
+import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
@@ -44,7 +44,7 @@ class TripDailyTurnsAdapterTest {
 			new RecordedEvent(nextEventId(), TripEventType.HARSH_BRAKE, null, null));
 		save("trip-2", 1L, Instant.parse("2026-11-03T05:00:00Z"), 8.0, turn(true));
 
-		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(3, 2));
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(3, 2));
 	}
 
 	@Test
@@ -54,7 +54,7 @@ class TripDailyTurnsAdapterTest {
 		save("next-day", 1L, DAY_END, 12.0, turn(true));
 		save("short", 1L, Instant.parse("2026-11-03T01:00:00Z"), 2.9, turn(true));
 
-		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(1, 1));
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(1, 1));
 	}
 
 	@Test
@@ -62,7 +62,7 @@ class TripDailyTurnsAdapterTest {
 		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0,
 			new RecordedEvent(nextEventId(), TripEventType.TURN, null, null));
 
-		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new DailyTurns(1, 0));
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(1, 0));
 	}
 
 	private void save(String tripId, Long driverId, Instant endedAt, double distanceKm, RecordedEvent... events) {

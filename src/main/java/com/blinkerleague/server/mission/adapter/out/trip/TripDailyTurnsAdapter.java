@@ -8,7 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
-import com.blinkerleague.server.mission.domain.DailyTurns;
+import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -34,11 +34,11 @@ public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
 	private final JdbcTemplate jdbcTemplate;
 
 	@Override
-	public DailyTurns load(Long driverId, Instant from, Instant to) {
+	public RoundTurns load(Long driverId, Instant from, Instant to) {
 		List<String> payloads = jdbcTemplate.queryForList(TURN_PAYLOADS, String.class,
 			driverId, Timestamp.from(from), Timestamp.from(to));
 		int success = (int)payloads.stream().filter(TripDailyTurnsAdapter::signalOn).count();
-		return new DailyTurns(payloads.size(), success);
+		return new RoundTurns(payloads.size(), success);
 	}
 
 	// payload가 없거나 읽을 수 없으면 깜빡이를 안 켠 회전으로 본다.

@@ -17,7 +17,7 @@ import com.blinkerleague.server.mission.application.port.out.LoadDailyTurnsPort;
 import com.blinkerleague.server.mission.application.service.GetTodayMissionService.TodayMission;
 import com.blinkerleague.server.mission.domain.ConditionProgress;
 import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
-import com.blinkerleague.server.mission.domain.DailyTurns;
+import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.blinkerleague.server.mission.domain.Mission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 import com.blinkerleague.server.mission.domain.TurnSignalCondition;
@@ -30,7 +30,7 @@ class GetTodayMissionServiceTest {
 	private final Mission seed = Mission.daily("회전 깜빡이 완벽", new TurnSignalCondition(3, 100), 20,
 		LocalDate.of(2026, 1, 1), LocalDate.of(2099, 12, 31));
 
-	private final RecordingTurns turns = new RecordingTurns(new DailyTurns(2, 2));
+	private final RecordingTurns turns = new RecordingTurns(new RoundTurns(2, 2));
 
 	private final GetTodayMissionService service = new GetTodayMissionService(
 		date -> Optional.of(seed), turns, clock);
@@ -43,7 +43,7 @@ class GetTodayMissionServiceTest {
 		assertThat(today.periodKey()).isEqualTo("2026-11-03");
 		assertThat(today.status()).isEqualTo(MissionStatus.IN_PROGRESS);
 		assertThat(today.rewardPoint()).isEqualTo(20);
-		assertThat(today.turns()).isEqualTo(new DailyTurns(2, 2));
+		assertThat(today.turns()).isEqualTo(new RoundTurns(2, 2));
 		assertThat(today.requiredTurns()).isEqualTo(3);
 		assertThat(today.conditions()).containsExactly(
 			new ConditionProgress(ConditionType.TURN_COUNT, 2, 3),
@@ -65,17 +65,17 @@ class GetTodayMissionServiceTest {
 	/** 요청 받은 운전자와 기간을 기록하는 가짜 포트. */
 	private static final class RecordingTurns implements LoadDailyTurnsPort {
 
-		private final DailyTurns result;
+		private final RoundTurns result;
 		private Long driverId;
 		private Instant from;
 		private Instant to;
 
-		RecordingTurns(DailyTurns result) {
+		RecordingTurns(RoundTurns result) {
 			this.result = result;
 		}
 
 		@Override
-		public DailyTurns load(Long driverId, Instant from, Instant to) {
+		public RoundTurns load(Long driverId, Instant from, Instant to) {
 			this.driverId = driverId;
 			this.from = from;
 			this.to = to;
