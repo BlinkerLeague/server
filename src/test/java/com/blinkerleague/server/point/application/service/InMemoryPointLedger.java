@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
 import com.blinkerleague.server.point.application.port.out.SavePointEntryPort;
+import com.blinkerleague.server.point.application.port.out.SavePointEntryPort.PointAlreadyEarnedException;
 import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.point.domain.PointReason;
 
@@ -13,10 +14,20 @@ import com.blinkerleague.server.point.domain.PointReason;
 class InMemoryPointLedger implements LoadPointLedgerPort, SavePointEntryPort {
 
 	private final List<PointEntry> entries = new ArrayList<>();
+	private boolean nextSaveConflicts;
 
 	@Override
 	public void saveNew(PointEntry entry) {
+		if (nextSaveConflicts) {
+			nextSaveConflicts = false;
+			throw new PointAlreadyEarnedException(entry.getReason(), entry.getRefId(), null);
+		}
 		entries.add(entry);
+	}
+
+	/** 확인과 저장 사이에 다른 요청이 같은 적립을 먼저 저장한 상황을 흉내 낸다. */
+	void conflictOnNextSave() {
+		nextSaveConflicts = true;
 	}
 
 	@Override

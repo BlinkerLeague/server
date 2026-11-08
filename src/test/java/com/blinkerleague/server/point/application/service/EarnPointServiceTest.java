@@ -71,4 +71,13 @@ class EarnPointServiceTest {
 		assertThat(ledger.entries()).singleElement()
 			.satisfies(entry -> assertThat(entry.getAmount()).isEqualTo(10));
 	}
+
+	@Test
+	void 확인과_저장_사이에_같은_운행이_먼저_적립되면_오류_없이_0을_돌려준다() {
+		ledger.conflictOnNextSave();
+
+		int earned = service.earnForTrip(1L, "trip-1", 12.3, 86);
+
+		assertThat(earned).isZero();
+	}
 }
