@@ -47,6 +47,7 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 | `GET` | `/api/trips/{tripId}/score` | Bearer | 운행 결과 `{ "tripId", "status", "score", "grade", "metrics": [{ "metric", "value", "score", "weight" }], "turns": { "total", "success" }, "summary": { "goals", "conceded", "fouls" }, "plays": [{ "occurredAt", "type", "result" }], "mission": { "missionId", "status" } }`. `mission`은 이 운행이 끝난 날의 미션 판정(`IN_PROGRESS` · `ACHIEVED` · `FAILED`), 그날 운영 중인 미션이 없으면 `null`. 깜빡이 점수 = `signalOn`이 `true`인 회전 비율 × 100(측정한 항목만 가중치 재분배). `plays`는 모든 이벤트를 시각순으로 담고 `TURN`만 `result`(`GOAL`/`CONCEDED`)가 있음. 없는 운행 · 남의 운행은 404 `NOT_FOUND` |
 | `GET` | `/api/trips?limit=10` | Bearer | 최근 경기 목록. 내 운행을 종료 시각 최신순으로 `[{ "tripId", "endedAt", "distanceKm", "status", "score", "grade" }]`. `limit` 기본 10, 50을 넘으면 50으로 자름, 1 미만이면 400 `INVALID_INPUT` |
 | `GET` | `/api/missions/today` | Bearer | 오늘의 미션 `{ "missionId", "title", "periodKey", "status", "rewardPoint", "progress": { "turns", "successTurns", "requiredTurns" }, "conditions": [{ "type", "current", "target" }] }`. 운행 1건 = 1라운드, 그날(Asia/Seoul) 라운드 중 하나라도 조건(회전 3회 이상 · 깜빡이 100%)을 채우면 `ACHIEVED`, 그날이 끝날 때까지 못 채우면 `FAILED`. 오늘 첫 운행 전에는 마지막 미션 날의 최종 상태를 그 날의 `periodKey`로 보여 준다(D25). 오늘 운영 중인 미션이 없으면 404 `NOT_FOUND` |
+| `GET` | `/api/points` | Bearer | 내 포인트 → `{ "balance", "todayEarned", "dailyCap", "entries": [{ "amount", "reason", "description", "createdAt" }] }`. 잔액은 전체 적립 합계, 오늘 적립은 Asia/Seoul 기준, 원장은 최근 20건. 운행 적립(`TRIP`)의 `description`은 적립 당시 `{ "distanceKm", "score" }`. 적립 연결(운행 점수 · 미션 달성)은 아직 없음 |
 
 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.
 
@@ -129,11 +130,11 @@ docker compose up -d          # Redis (Docker 엔진이 켜져 있어야 함)
 | 보호된 API가 401 `UNAUTHORIZED` | `Authorize`를 하지 않았습니다. 5번을 보세요. |
 | 보호된 API가 401 `INVALID_TOKEN` | Access 토큰이 만료됐거나(6번), `.env`의 `JWT_SECRET`을 바꾼 뒤 이전 토큰을 쓰고 있습니다(4번부터 다시). |
 
-API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합니다(`servers`는 지워 실행 포트가 박히지 않게 합니다).
+API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합니다. `servers`는 지워 실행 포트가 박히지 않게 하고, `-S`로 키를 정렬해 실행할 때마다 응답 코드 순서가 바뀌어 diff가 생기지 않게 합니다.
 
 ```bash
 ./gradlew bootRun   # 다른 터미널에서
-curl -s http://localhost:8080/v3/api-docs | jq 'del(.servers)' > docs/api/openapi.json
+curl -s http://localhost:8080/v3/api-docs | jq -S 'del(.servers)' > docs/api/openapi.json
 ```
 
 ### API 명세 관리 규칙

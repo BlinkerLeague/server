@@ -21,6 +21,41 @@
         },
         "type": "object"
       },
+      "Description": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "EntryResponse": {
+        "properties": {
+          "amount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "$ref": "#/components/schemas/Description"
+          },
+          "reason": {
+            "enum": [
+              "TRIP"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ErrorResponse": {
         "properties": {
           "code": {
@@ -163,6 +198,29 @@
             "type": "integer"
           },
           "tripMaxKm": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PointsResponse": {
+        "properties": {
+          "balance": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "dailyCap": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EntryResponse"
+            },
+            "type": "array"
+          },
+          "todayEarned": {
             "format": "int32",
             "type": "integer"
           }
@@ -716,6 +774,38 @@
         ]
       }
     },
+    "/api/points": {
+      "get": {
+        "description": "잔액(전체 적립 합계), 오늘(Asia/Seoul) 적립 합계와 일일 상한, 최근 원장 20건(최근 것부터). 운행 적립은 적립 당시의 거리 · 점수를 description에 담는다.",
+        "operationId": "points",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointsResponse"
+                }
+              }
+            },
+            "description": "잔액 · 오늘 적립 · 일일 상한 · 최근 원장"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "내 포인트 조회",
+        "tags": [
+          "포인트"
+        ]
+      }
+    },
     "/api/trips": {
       "get": {
         "description": "내 운행을 종료 시각 최신순으로 돌려준다(SCR-01). limit은 기본 10, 최대 50이며 50을 넘으면 50건으로 자른다(D24). 점수가 없는 운행은 score · grade가 null이다.",
@@ -920,6 +1010,10 @@
     {
       "description": "오늘의 미션",
       "name": "미션"
+    },
+    {
+      "description": "포인트 잔액 · 적립 원장",
+      "name": "포인트"
     }
   ]
 }

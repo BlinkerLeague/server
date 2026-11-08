@@ -372,13 +372,15 @@ API: `GET /api/missions/today`
 
 API: `GET /api/points` (잔액 + 최근 원장 20건)
 
+상태: 원장 핵심 완료(11.8), 적립 연결은 남음. `point_ledger` 테이블, 운행 적립 계산, 일일 상한(`point.dailyCap`, 기준값 설정), (`reason`, `ref_id`) 한 번만 적립(동시 충돌은 유니크 제약으로 감지), 운전자 행 `SELECT ... FOR UPDATE`로 같은 운전자의 적립 직렬화, `GET /api/points`. 적립 시각은 `earned_at`(Instant)에 두고 응답의 `createdAt`은 `+09:00`. **남은 항목:** 운행 점수 확정 후 `TRIP` 적립 호출(`feat/trip-score` 머지 후), 미션 달성 시 `DAILY_MISSION` 20P(`driver_mission` 기록 후, #33), P0 달성분 소급 적립 여부 결정. 아래 예시의 운행 적립은 공식대로 12.3km × 86점 → 10P로 고쳤다(이전 예시 42P는 공식과 맞지 않았음).
+
 ```json
 {
   "balance": 1240,
   "todayEarned": 62,
   "dailyCap": 150,
   "entries": [
-    { "amount": 42, "reason": "TRIP", "description": { "distanceKm": 12.3, "score": 86 }, "createdAt": "2026-11-03T08:40:00+09:00" },
+    { "amount": 10, "reason": "TRIP", "description": { "distanceKm": 12.3, "score": 86 }, "createdAt": "2026-11-03T08:40:00+09:00" },
     { "amount": 20, "reason": "DAILY_MISSION", "description": null, "createdAt": "2026-11-03T08:40:00+09:00" }
   ]
 }
