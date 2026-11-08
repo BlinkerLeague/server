@@ -57,6 +57,18 @@ class TripDailyRoundsAdapterTest {
 	}
 
 	@Test
+	void signalOn이_boolean_true가_아니면_점수와_같이_깜빡이를_안_켠_회전으로_센다() {
+		// 점수 엔진(D23)과 같은 기준: 문자열 "true", 숫자 1, 잘못된 JSON은 켠 회전이 아니다.
+		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0,
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{\"signalOn\":\"true\"}"),
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{\"signalOn\":1}"),
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{not json"),
+			turn(true));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(new RoundTurns(4, 1));
+	}
+
+	@Test
 	void 운행마다_회전_결과를_종료_시각_순서로_돌려주고_회전_없는_운행도_라운드다() {
 		save("late", 1L, Instant.parse("2026-11-03T05:00:00Z"), 12.0, turn(true));
 		save("early", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true), turn(false));
