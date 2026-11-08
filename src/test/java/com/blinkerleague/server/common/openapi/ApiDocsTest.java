@@ -72,7 +72,8 @@ class ApiDocsTest {
 		"/api/trips/{tripId}/score, get, 200, 401 404",
 		"/api/missions/today,  get,  200, 401 404",
 		"/api/points,          get,  200, 401",
-		"/api/streak,          get,  200, 401"})
+		"/api/streak,          get,  200, 401",
+		"/api/badges,          get,  200, 401"})
 	void 성공_응답과_오류_응답_코드를_ErrorResponse_형식으로_문서에_담는다(String path, String method,
 		String successCodes, String errorCodes) throws Exception {
 		var result = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
@@ -96,7 +97,8 @@ class ApiDocsTest {
 		"/api/trips/{tripId}/score, get, 운행 점수 조회",
 		"/api/missions/today,    get,  오늘의 미션 조회",
 		"/api/points,            get,  내 포인트 조회",
-		"/api/streak,            get,  연속 달성 조회"})
+		"/api/streak,            get,  연속 달성 조회",
+		"/api/badges,            get,  배지 진열장 조회"})
 	void API마다_요약을_담는다(String path, String method, String summary) throws Exception {
 		mockMvc.perform(get("/v3/api-docs"))
 			.andExpect(status().isOk())
@@ -113,7 +115,8 @@ class ApiDocsTest {
 		"/api/trips/{tripId}/score, get, 운행",
 		"/api/missions/today,    get,  미션",
 		"/api/points,            get,  포인트",
-		"/api/streak,            get,  미션"})
+		"/api/streak,            get,  미션",
+		"/api/badges,            get,  배지"})
 	void API를_기능별_한글_태그로_묶는다(String path, String method, String tag) throws Exception {
 		mockMvc.perform(get("/v3/api-docs"))
 			.andExpect(status().isOk())
