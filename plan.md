@@ -306,11 +306,14 @@ API: `GET /api/missions/today`
 작업:
 - `mission` 테이블: `mission_id`, `type`, `period`(`DAILY`/`WEEKLY`), `condition`(JSON), `reward_point`, `active_from`, `active_to`. "회전 깜빡이 완벽"(회전 3회 이상, 사용률 100%, 20P) 시드
 - `driver_mission` 테이블: `driver_id`, `mission_id`, `period_key`, `status`(`IN_PROGRESS`/`ACHIEVED`/`FAILED`), `achieved_at`. (`driver_id`, `mission_id`, `period_key`) 유니크
-- 운행 업로드 후 그날(Asia/Seoul) 점수 대상 운행들의 회전을 합산해 판정. 한 번이라도 실패 회전이 있으면 그날은 `FAILED`
+- **라운드 단위 판정(11.8 결정):** 시동을 켜고 끄기까지의 운행 1건이 1라운드다. 미션 조건(회전 3회 이상, 사용률 100%)은 라운드 1건 안에서 판정한다. 회전을 하루 동안 합산하지 않는다
+- 그날(Asia/Seoul, 운행 **종료 시각** 기준) 라운드 중 **하나라도** 조건을 채우면 그날 미션은 `ACHIEVED`로 확정한다. 이후 실패한 라운드가 있어도 바뀌지 않는다
+- 실패한 라운드(깜빡이를 안 켠 회전 포함)가 있어도 그날은 `IN_PROGRESS`로 남아 다음 라운드에서 다시 도전한다. 그날이 끝날 때까지 달성하지 못하면 `FAILED`(`driver_mission` 기록)
+- 진행도(`progress`, `conditions`): 달성했으면 달성한 라운드, 아니면 가장 최근 라운드. 라운드가 없으면 0
 - `EXCLUDED_SHORT` 운행은 집계에서 제외
 - 포인트 지급은 P1(`feat/point-ledger`)에서 연결. 지금은 달성 상태만 기록
 
-테스트: 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 1회 포함 → `FAILED`, 자정 경계 운행의 period_key, 조건별 진행도(회전 수 · 사용률)와 `rewardPoint` 응답.
+테스트: 한 라운드에서 회전 3회 모두 성공 → `ACHIEVED`, 2회만 → `IN_PROGRESS`, 실패 라운드 뒤 달성 라운드 → `ACHIEVED`, 달성 뒤 실패 라운드 → `ACHIEVED` 유지, 달성 라운드 없음 → `IN_PROGRESS`(최근 라운드 진행도), 자정 경계 운행의 period_key, 조건별 진행도(회전 수 · 사용률)와 `rewardPoint` 응답.
 
 ### P0 마무리 (11.9 ~ 11.15)
 - 차량 앱과 실제 연동 확인(에뮬레이터 시나리오: 좌회전 성공 → 우회전 실패 → 운행 종료 점수 · 미션)
