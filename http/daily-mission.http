@@ -1,6 +1,7 @@
 ### 오늘의 미션 API 로컬 수동 테스트 (IntelliJ HTTP Client)
 # 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
-# 환경: 실행 시 http-client.env.json의 "local"을 고른다.
+# 환경: 고르지 않아도 된다. 0번 요청이 서버 주소(host)를 저장하고 다음 요청이 그 값을 쓴다.
+#       http-client.env.json의 "local"을 골라도 같은 주소라 그대로 동작한다.
 # 위에서부터 순서대로 실행한다. 0-A에서 받은 토큰과 오늘 · 어제 날짜를 다음 요청이 이어받는다.
 #
 # 규칙(plan.md 3.6): 시동을 켜고 끄기까지의 운행 1건이 1라운드다.
@@ -13,6 +14,16 @@
 # 운전자 A는 매번 새로 등록하므로 몇 번을 다시 실행해도 처음 상태(라운드 없음)에서 시작한다.
 # 저장 결과 확인: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa)
 #   select * from mission;  select * from trip;  select * from trip_event;
+
+### 0. 서버 주소 설정 + 서버 동작 확인 → 200 (환경을 고르지 않아도 다음 요청의 host가 채워지게 한다)
+GET http://localhost:8080/api/config/thresholds
+
+> {%
+    client.test("서버 응답 200", function () {
+        client.assert(response.status === 200, "status: " + response.status);
+    });
+    client.global.set("host", "http://localhost:8080");
+%}
 
 ### 0-A. 운전자 A 등록 → 201 (accessToken, 오늘 · 어제 날짜 저장)
 POST {{host}}/api/drivers
