@@ -59,6 +59,9 @@ public class DriverMission extends BaseTimeEntity {
 
 	/** 그날 판정 결과를 반영한다. */
 	public void apply(MissionStatus judged, Instant now) {
-		throw new UnsupportedOperationException();
+		this.status = judged;
+		if (judged == MissionStatus.ACHIEVED) {
+			this.achievedAt = now;
+		}
 	}
 }
