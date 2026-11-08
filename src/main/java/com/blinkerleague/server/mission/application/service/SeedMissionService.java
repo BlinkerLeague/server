@@ -14,6 +14,9 @@ public class SeedMissionService {
 	private final SaveMissionPort saveMissionPort;
 
 	public void seedIfAbsent(List<Mission> defaults) {
+		if (saveMissionPort.existsAny()) {
+			return;
+		}
 		saveMissionPort.saveAll(defaults);
 	}
 }
