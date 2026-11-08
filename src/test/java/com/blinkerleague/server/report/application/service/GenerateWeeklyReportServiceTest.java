@@ -74,4 +74,14 @@ class GenerateWeeklyReportServiceTest {
 		assertThat(stores.find(1L, "2026-W45")).hasValueSatisfying(
 			m -> assertThat(m.getStatus()).isEqualTo(WeeklyMissionStatus.ACHIEVED));
 	}
+
+	@Test
+	void 이미_만든_주는_저장본을_돌려주고_미션을_다시_등록하지_않는다() {
+		WeeklyReportView first = service.generate(1L, W45);
+
+		WeeklyReportView again = service.generate(1L, W45);
+
+		assertThat(again).isEqualTo(first);
+		assertThat(stores.missions).hasSize(1);
+	}
 }
