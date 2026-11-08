@@ -53,4 +53,9 @@ public class EarnPointService {
 		PointDay today = PointDay.containing(now, clock.getZone());
 		return loadPointLedgerPort.sumEarned(driverId, today.from(), today.to());
 	}
+
+	/** 일일 미션 달성 보상을 적립하고, 실제로 적립한 포인트를 돌려준다. refId는 운전자 · 미션 · 날짜마다 하나다. */
+	public int earnForMission(Long driverId, String refId, int rewardPoint) {
+		throw new UnsupportedOperationException();
+	}
 }
