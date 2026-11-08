@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.ThresholdsFixture;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
+import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.Trip;
 import com.blinkerleague.server.trip.domain.TripEventType;
@@ -29,8 +32,13 @@ class UploadTripServiceTest {
 	private static final Instant ENDED_AT = Instant.parse("2026-11-03T08:40:00Z");
 
 	private final InMemoryTripRepository trips = new InMemoryTripRepository();
+	private final List<Object[]> missionCalls = new ArrayList<>();
 	private final UploadTripService service = new UploadTripService(trips, trips,
-		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)));
+		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)),
+		(driverId, endedAt) -> {
+			missionCalls.add(new Object[] {driverId, endedAt});
+			return Optional.of(new TripMissionPort.TripMission(7L, "ACHIEVED"));
+		});
 
 	@Test
 	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {
@@ -131,5 +139,14 @@ class UploadTripServiceTest {
 	private static UploadTripService.Command command(String tripId, double distanceKm, RecordedEvent... events) {
 		return new UploadTripService.Command(tripId, STARTED_AT, ENDED_AT, distanceKm, Set.of(ScoreItem.TURN_SIGNAL),
 			List.of(events));
+	}
+
+	@Test
+	void 업로드하면_운행이_끝난_날의_미션_판정을_기록하고_결과에_담는다() {
+		UploadTripService.Result result = service.upload(1L, command("trip-1", 12.3));
+
+		assertThat(missionCalls).singleElement()
+			.satisfies(call -> assertThat(call).containsExactly(1L, ENDED_AT));
+		assertThat(result.trip().mission()).isEqualTo(new TripMissionPort.TripMission(7L, "ACHIEVED"));
 	}
 }
