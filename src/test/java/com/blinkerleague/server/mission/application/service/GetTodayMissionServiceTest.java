@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -80,6 +81,11 @@ class GetTodayMissionServiceTest {
 			this.from = from;
 			this.to = to;
 			return result;
+		}
+
+		@Override
+		public List<RoundTurns> loadRounds(Long driverId, Instant from, Instant to) {
+			throw new UnsupportedOperationException();
 		}
 	}
 }

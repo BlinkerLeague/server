@@ -65,6 +65,17 @@ class TripDailyTurnsAdapterTest {
 		assertThat(adapter.load(1L, DAY_START, DAY_END)).isEqualTo(new RoundTurns(1, 0));
 	}
 
+	@Test
+	void 운행마다_회전_결과를_종료_시각_순서로_돌려주고_회전_없는_운행도_라운드다() {
+		save("late", 1L, Instant.parse("2026-11-03T05:00:00Z"), 12.0, turn(true));
+		save("early", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true), turn(false));
+		save("no-turn", 1L, Instant.parse("2026-11-03T03:00:00Z"), 12.0,
+			new RecordedEvent(nextEventId(), TripEventType.HARSH_BRAKE, null, null));
+
+		assertThat(adapter.loadRounds(1L, DAY_START, DAY_END)).containsExactly(
+			new RoundTurns(2, 1), new RoundTurns(0, 0), new RoundTurns(1, 1));
+	}
+
 	private void save(String tripId, Long driverId, Instant endedAt, double distanceKm, RecordedEvent... events) {
 		Instant startedAt = endedAt.minusSeconds(1800);
 		List<RecordedEvent> timed = java.util.Arrays.stream(events)

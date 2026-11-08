@@ -41,6 +41,11 @@ public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
 		return new RoundTurns(payloads.size(), success);
 	}
 
+	@Override
+	public List<RoundTurns> loadRounds(Long driverId, Instant from, Instant to) {
+		throw new UnsupportedOperationException();
+	}
+
 	// payload가 없거나 읽을 수 없으면 깜빡이를 안 켠 회전으로 본다.
 	private static boolean signalOn(String payload) {
 		if (payload == null) {
