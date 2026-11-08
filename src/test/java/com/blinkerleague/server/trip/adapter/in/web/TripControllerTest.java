@@ -61,11 +61,10 @@ class TripControllerTest {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.score").value(100))
 			.andExpect(jsonPath("$.grade").value("S"))
-			.andExpect(jsonPath("$.metrics.length()").value(1))
-			.andExpect(jsonPath("$.metrics[0].metric").value("TURN_SIGNAL"))
-			.andExpect(jsonPath("$.metrics[0].value").value(1.0))
-			.andExpect(jsonPath("$.metrics[0].score").value(100))
-			.andExpect(jsonPath("$.metrics[0].weight").value(1.0));
+			.andExpect(jsonPath("$.metrics[?(@.status == 'SCORED')].metric").value(org.hamcrest.Matchers.contains("TURN_SIGNAL")))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].value").value(org.hamcrest.Matchers.contains(1.0)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].score").value(org.hamcrest.Matchers.contains(100)))
+			.andExpect(jsonPath("$.metrics[?(@.metric == 'TURN_SIGNAL')].weight").value(org.hamcrest.Matchers.contains(1.0)));
 	}
 
 	@Test

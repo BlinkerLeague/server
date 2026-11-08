@@ -2,6 +2,7 @@ package com.blinkerleague.server.trip.adapter.in.web;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
@@ -135,7 +136,7 @@ public class TripController {
 
 		static TripResult from(TripScoreView view) {
 			List<MetricResult> metrics = view.metrics().stream()
-				.map(m -> new MetricResult(m.metric(), m.value(), m.score(), m.weight()))
+				.map(m -> new MetricResult(m.metric(), m.status(), m.reason(), m.value(), m.score(), m.weight(), m.detail()))
 				.toList();
 			List<PlayItem> plays = view.plays().stream()
 				.map(p -> new PlayItem(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
@@ -165,7 +166,12 @@ public class TripController {
 		}
 	}
 
-	public record MetricResult(ScoreItem metric, double value, int score, double weight) {
+	/**
+	 * 항목별 결과(plan.md 4.1). status는 SCORED · UNSUPPORTED(차량 미지원) · NOT_APPLICABLE(측정할 상황 없음 · 표본 부족).
+	 * 측정하지 못한 항목은 reason이 있고 value · score · weight는 null이다. detail은 화면 문구용 근거 수치다.
+	 */
+	public record MetricResult(ScoreItem metric, String status, String reason, Double value, Integer score,
+		Double weight, Map<String, Object> detail) {
 	}
 
 	public record TurnsResult(int total, int success) {

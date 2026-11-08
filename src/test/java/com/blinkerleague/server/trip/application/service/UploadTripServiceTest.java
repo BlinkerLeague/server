@@ -127,7 +127,7 @@ class UploadTripServiceTest {
 		Trip saved = trips.findById("trip-1").orElseThrow();
 		assertThat(saved.getStatus()).isEqualTo(TripStatus.SCORED);
 		assertThat(saved.getScore()).isEqualTo(75);
-		assertThat(saved.getMetrics())
+		assertThat(saved.getMetrics()).filteredOn(m -> m.getStatus().equals("SCORED"))
 			.extracting(TripMetric::getMetric, TripMetric::getValue, TripMetric::getScore, TripMetric::getWeight)
 			.containsExactly(tuple(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0));
 	}
