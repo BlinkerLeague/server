@@ -41,7 +41,11 @@ public class TripDailyTurnsAdapter implements LoadDailyTurnsPort {
 		return new DailyTurns(payloads.size(), success);
 	}
 
+	// payload가 없거나 읽을 수 없으면 깜빡이를 안 켠 회전으로 본다.
 	private static boolean signalOn(String payload) {
+		if (payload == null) {
+			return false;
+		}
 		try {
 			return MAPPER.readTree(payload).path("signalOn").asBoolean(false);
 		} catch (JsonProcessingException e) {
