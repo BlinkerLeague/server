@@ -2,9 +2,12 @@ package com.blinkerleague.server.badge.application.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.blinkerleague.server.badge.application.port.out.BadgeAwardStore;
 import com.blinkerleague.server.badge.application.port.out.LoadBadgeCatalogPort;
+import com.blinkerleague.server.badge.domain.BadgeAward;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,7 +19,12 @@ public class GetBadgesService {
 	private final BadgeAwardStore badgeAwardStore;
 
 	public List<BadgeView> get(Long driverId) {
-		throw new UnsupportedOperationException();
+		Map<String, Instant> awarded = badgeAwardStore.findByDriver(driverId).stream()
+			.collect(Collectors.toMap(BadgeAward::getBadgeCode, BadgeAward::getAwardedAt));
+		return loadBadgeCatalogPort.findAll().stream()
+			.map(badge -> new BadgeView(badge.getCode(), badge.getName(), badge.getCondition(),
+				awarded.containsKey(badge.getCode()), awarded.get(badge.getCode())))
+			.toList();
 	}
 
 	/** awardedAt은 받지 않았으면 null이다. */
