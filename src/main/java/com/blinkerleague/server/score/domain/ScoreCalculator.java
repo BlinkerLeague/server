@@ -47,6 +47,7 @@ public class ScoreCalculator {
 			case SAFETY_WARNING -> safetyWarning(facts, thresholds.safetyWarning());
 			case NIGHT_HEADLIGHT -> nightHeadlight(facts);
 			case SIGNAL_CANCEL -> signalCancel(facts, thresholds.signalCancel());
+			case TURN_SPEED -> turnSpeed(facts, thresholds.turn(), minSamples(thresholds, ScoreItem.TURN_SPEED));
 			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
 	}
@@ -115,6 +116,23 @@ public class ScoreCalculator {
 		double per100Km = count / facts.distanceKm() * 100;
 		double value = Math.max(0, 1 - rule.penaltyPer100Km() * per100Km / 100);
 		return Outcome.of(value, Map.of("count", count, "per100Km", oneDecimal(per100Km)));
+	}
+
+	// 속도를 아는 회전 중 최고 속도가 turnSpeedKmh 이하인 비율(D18).
+	private static Outcome turnSpeed(TripFacts facts, Thresholds.Turn rule, int minSamples) {
+		List<DrivingEvent> turns = ofType(facts, TripEventType.TURN);
+		if (turns.isEmpty()) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_TURN");
+		}
+		List<Double> speeds = turns.stream().map(t -> t.payload().maxSpeedKmh()).filter(Objects::nonNull).toList();
+		if (speeds.isEmpty()) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_SPEED");
+		}
+		if (speeds.size() < minSamples) {
+			return Outcome.excluded(MetricStatus.NOT_APPLICABLE, "TOO_FEW_SAMPLES");
+		}
+		long within = speeds.stream().filter(speed -> speed <= rule.turnSpeedKmh()).count();
+		return Outcome.of((double) within / speeds.size(), Map.of("turns", speeds.size(), "withinLimit", (int) within));
 	}
 
 	// max(0, 100 − penalty × 깜빡이 끄기를 잊은 횟수) (D18)
