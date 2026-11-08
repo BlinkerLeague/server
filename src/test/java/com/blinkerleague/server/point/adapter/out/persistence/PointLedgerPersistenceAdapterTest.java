@@ -1,6 +1,7 @@
 package com.blinkerleague.server.point.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 
@@ -13,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
 import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.point.application.port.out.SavePointEntryPort.PointAlreadyEarnedException;
 import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.point.domain.PointReason;
 
@@ -51,5 +53,13 @@ class PointLedgerPersistenceAdapterTest {
 
 		assertThat(adapter.sumEarned(1L, from, to)).isEqualTo(30);
 		assertThat(adapter.sumEarned(3L, from, to)).isZero();
+	}
+
+	@Test
+	void 같은_사유와_refId를_다시_저장하면_이미_적립했다고_알린다() {
+		adapter.saveNew(PointEntry.trip(1L, "trip-1", 10, 12.3, 86, NOW));
+
+		assertThatThrownBy(() -> adapter.saveNew(PointEntry.trip(1L, "trip-1", 10, 12.3, 86, NOW)))
+			.isInstanceOf(PointAlreadyEarnedException.class);
 	}
 }
