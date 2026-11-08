@@ -38,7 +38,8 @@ public record Thresholds(
 	public record Harsh(int deltaKmhPerSec, double penaltyPer10Km) {
 	}
 
-	public record SafetyWarning(int mergeWindowSec) {
+	/** 같은 경고를 1회로 묶는 시간(mergeWindowSec)과 감점 폭(100km당 1회마다 penaltyPer100Km점). */
+	public record SafetyWarning(int mergeWindowSec, double penaltyPer100Km) {
 	}
 
 	/** 운행 적립 최대 거리, 일일 상한, 연속 달성 보상(streakRewardDays일마다 streakRewardPoint, plan.md 4.3). */

@@ -1,5 +1,7 @@
 package com.blinkerleague.server.score.domain;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -40,6 +42,7 @@ public class ScoreCalculator {
 		return switch (item) {
 			case TURN_SIGNAL -> turnSignal(facts);
 			case SMOOTH_DRIVING -> smoothDriving(facts, thresholds.harsh());
+			case SAFETY_WARNING -> safetyWarning(facts, thresholds.safetyWarning());
 			default -> Outcome.excluded(MetricStatus.NOT_APPLICABLE, "NO_DATA");
 		};
 	}
@@ -68,6 +71,23 @@ public class ScoreCalculator {
 		double per10Km = count / facts.distanceKm() * 10;
 		double value = Math.max(0, 1 - rule.penaltyPer10Km() * per10Km / 100);
 		return Outcome.of(value, Map.of("count", count, "per10Km", oneDecimal(per10Km)));
+	}
+
+	// 같은 경고가 mergeWindowSec 안에 다시 오면 1회로 센다. max(0, 100 − penaltyPer100Km × 100km당 횟수) (plan.md 4.1)
+	private static Outcome safetyWarning(TripFacts facts, Thresholds.SafetyWarning rule) {
+		List<Instant> times = ofType(facts, TripEventType.SAFETY_WARNING).stream()
+			.map(DrivingEvent::occurredAt).sorted().toList();
+		int count = 0;
+		Instant lastCounted = null;
+		for (Instant at : times) {
+			if (lastCounted == null || Duration.between(lastCounted, at).getSeconds() > rule.mergeWindowSec()) {
+				count++;
+				lastCounted = at;
+			}
+		}
+		double per100Km = count / facts.distanceKm() * 100;
+		double value = Math.max(0, 1 - rule.penaltyPer100Km() * per100Km / 100);
+		return Outcome.of(value, Map.of("count", count, "per100Km", oneDecimal(per100Km)));
 	}
 
 	private static List<DrivingEvent> ofType(TripFacts facts, TripEventType type) {
