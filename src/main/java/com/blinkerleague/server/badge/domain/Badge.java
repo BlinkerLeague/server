@@ -47,6 +47,11 @@ public class Badge {
 	}
 
 	public boolean isEarnedBy(BadgeProgress progress) {
-		throw new UnsupportedOperationException();
+		int value = switch (rule) {
+			case SCORED_TRIPS -> progress.scoredTrips();
+			case STREAK_DAYS -> progress.longestStreakDays();
+			case SIGNAL_ON_TURNS -> progress.signalOnTurns();
+		};
+		return value >= target;
 	}
 }
