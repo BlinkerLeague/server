@@ -7,11 +7,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +28,7 @@ public class ThresholdController {
 
 	/** 앱이 시작할 때 내려받는다. 앱은 version이 바뀐 경우에만 갱신한다. */
 	@SecurityRequirements // 공개 API: 인증 없음
+	@ApiResponse(responseCode = "200", description = "현재 기준값과 version")
 	@GetMapping("/thresholds")
 	public ThresholdsResponse thresholds() {
 		return ThresholdsResponse.from(thresholdProvider.current());

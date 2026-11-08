@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
@@ -19,6 +20,9 @@ import com.blinkerleague.server.trip.domain.TripEventType;
 import com.blinkerleague.server.trip.domain.TripStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -34,6 +38,14 @@ public class TripController {
 	private final UploadTripService uploadTripService;
 
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
+	@ApiResponse(responseCode = "201", description = "새로 저장함. 최소 거리 미만이면 status=EXCLUDED_SHORT, 아니면 UPLOADED")
+	@ApiResponse(responseCode = "200", description = "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다")
+	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "CONFLICT: 다른 운전자가 이미 사용한 tripId",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@PostMapping
 	public ResponseEntity<TripResult> upload(@CurrentDriver Long driverId,
 		@Valid @RequestBody UploadTripRequest request) {

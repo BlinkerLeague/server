@@ -5,10 +5,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.auth.application.service.TokenReissueService;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +24,11 @@ public class AuthController {
 	private final TokenReissueService tokenReissueService;
 
 	@SecurityRequirements // 공개 API: 인증 없음
+	@ApiResponse(responseCode = "200", description = "새 Access · Refresh 토큰. 사용한 Refresh 토큰은 무효가 된다")
+	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: refreshToken 누락",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "INVALID_TOKEN: 없거나 만료 · 사용된 Refresh 토큰. 사용된 토큰을 다시 쓰면 그 운전자의 토큰 전체가 무효가 된다",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@PostMapping("/refresh")
 	public TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
 		TokenReissueService.TokenPair pair = tokenReissueService.reissue(request.refreshToken());

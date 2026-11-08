@@ -18,6 +18,8 @@ spring:
 
 # API 문서(OpenAPI · Swagger UI)는 배포 환경에 노출하지 않는다(Pleos 보안 가이드). local 프로필에서만 켠다.
 springdoc:
+  # 전역 예외 처리기의 응답(400 · 404 · 405 · 500)을 모든 API에 붙이지 않고, 컨트롤러의 @ApiResponse만 쓴다.
+  override-with-generic-response: false
   api-docs:
     enabled: false
   swagger-ui:
