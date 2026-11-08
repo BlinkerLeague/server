@@ -72,4 +72,24 @@ class ScoreCalculatorTest {
 	private static DrivingEvent turn(boolean signalOn) {
 		return new DrivingEvent(TripEventType.TURN, AT, signalOn);
 	}
+
+	@Test
+	void 급가감속은_10km당_횟수만큼_감점하고_횟수와_10km당_횟수를_근거로_담는다() {
+		List<DrivingEvent> events = List.of(turn(true), turn(true), turn(true), turn(false),
+			new DrivingEvent(TripEventType.HARSH_ACCEL, AT, false),
+			new DrivingEvent(TripEventType.HARSH_BRAKE, AT, false));
+
+		ScoreResult result = calculator.calculate(
+			new TripFacts(Set.of(ScoreItem.TURN_SIGNAL, ScoreItem.SMOOTH_DRIVING), 14.0, events), THRESHOLDS);
+
+		// 10km당 2 ÷ 14 × 10 = 1.43회 → 100 − 10 × 1.43 = 85.7점. 가중치 0.4 : 0.3 → 4/7 : 3/7
+		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.SMOOTH_DRIVING).singleElement()
+			.satisfies(m -> {
+				assertThat(m.status()).isEqualTo(MetricStatus.SCORED);
+				assertThat(m.score()).isEqualTo(86);
+				assertThat(m.weight()).isCloseTo(3.0 / 7, org.assertj.core.data.Offset.offset(1e-9));
+				assertThat(m.detail()).containsEntry("count", 2).containsEntry("per10Km", 1.4);
+			});
+		assertThat(result.score()).isEqualTo(80);
+	}
 }
