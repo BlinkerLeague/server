@@ -51,6 +51,16 @@ class ApiDocsTest {
 			.andExpect(jsonPath("$.paths['/api/trips'].post.security").doesNotExist());
 	}
 
+	@Test
+	void 문서_제목과_인증_오류_형식_안내를_담는다() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.info.title").value("깜빡이리그 서버 API"))
+			.andExpect(jsonPath("$.info.description").value(org.hamcrest.Matchers.allOf(
+				org.hamcrest.Matchers.containsString("Authorization: Bearer"),
+				org.hamcrest.Matchers.containsString("{ \"code\", \"message\" }"))));
+	}
+
 	private static final String ERROR_SCHEMA = "#/components/schemas/ErrorResponse";
 
 	@ParameterizedTest(name = "{0} {1} → {2}")
