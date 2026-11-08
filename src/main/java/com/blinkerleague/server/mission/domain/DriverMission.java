@@ -57,8 +57,11 @@ public class DriverMission extends BaseTimeEntity {
 		return new DriverMission(driverId, missionId, periodKey);
 	}
 
-	/** 그날 판정 결과를 반영한다. */
+	/** 그날 판정 결과를 반영한다. 한 번 달성한 날은 되돌리지 않는다(plan.md 3.6 라운드 단위 판정). */
 	public void apply(MissionStatus judged, Instant now) {
+		if (status == MissionStatus.ACHIEVED) {
+			return;
+		}
 		this.status = judged;
 		if (judged == MissionStatus.ACHIEVED) {
 			this.achievedAt = now;
