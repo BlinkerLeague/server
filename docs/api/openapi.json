@@ -282,6 +282,13 @@
       },
       "PlayItem": {
         "properties": {
+          "direction": {
+            "enum": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "type": "string"
+          },
           "occurredAt": {
             "format": "date-time",
             "type": "string"
@@ -708,6 +715,10 @@
             "format": "double",
             "type": "number"
           },
+          "mergeGapSec": {
+            "format": "int32",
+            "type": "integer"
+          },
           "minAngleDeg": {
             "format": "int32",
             "type": "integer"
@@ -723,6 +734,17 @@
           "signalLeadSec": {
             "format": "int32",
             "type": "integer"
+          },
+          "steeringEnterDeg": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "steeringExitDeg": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "steeringRightPositive": {
+            "type": "boolean"
           },
           "turnSpeedKmh": {
             "format": "int32",

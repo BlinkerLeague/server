@@ -12,11 +12,15 @@ public record MatchReport(Summary summary, List<Play> plays) {
 	public static MatchReport of(List<DrivingEvent> events) {
 		List<Play> plays = events.stream()
 			.sorted(Comparator.comparing(DrivingEvent::occurredAt))
-			.map(event -> new Play(event.occurredAt(), event.type(), resultOf(event)))
+			.map(event -> new Play(event.occurredAt(), event.type(), directionOf(event), resultOf(event)))
 			.toList();
 		int goals = (int) plays.stream().filter(play -> play.result() == PlayResult.GOAL).count();
 		int conceded = (int) plays.stream().filter(play -> play.result() == PlayResult.CONCEDED).count();
 		return new MatchReport(new Summary(goals, conceded, 0), plays);
+	}
+
+	private static TurnDirection directionOf(DrivingEvent event) {
+		return event.type() == TripEventType.TURN ? event.payload().direction() : null;
 	}
 
 	private static PlayResult resultOf(DrivingEvent event) {
@@ -29,7 +33,11 @@ public record MatchReport(Summary summary, List<Play> plays) {
 	public record Summary(int goals, int conceded, int fouls) {
 	}
 
-	/** TURN이 아닌 이벤트는 result가 null이다. */
-	public record Play(Instant occurredAt, TripEventType type, PlayResult result) {
+	/** TURN이 아닌 이벤트는 direction · result가 null이다. */
+	public record Play(Instant occurredAt, TripEventType type, TurnDirection direction, PlayResult result) {
+
+		public Play(Instant occurredAt, TripEventType type, PlayResult result) {
+			this(occurredAt, type, null, result);
+		}
 	}
 }

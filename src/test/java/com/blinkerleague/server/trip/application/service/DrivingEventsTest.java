@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.score.domain.EventPayload;
 import com.blinkerleague.server.score.domain.SignalTiming;
+import com.blinkerleague.server.score.domain.TurnDirection;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.TripEventType;
 
@@ -39,5 +40,16 @@ class DrivingEventsTest {
 
 	private static RecordedEvent event(TripEventType type, String payload) {
 		return new RecordedEvent("e-" + type + payload.hashCode(), type, AT, payload);
+	}
+
+	@Test
+	void 회전_방향을_읽고_LEFT_RIGHT가_아니면_없는_값으로_둔다() {
+		List<TurnDirection> directions = DrivingEvents.fromRecorded(List.of(
+			event(TripEventType.TURN, "{\"direction\":\"LEFT\",\"signalOn\":true}"),
+			event(TripEventType.TURN, "{\"direction\":\"RIGHT\",\"signalOn\":false}"),
+			event(TripEventType.TURN, "{\"direction\":\"UP\",\"signalOn\":false}"))).stream()
+			.map(e -> e.payload().direction()).toList();
+
+		assertThat(directions).containsExactly(TurnDirection.LEFT, TurnDirection.RIGHT, null);
 	}
 }
