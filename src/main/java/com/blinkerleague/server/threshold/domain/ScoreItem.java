@@ -11,5 +11,7 @@ public enum ScoreItem {
 	/** 회전 중 최고 속도(D18) */
 	TURN_SPEED,
 	/** 출발 시 · 주행 중 안전벨트(D18) */
-	SEAT_BELT
+	SEAT_BELT,
+	/** 비 오는 구간의 점등 · 감속(D18) */
+	RAIN_DRIVING
 }

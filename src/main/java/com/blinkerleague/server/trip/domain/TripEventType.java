@@ -14,5 +14,7 @@ public enum TripEventType {
 	/** 깜빡이를 켠 채 회전 없이 signalCancel.forgetSec 넘게 달림. payload { durationSec } */
 	SIGNAL_LEFT_ON,
 	/** 운행당 1건. payload { buckledAtDeparture, unbuckledMovingSec } */
-	SEAT_BELT
+	SEAT_BELT,
+	/** 와이퍼가 rain.minWiperSec 넘게 켜진 구간. payload { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec } */
+	RAIN_SEGMENT
 }

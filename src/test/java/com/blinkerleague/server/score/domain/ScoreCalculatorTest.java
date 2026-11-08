@@ -250,4 +250,30 @@ class ScoreCalculatorTest {
 		assertThat(result.metrics()).filteredOn(m -> m.metric() == ScoreItem.SEAT_BELT).singleElement()
 			.satisfies(m -> assertThat(m.reason()).isEqualTo("NO_DATA"));
 	}
+
+	@Test
+	void 우천_운전은_점등_비율과_감속_준수_비율의_평균이고_제한속도를_모르면_점등만_본다() {
+		ScoreResult both = rain(rainSegment(600, 60, 400, 100));
+		ScoreResult lightOnly = rain(rainSegment(600, 60, 0, 0));
+		ScoreResult dry = rain();
+
+		// 점등 1 − 60/600 = 0.9, 감속 1 − 100/400 = 0.75 → 평균 0.825
+		assertThat(rainMetric(both).score()).isEqualTo(83);
+		assertThat(rainMetric(both).detail()).containsEntry("durationSec", 600).containsEntry("knownLimitSec", 400);
+		assertThat(rainMetric(lightOnly).score()).isEqualTo(90);
+		assertThat(rainMetric(dry).reason()).isEqualTo("NO_RAIN");
+	}
+
+	private ScoreResult rain(DrivingEvent... segments) {
+		return calculator.calculate(new TripFacts(Set.of(ScoreItem.RAIN_DRIVING), 12.0, List.of(segments)), THRESHOLDS);
+	}
+
+	private static MetricScore rainMetric(ScoreResult result) {
+		return result.metrics().stream().filter(m -> m.metric() == ScoreItem.RAIN_DRIVING).findFirst().orElseThrow();
+	}
+
+	private static DrivingEvent rainSegment(int durationSec, int headlightOffSec, int knownLimitSec, int overRainLimitSec) {
+		return new DrivingEvent(TripEventType.RAIN_SEGMENT, AT, new EventPayload(false, null, null, durationSec,
+			headlightOffSec, knownLimitSec, overRainLimitSec, null, null));
+	}
 }
