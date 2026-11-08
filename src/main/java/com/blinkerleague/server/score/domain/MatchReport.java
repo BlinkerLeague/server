@@ -12,11 +12,15 @@ public record MatchReport(Summary summary, List<Play> plays) {
 	public static MatchReport of(List<DrivingEvent> events) {
 		List<Play> plays = events.stream()
 			.sorted(Comparator.comparing(DrivingEvent::occurredAt))
-			.map(event -> new Play(event.occurredAt(), event.type(), resultOf(event)))
+			.map(event -> new Play(event.occurredAt(), event.type(), directionOf(event), resultOf(event)))
 			.toList();
 		int goals = (int) plays.stream().filter(play -> play.result() == PlayResult.GOAL).count();
 		int conceded = (int) plays.stream().filter(play -> play.result() == PlayResult.CONCEDED).count();
 		return new MatchReport(new Summary(goals, conceded, 0), plays);
+	}
+
+	private static TurnDirection directionOf(DrivingEvent event) {
+		return event.type() == TripEventType.TURN ? event.payload().direction() : null;
 	}
 
 	private static PlayResult resultOf(DrivingEvent event) {
