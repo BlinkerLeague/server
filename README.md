@@ -63,6 +63,24 @@ API를 바꿨으면 `docs/api/openapi.json`을 다시 만들어 함께 커밋합
 curl -s http://localhost:8080/v3/api-docs | jq 'del(.servers)' > docs/api/openapi.json
 ```
 
+### API 명세 관리 규칙
+
+API 명세는 **Swagger(OpenAPI)로 관리합니다.** 컨트롤러 코드의 어노테이션이 명세의 원본이고, 따로 손으로 쓰는 명세 문서는 두지 않습니다.
+
+- **원본은 코드입니다.** 요청 · 응답 형식, 검증 규칙, 상태 코드, 오류 코드는 컨트롤러와 DTO의 어노테이션(`@Tag`, `@Operation`, `@ApiResponse`, Bean Validation)에 적습니다. 코드와 문서가 어긋나지 않도록 명세를 코드 밖에 따로 두지 않습니다.
+- **API를 추가하거나 바꾸는 PR에는 명세도 함께 들어갑니다.**
+  - 컨트롤러 어노테이션을 갱신합니다.
+  - `ApiDocsTest`에 해당 API의 행을 추가합니다.
+  - `docs/api/openapi.json`을 다시 만들어 같은 PR에서 커밋합니다.
+- **다른 사람에게는 Swagger로 전달합니다.**
+  - 서버를 직접 띄울 수 있는 사람: 저장소를 받아 `local` 프로필로 실행한 뒤 Swagger UI를 엽니다. 실행 순서는 위 "실행 방법"을 따릅니다.
+  - 서버를 띄우기 어려운 사람: `docs/api/openapi.json`을 Swagger Editor나 Postman에서 엽니다.
+- **다른 문서의 역할**
+  - `plan.md`: 기능 설계와 결정 기록입니다. 명세가 아닙니다.
+  - 위 API 표: 한눈에 보는 요약입니다.
+  - `http/*.http`: 로컬 수동 테스트용입니다.
+  - 형식이 서로 다르면 Swagger가 기준입니다.
+
 ## Docker 설정 (Redis)
 
 Redis는 Refresh 토큰(SHA-256 해시)만 저장합니다. 서버 세션은 쓰지 않습니다(JWT, stateless).
@@ -195,3 +213,4 @@ docker exec -it blinkerleague-redis redis-cli   # Redis CLI 접속
 - 제목은 커밋 컨벤션과 같은 형식을 따릅니다. 예: `feat: 경기 일정 조회 API 추가`
 - 변경 내용과 확인 방법(테스트 결과 등)을 본문에 적습니다.
 - `./gradlew build`가 통과한 상태에서 올립니다.
+- API를 추가하거나 바꿨다면 컨트롤러 어노테이션 · `ApiDocsTest` · `docs/api/openapi.json`을 같은 PR에 포함합니다([API 명세 관리 규칙](#api-명세-관리-규칙)).

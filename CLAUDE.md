@@ -93,6 +93,27 @@ The car app is distributed through the Pleos App Market and must pass its securi
 - **CORS:** the API serves a native app, so no CORS is configured and browsers are refused cross-origin calls. If a web client is added, allow explicit origins only, never `*` with credentials.
 - **Dependencies:** when adding or upgrading a dependency, check it for known vulnerabilities and handle high-severity ones first. Stay on the latest patch release of the pinned Spring Boot 3.3.x line. If a critical vulnerability has no fix within the pinned versions (see Stack), raise it to the user instead of upgrading silently.
 
+## API specification: managed with Swagger
+
+The API specification is managed with Swagger (OpenAPI, springdoc). The controller annotations are the source of truth, and there is no hand-written spec document. The mechanics are under `common.openapi` above and in the README section "API 명세 관리 규칙".
+
+- **Spec lives in code.** Document request and response shapes, validation, status codes, and error codes with `@Tag`, `@Operation`, `@ApiResponse`, and Bean Validation on the controller and DTOs. Do not write or update a separate spec in Markdown, a doc, or a wiki.
+- **A PR that adds or changes an API includes its spec.**
+  - Update the controller annotations.
+  - Add the endpoint's rows to `ApiDocsTest`. Write that test first, in the red step.
+  - Regenerate `docs/api/openapi.json` and commit it in the same PR.
+  - A PR that changes an API without these is not ready.
+- **Share the spec through Swagger.**
+  - Someone who can run the server checks out the repo, runs it with the `local` profile, and opens `/swagger-ui.html`.
+  - Someone who cannot run it opens `docs/api/openapi.json` in Swagger Editor or Postman.
+  - Point people there instead of writing a new spec document. Ask the user before creating one.
+- **Other documents have other roles.**
+  - `plan.md` records design and decisions.
+  - The README API table is a summary.
+  - `http/*.http` files are for manual local testing.
+  - When a shape differs between them, Swagger is the reference. Fix the others to match, or ask the user if the code itself looks wrong.
+- **Docs stay off outside `local`** (Pleos guide). Never enable `springdoc.*` in a deployed profile without the user's decision.
+
 ## Commands
 
 Use the wrapper (`gradlew.bat` on Windows, `./gradlew` in Git Bash):
