@@ -30,6 +30,9 @@
 | D19 | 리그 비교 점수 | 차량마다 측정 가능한 항목이 달라, 항목이 적은 차가 리그에서 유리할 수 있음(4.4 "같은 측정 항목 집단끼리 비교") | **제안(11.4): 리그 순위 · 안전지수는 모든 차가 측정하는 공통 항목 점수로**, 운행 점수 · 포인트는 전체 항목 점수로. 공통 항목 목록은 기준값 설정에 둠. `feat/region-league` 착수 전 확정 |
 | D20 | 오토라이트 · 비상등 규칙 | Vehicle SDK 2.3.2에 오토라이트 상태 · 비상등 API가 없음(에뮬레이터 확인) | **제안(11.4): 4.1의 "오토라이트면 100점"과 `NIGHT_SEGMENT.autoLight` 삭제**, 하향등 상태로만 판정. 앱 회전 제외 규칙의 비상등 조건도 적용 불가. 실차에서 경고등으로 비상등이 오면 재검토 |
 | D21 | 새 이벤트 종류 · 항목 이름 수용 | `TripEventType` · `ScoreItem`이 enum이라 모르는 값이 오면 `POST /api/trips`가 400. 앱은 4xx를 재전송하지 않고 `REJECTED`로 멈추므로 운행 전체가 버려짐 | **미정.** A) 서버 P1 반영(enum 추가)이 배포된 뒤에만 앱이 새 값을 보냄(기준값 `version`으로 앱이 판단) / B) 모르는 이벤트 종류는 저장만 하고 무시, 모르는 `supported` 이름은 버림. 기본 제안 A |
+| D22 | 경기 요약(`summary`) · 경기 기록(`plays`) 정의 | 3.5에 제안만 있고 화면 기획서와 확정 전 | **결정(11.5):** 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 점수에 쓰지 않으므로 항상 0). `plays`는 저장된 **모든 이벤트**를 시각순으로 담고, `TURN`만 `result`(`GOAL`/`CONCEDED`)가 있으며 나머지(`LANE_CHANGE` 등)는 `result: null` |
+| D23 | `TURN` payload의 `signalOn` 해석 불가 | 업로드는 payload를 해석하지 않고 저장하므로 `signalOn`이 없거나 boolean이 아닐 수 있음 | **결정(11.5): 깜빡이를 켜지 않은 회전으로 판정.** `signalOn`이 `true`일 때만 성공. 업로드(400)로 막지 않는다 |
+| D24 | 최근 경기 목록 `limit` | 3.5에서 "착수 시 확정" | **결정(11.5): 기본 10, 최대 50.** 50을 넘으면 50으로 자른다 |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -243,6 +246,8 @@ API: `POST /api/trips` (인증 필요. 요청 형식은 아래 제안 형식, D1
 
 ### 3.5 `feat/trip-score` — 점수 엔진 (FR-03, FR-05)
 
+상태: 완료. 순수 점수 엔진은 `score.domain`(`ScoreCalculator`, `WeightRedistribution`, `MatchReport`)에 있고, `POST /api/trips`가 업로드하면서 점수를 매긴다(별도 배치 없음). 항목별 점수는 `trip_metric`에 저장한다(`value`가 H2 예약어라 컬럼 이름은 `metric_value`). `summary` · `plays` · `turns`는 저장하지 않고 조회할 때 이벤트에서 계산한다. 결정: 경기 요약 · 기록 D22, `signalOn` 해석 불가 D23, 목록 `limit` D24. `limit`이 1 미만이면 400(500 방지). 응답 시간은 회전 300회 운행 업로드가 3초 안에 끝나는지 통합 테스트로 확인(로컬 0.2초). 남은 항목: `mission`은 3.6에서 채운다. 기준값(가중치)이 바뀌어도 이미 저장된 점수는 다시 계산하지 않는다(등급만 조회 시점 기준으로 계산).
+
 API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 구조(`TripResult`)
 
 ```json
@@ -265,8 +270,8 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 ```
 
 - `grade`: 3.3 `grades` 기준으로 점수에서 계산(SCR-02). 점수가 없으면 `null`
-- `summary`: 경기 비유 집계(SCR-02a). 제안: 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0). 정의는 화면 기획서와 확정
-- `plays`: 운행 중 이벤트를 시각순으로(SCR-02a). `result`는 `summary`와 같은 정의
+- `summary`: 경기 비유 집계(SCR-02a). 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0). D22로 결정
+- `plays`: 운행 중 모든 이벤트를 시각순으로(SCR-02a). `TURN`의 `result`는 `summary`와 같은 정의, 그 외 이벤트는 `result: null`(D22). `signalOn`을 해석할 수 없는 회전은 실점(D23)
 - `mission`: 이 운행을 반영한 그날 미션 판정 결과(SCR-02, VOC-02). `feat/daily-mission` 전까지는 `null`
 
 작업:
@@ -276,7 +281,7 @@ API: `GET /api/trips/{tripId}/score`. `POST /api/trips` 응답도 이와 같은 
 - `trip_metric` 테이블: `trip_id`, `metric`, `value`, `score`, `weight`
 - 회전 0회 → `status=NO_TURN`, `score=null` (앱은 "측정할 회전이 없었어요" 표시). P0은 측정 항목이 깜빡이뿐이라 이렇게 두고, 4.1에서 깜빡이 항목의 제외 사유로 바꾼다
 - 남의 운행 조회 시 404
-- **최근 경기 목록** `GET /api/trips?limit=2`(SCR-01): 내 운행을 종료 시각 최신순으로. 항목은 `tripId`, `endedAt`, `distanceKm`, `status`, `score`, `grade`. `limit` 기본 · 최댓값은 착수 시 확정
+- **최근 경기 목록** `GET /api/trips?limit=2`(SCR-01): 내 운행을 종료 시각 최신순으로. 항목은 `tripId`, `endedAt`, `distanceKm`, `status`, `score`, `grade`. `limit` 기본 10, 최대 50(넘으면 50으로 자름, D24)
 
 테스트: 회전 4회 중 3회 성공 → 75점, 회전 0회 → `NO_TURN`, 재분배 계산(가중치 합 1) 단위 테스트, 점수별 `grade`, `summary` · `plays` 집계, 최근 경기 목록 정렬 · `limit` · 남의 운행 제외. 응답 시간 3초 목표는 통합 테스트에서 대략 확인.
 
