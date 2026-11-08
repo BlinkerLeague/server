@@ -10,6 +10,7 @@ import com.blinkerleague.server.common.error.ErrorResponse;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -23,6 +24,8 @@ public class AuthController {
 
 	private final TokenReissueService tokenReissueService;
 
+	@Operation(summary = "토큰 재발급",
+		description = "Refresh 토큰을 본문으로 보내 새 Access · Refresh 토큰을 받는다. 보낸 Refresh 토큰은 무효가 되므로 응답의 새 토큰으로 바꿔 저장한다.")
 	@SecurityRequirements // 공개 API: 인증 없음
 	@ApiResponse(responseCode = "200", description = "새 Access · Refresh 토큰. 사용한 Refresh 토큰은 무효가 된다")
 	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: refreshToken 누락",

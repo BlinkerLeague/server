@@ -15,6 +15,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,6 +29,8 @@ public class DriverController {
 
 	private final RegisterDriverService registerDriverService;
 
+	@Operation(summary = "운전자 등록",
+		description = "닉네임과 거주 지역(시군구 5자리 코드)으로 운전자를 등록하고 Access · Refresh 토큰을 발급한다. 로그인 API는 없으며, 토큰을 잃으면 다시 등록한다(P0).")
 	@SecurityRequirements // 공개 API: 인증 없음
 	@ApiResponse(responseCode = "201", description = "등록 완료. Access · Refresh 토큰을 함께 발급한다")
 	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 닉네임 2~12자, 지역 코드는 시군구 5자리 숫자",

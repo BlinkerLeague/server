@@ -20,6 +20,7 @@ import com.blinkerleague.server.trip.domain.TripEventType;
 import com.blinkerleague.server.trip.domain.TripStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -38,6 +39,8 @@ public class TripController {
 	private final UploadTripService uploadTripService;
 
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
+	@Operation(summary = "운행 · 이벤트 업로드",
+		description = "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.")
 	@ApiResponse(responseCode = "201", description = "새로 저장함. 최소 거리 미만이면 status=EXCLUDED_SHORT, 아니면 UPLOADED")
 	@ApiResponse(responseCode = "200", description = "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다")
 	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null",
