@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 public class WeeklyPersistenceAdapter implements WeeklyMissionStore, WeeklyReportStore {
 
 	private final WeeklyMissionJpaRepository missionRepository;
+	private final WeeklyReportJpaRepository reportRepository;
 
 	@Override
 	public Optional<WeeklyMission> find(Long driverId, String weekKey) {
@@ -28,11 +29,11 @@ public class WeeklyPersistenceAdapter implements WeeklyMissionStore, WeeklyRepor
 
 	@Override
 	public Optional<String> findReport(Long driverId, String weekKey) {
-		throw new UnsupportedOperationException();
+		return reportRepository.findByDriverIdAndWeekKey(driverId, weekKey).map(WeeklyReportEntity::getReportJson);
 	}
 
 	@Override
 	public void saveReport(Long driverId, String weekKey, String reportJson) {
-		throw new UnsupportedOperationException();
+		reportRepository.save(new WeeklyReportEntity(driverId, weekKey, reportJson));
 	}
 }
