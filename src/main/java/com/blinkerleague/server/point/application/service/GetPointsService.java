@@ -1,6 +1,8 @@
 package com.blinkerleague.server.point.application.service;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import com.blinkerleague.server.point.application.port.out.LoadPointLedgerPort;
@@ -18,7 +20,11 @@ public class GetPointsService {
 	private final Clock clock;
 
 	public Points get(Long driverId) {
-		throw new UnsupportedOperationException();
+		LocalDate today = LocalDate.ofInstant(clock.instant(), clock.getZone());
+		Instant from = today.atStartOfDay(clock.getZone()).toInstant();
+		Instant to = today.plusDays(1).atStartOfDay(clock.getZone()).toInstant();
+		return new Points(loadPointLedgerPort.balance(driverId), loadPointLedgerPort.sumEarned(driverId, from, to),
+			thresholdProvider.current().thresholds().point().dailyCap(), List.of());
 	}
 
 	/** balance는 전체 적립 합계, todayEarned는 오늘(Asia/Seoul) 적립 합계. */

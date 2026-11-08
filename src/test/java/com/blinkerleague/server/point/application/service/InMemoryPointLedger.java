@@ -38,6 +38,11 @@ class InMemoryPointLedger implements LoadPointLedgerPort, SavePointEntryPort, Dr
 	}
 
 	@Override
+	public int balance(Long driverId) {
+		return entries.stream().filter(entry -> entry.getDriverId().equals(driverId)).mapToInt(PointEntry::getAmount).sum();
+	}
+
+	@Override
 	public int sumEarned(Long driverId, Instant from, Instant to) {
 		return entries.stream()
 			.filter(entry -> entry.getDriverId().equals(driverId))
