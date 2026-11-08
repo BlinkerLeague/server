@@ -19,6 +19,7 @@ import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
 import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.score.domain.PlayResult;
+import com.blinkerleague.server.score.domain.TurnDirection;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.application.service.GetTripScoreService;
@@ -144,7 +145,7 @@ public class TripController {
 				.toList();
 			List<PlayItem> plays = view.plays().stream()
 				.map(p -> new PlayItem(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
-					p.result()))
+					p.direction(), p.result()))
 				.toList();
 			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics,
 				new TurnsResult(view.turns().total(), view.turns().success()),
@@ -185,7 +186,7 @@ public class TripController {
 	public record SummaryResult(int goals, int conceded, int fouls) {
 	}
 
-	/** TURN이 아닌 이벤트는 result가 null이다(D22). */
-	public record PlayItem(OffsetDateTime occurredAt, TripEventType type, PlayResult result) {
+	/** 회전 방향(direction)은 앱이 보낸 TURN payload의 값이다(앱 요청 8번). TURN이 아닌 이벤트는 direction · result가 null이다(D22). */
+	public record PlayItem(OffsetDateTime occurredAt, TripEventType type, TurnDirection direction, PlayResult result) {
 	}
 }
