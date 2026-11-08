@@ -5,7 +5,7 @@ BlinkerLeague 백엔드 서버입니다.
 ## 기술 스택
 
 - Java 17
-- Spring Boot 3.3.13 (Web, Data JPA, Security, Data Redis, Spring Session)
+- Spring Boot 3.3.13 (Web, Validation, Data JPA, Data Redis, Security + OAuth2 Resource Server(JWT))
 - H2 (개발용 인메모리 DB)
 - Gradle 7.6.4 (wrapper)
 - Lombok
@@ -49,7 +49,8 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 
 ## Docker 설정 (Redis)
 
-Spring Session이 Redis를 사용하므로 서버 실행 전에 Redis 컨테이너를 먼저 띄웁니다.
+Redis는 Refresh 토큰(SHA-256 해시)만 저장합니다. 서버 세션은 쓰지 않습니다(JWT, stateless).
+Redis 연결은 처음 쓸 때 맺으므로 Redis 없이도 서버는 뜨지만, 운전자 등록(`POST /api/drivers`)과 토큰 재발급(`POST /api/auth/refresh`)은 실패합니다. 서버 실행 전에 Redis 컨테이너를 먼저 띄웁니다.
 설정은 프로젝트 루트의 `docker-compose.yml`에 있습니다.
 
 | 항목 | 값 |
