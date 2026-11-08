@@ -34,4 +34,20 @@ class GetPointsServiceTest {
 		assertThat(points.todayEarned()).isEqualTo(30);
 		assertThat(points.dailyCap()).isEqualTo(150);
 	}
+
+	@Test
+	void 원장은_최근_적립부터_최대_20건을_돌려준다() {
+		for (int i = 1; i <= 21; i++) {
+			ledger.saveNew(PointEntry.trip(1L, "trip-" + i, i, 10.0, 100, NOW.minusSeconds(60L * (22 - i))));
+		}
+		ledger.saveNew(PointEntry.trip(2L, "other", 50, 50.0, 100, NOW));
+
+		GetPointsService.Points points = service.get(1L);
+
+		assertThat(points.entries()).hasSize(20)
+			.extracting(PointEntry::getRefId)
+			.startsWith("trip-21", "trip-20")
+			.endsWith("trip-2")
+			.doesNotContain("trip-1", "other");
+	}
 }
