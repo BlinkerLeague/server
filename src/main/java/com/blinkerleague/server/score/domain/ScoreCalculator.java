@@ -30,7 +30,7 @@ public class ScoreCalculator {
 
 		Map<ScoreItem, Double> applied = WeightRedistribution.redistribute(weights, values.keySet());
 		List<MetricScore> metrics = values.entrySet().stream()
-			.map(e -> new MetricScore(e.getKey(), e.getValue(), toScore(e.getValue()), applied.get(e.getKey())))
+			.map(e -> MetricScore.scored(e.getKey(), e.getValue(), toScore(e.getValue()), applied.get(e.getKey()), Map.of()))
 			.toList();
 		double total = metrics.stream().mapToDouble(m -> m.value() * 100 * m.weight()).sum();
 		return new ScoreResult((int) Math.round(total), metrics);

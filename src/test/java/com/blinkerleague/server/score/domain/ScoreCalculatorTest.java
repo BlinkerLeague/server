@@ -46,7 +46,7 @@ class ScoreCalculatorTest {
 
 		ScoreResult result = calculator.calculate(new TripFacts(EnumSet.allOf(ScoreItem.class), 12.0, turns), THRESHOLDS);
 
-		assertThat(result.metrics()).containsExactly(new MetricScore(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0));
+		assertThat(result.metrics()).containsExactly(MetricScore.scored(ScoreItem.TURN_SIGNAL, 0.75, 75, 1.0, java.util.Map.of()));
 		assertThat(result.score()).isEqualTo(75);
 	}
 
