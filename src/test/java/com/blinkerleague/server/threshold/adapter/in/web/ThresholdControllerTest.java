@@ -33,6 +33,8 @@ class ThresholdControllerTest {
 			.andExpect(jsonPath("$.weights.TURN_SIGNAL").value(0.4))
 			.andExpect(jsonPath("$.weights.NIGHT_HEADLIGHT").value(0.1))
 			.andExpect(jsonPath("$.point.dailyCap").value(150))
+			.andExpect(jsonPath("$.point.streakRewardDays").value(7))
+			.andExpect(jsonPath("$.point.streakRewardPoint").value(50))
 			.andExpect(jsonPath("$.grades[0].grade").value("S"))
 			.andExpect(jsonPath("$.grades[0].minScore").value(95))
 			.andExpect(jsonPath("$.grades[3].grade").value("C"))
