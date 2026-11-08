@@ -31,7 +31,9 @@ public record Thresholds(
 	public record Trip(double minDistanceKm, int parkEndMinutes) {
 	}
 
-	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec) {
+	/** 앱의 회전 판정 기준과 서버의 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비). */
+	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec,
+		double lateSignalScore) {
 	}
 
 	/** 앱의 급가감속 판정 기준(deltaKmhPerSec)과 서버의 감점 폭(10km당 1회마다 penaltyPer10Km점). */
