@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 import com.blinkerleague.server.mission.domain.RoundTurns;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -52,13 +53,15 @@ public class TripDailyRoundsAdapter implements LoadDailyRoundsPort {
 		return rounds.values().stream().map(counts -> new RoundTurns(counts[0], counts[1])).toList();
 	}
 
-	// payload가 없거나 읽을 수 없으면 깜빡이를 안 켠 회전으로 본다.
+	// 점수 엔진과 같은 기준(D23): signalOn이 boolean true일 때만 켠 회전이다.
+	// payload가 없거나, 읽을 수 없거나, 문자열 · 숫자면 깜빡이를 안 켠 회전으로 본다.
 	private static boolean signalOn(String payload) {
 		if (payload == null) {
 			return false;
 		}
 		try {
-			return MAPPER.readTree(payload).path("signalOn").asBoolean(false);
+			JsonNode signalOn = MAPPER.readTree(payload).path("signalOn");
+			return signalOn.isBoolean() && signalOn.booleanValue();
 		} catch (JsonProcessingException e) {
 			return false;
 		}
