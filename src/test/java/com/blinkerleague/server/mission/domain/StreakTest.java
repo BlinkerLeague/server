@@ -17,4 +17,12 @@ class StreakTest {
 
 		assertThat(Streak.current(achieved, TODAY)).isEqualTo(3);
 	}
+
+	@Test
+	void 오늘_아직_달성하지_않았으면_어제부터_센다() {
+		Set<LocalDate> achieved = Set.of(TODAY.minusDays(1), TODAY.minusDays(2));
+
+		assertThat(Streak.current(achieved, TODAY)).isEqualTo(2);
+		assertThat(Streak.current(Set.of(TODAY.minusDays(2)), TODAY)).isZero();
+	}
 }
