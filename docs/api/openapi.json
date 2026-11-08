@@ -156,6 +156,36 @@
         },
         "type": "object"
       },
+      "MetricChange": {
+        "properties": {
+          "change": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "lastWeek": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "metric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "thisWeek": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "MetricResult": {
         "properties": {
           "detail": {
@@ -205,6 +235,46 @@
             "type": "integer"
           },
           "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MissionView": {
+        "properties": {
+          "metric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "minDistanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "ASSIGNED",
+              "ACHIEVED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "target": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "week": {
             "type": "string"
           }
         },
@@ -734,6 +804,47 @@
           "tripId"
         ],
         "type": "object"
+      },
+      "WeeklyReportView": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "lastMission": {
+            "$ref": "#/components/schemas/MissionView"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricChange"
+            },
+            "type": "array"
+          },
+          "nextMission": {
+            "$ref": "#/components/schemas/MissionView"
+          },
+          "trips": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "weakestMetric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "week": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -989,6 +1100,59 @@
         ]
       }
     },
+    "/api/reports/weekly": {
+      "get": {
+        "description": "한 주(ISO 주, 월요일 시작, Asia/Seoul) 동안의 운전을 지난주와 비교한다(plan.md 4.5, SCR-07). metrics는 항목별 거리 가중 평균 점수(0~100)와 지난주 대비 변화, weakestMetric은 이번 주 가장 약한 항목이다. lastMission은 이 주에 수행한 맞춤 미션의 판정, nextMission은 가장 약한 항목으로 다음 주에 자동 등록한 맞춤 미션이다(수락 단계 없음, D7 B). 매주 월요일 04:00에 미리 만들어 두고, 없으면 조회할 때 만든다. 한 번 만든 리포트는 저장본을 그대로 돌려준다.",
+        "operationId": "weekly",
+        "parameters": [
+          {
+            "description": "ISO 주(예: 2026-W45). 없으면 지난주",
+            "in": "query",
+            "name": "week",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportView"
+                }
+              }
+            },
+            "description": "주간 리포트"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: week 형식이 2026-W45가 아니거나 아직 끝나지 않은 주"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "주간 리포트 조회",
+        "tags": [
+          "리포트"
+        ]
+      }
+    },
     "/api/streak": {
       "get": {
         "description": "일일 미션을 연속으로 달성한 일수(plan.md 4.3). 오늘 달성했으면 오늘부터, 아직이면 어제부터 거꾸로 센다(오늘 진행 중인 것은 끊김이 아님). 날짜는 Asia/Seoul 기준.",
@@ -1209,6 +1373,10 @@
     {
       "description": "Access · Refresh 토큰",
       "name": "인증"
+    },
+    {
+      "description": "주간 리포트",
+      "name": "리포트"
     },
     {
       "description": "운전자 등록",

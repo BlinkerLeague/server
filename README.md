@@ -50,6 +50,7 @@ Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거
 | `GET` | `/api/points` | Bearer | 내 포인트 → `{ "balance", "todayEarned", "dailyCap", "entries": [{ "amount", "reason", "description", "createdAt" }] }`. 잔액은 전체 적립 합계, 오늘 적립은 Asia/Seoul 기준, 원장은 최근 20건. 운행 적립(`TRIP`)의 `description`은 적립 당시 `{ "distanceKm", "score" }`. 점수가 난 운행을 올리면 `TRIP`(floor(min(거리, 50km) × 점수 ÷ 100)), 그날 미션을 달성하면 `DAILY_MISSION`(20P), 7일 연속 달성마다 `STREAK_7`(50P)을 일일 상한(150P) 안에서 한 번씩 적립 |
 | `GET` | `/api/streak` | Bearer | 미션 연속 달성 `{ "streakDays", "todayAchieved" }`. 오늘 달성했으면 오늘부터, 아직이면 어제부터 센다. 연속이 7일(기준값 `point.streakRewardDays`)의 배수가 되는 날 50P(`point.streakRewardPoint`)를 `STREAK_7`로 적립 |
 | `GET` | `/api/badges` | Bearer | 배지 진열장. 전체 배지를 진열 순서로 `[{ "code", "name", "condition", "earned", "awardedAt" }]`. 기본 3종 `FIRST_TRIP` · `STREAK_7` · `SIGNAL_100`(카탈로그는 `badges/default-badges.json`), 운행을 올릴 때 판정 |
+| `GET` | `/api/reports/weekly?week=2026-W45` | Bearer | 주간 리포트(기본 지난주) `{ "week", "trips", "distanceKm", "metrics": [{ "metric", "thisWeek", "lastWeek", "change" }], "weakestMetric", "lastMission", "nextMission" }`. 항목 값은 거리 가중 평균 점수(0~100). 가장 약한 항목으로 다음 주 맞춤 미션을 자동 등록(수락 단계 없음, D7 B)하고, 다음 리포트에서 판정. 매주 월요일 04:00 배치로 미리 만들고, 없으면 조회할 때 만든다. 형식이 틀리거나 끝나지 않은 주는 400 `INVALID_INPUT` |
 
 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요합니다. 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`으로 응답합니다.
 
