@@ -1,6 +1,26 @@
 {
   "components": {
     "schemas": {
+      "ConditionProgress": {
+        "properties": {
+          "current": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "target": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "TURN_COUNT",
+              "SIGNAL_RATE"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ErrorResponse": {
         "properties": {
           "code": {
@@ -97,6 +117,18 @@
         },
         "type": "object"
       },
+      "MissionResult": {
+        "properties": {
+          "missionId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "PlayItem": {
         "properties": {
           "occurredAt": {
@@ -131,6 +163,23 @@
             "type": "integer"
           },
           "tripMaxKm": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Progress": {
+        "properties": {
+          "requiredTurns": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "successTurns": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "turns": {
             "format": "int32",
             "type": "integer"
           }
@@ -288,6 +337,42 @@
         },
         "type": "object"
       },
+      "TodayMissionResponse": {
+        "properties": {
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionProgress"
+            },
+            "type": "array"
+          },
+          "missionId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "periodKey": {
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          },
+          "rewardPoint": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "IN_PROGRESS",
+              "ACHIEVED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TokenResponse": {
         "properties": {
           "accessToken": {
@@ -324,7 +409,7 @@
             "type": "array"
           },
           "mission": {
-            "type": "object"
+            "$ref": "#/components/schemas/MissionResult"
           },
           "plays": {
             "items": {
@@ -589,6 +674,48 @@
         ]
       }
     },
+    "/api/missions/today": {
+      "get": {
+        "description": "오늘(Asia/Seoul) 운영 중인 일일 미션과 내 진행도. 운행 1건이 1라운드이고, 그날 라운드 중 하나라도 조건을 채우면 ACHIEVED로 확정된다. progress는 달성했으면 달성한 라운드, 아니면 가장 최근 라운드의 회전 수다. 최소 거리 미만 운행은 세지 않는다. 그날이 끝날 때까지 달성하지 못하면 FAILED이고, 오늘 첫 운행 전에는 마지막 미션 날의 최종 상태(ACHIEVED · FAILED)를 그 날의 periodKey로 보여 준다(D25).",
+        "operationId": "today",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayMissionResponse"
+                }
+              }
+            },
+            "description": "오늘의 미션과 진행도(status: IN_PROGRESS · ACHIEVED · FAILED). 오늘 운행 전이면 마지막 미션 날의 최종 상태"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 오늘 운영 중인 미션이 없음"
+          }
+        },
+        "summary": "오늘의 미션 조회",
+        "tags": [
+          "미션"
+        ]
+      }
+    },
     "/api/trips": {
       "get": {
         "description": "내 운행을 종료 시각 최신순으로 돌려준다(SCR-01). limit은 기본 10, 최대 50이며 50을 넘으면 50건으로 자른다(D24). 점수가 없는 운행은 score · grade가 null이다.",
@@ -789,6 +916,10 @@
     {
       "description": "운행(라운드) · 이벤트 업로드",
       "name": "운행"
+    },
+    {
+      "description": "오늘의 미션",
+      "name": "미션"
     }
   ]
 }

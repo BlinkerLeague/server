@@ -1,0 +1,99 @@
+package com.blinkerleague.server.mission.adapter.out.trip;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+
+import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
+import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.mission.domain.RoundTurns;
+import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.domain.RecordedEvent;
+import com.blinkerleague.server.trip.domain.Trip;
+import com.blinkerleague.server.trip.domain.TripEventType;
+
+@DataJpaTest
+@ActiveProfiles("test")
+@Import({TripDailyRoundsAdapter.class, JpaAuditingConfig.class, TimeConfig.class})
+class TripDailyRoundsAdapterTest {
+
+	// 2026-11-03 KST 하루
+	private static final Instant DAY_START = Instant.parse("2026-11-02T15:00:00Z");
+	private static final Instant DAY_END = Instant.parse("2026-11-03T15:00:00Z");
+
+	@Autowired
+	TripDailyRoundsAdapter adapter;
+
+	@Autowired
+	TestEntityManager entityManager;
+
+	private int eventSeq;
+
+	@Test
+	void 다른_운전자_다른_날_3km_미만_운행의_회전은_세지_않는다() {
+		save("mine", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true));
+		save("other-driver", 2L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true));
+		save("next-day", 1L, DAY_END, 12.0, turn(true));
+		save("short", 1L, Instant.parse("2026-11-03T01:00:00Z"), 2.9, turn(true));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(new RoundTurns(1, 1));
+	}
+
+	@Test
+	void payload가_없는_회전은_깜빡이를_안_켠_회전으로_센다() {
+		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0,
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, null));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(new RoundTurns(1, 0));
+	}
+
+	@Test
+	void signalOn이_boolean_true가_아니면_점수와_같이_깜빡이를_안_켠_회전으로_센다() {
+		// 점수 엔진(D23)과 같은 기준: 문자열 "true", 숫자 1, 잘못된 JSON은 켠 회전이 아니다.
+		save("trip-1", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0,
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{\"signalOn\":\"true\"}"),
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{\"signalOn\":1}"),
+			new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{not json"),
+			turn(true));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(new RoundTurns(4, 1));
+	}
+
+	@Test
+	void 운행마다_회전_결과를_종료_시각_순서로_돌려주고_회전_없는_운행도_라운드다() {
+		save("late", 1L, Instant.parse("2026-11-03T05:00:00Z"), 12.0, turn(true));
+		save("early", 1L, Instant.parse("2026-11-03T00:00:00Z"), 12.0, turn(true), turn(false));
+		save("no-turn", 1L, Instant.parse("2026-11-03T03:00:00Z"), 12.0,
+			new RecordedEvent(nextEventId(), TripEventType.HARSH_BRAKE, null, null));
+
+		assertThat(adapter.load(1L, DAY_START, DAY_END)).containsExactly(
+			new RoundTurns(2, 1), new RoundTurns(0, 0), new RoundTurns(1, 1));
+	}
+
+	private void save(String tripId, Long driverId, Instant endedAt, double distanceKm, RecordedEvent... events) {
+		Instant startedAt = endedAt.minusSeconds(1800);
+		List<RecordedEvent> timed = java.util.Arrays.stream(events)
+			.map(e -> new RecordedEvent(e.eventId(), e.type(), startedAt.plusSeconds(60), e.payload()))
+			.toList();
+		entityManager.persist(Trip.upload(tripId, driverId, startedAt, endedAt, distanceKm,
+			Set.of(ScoreItem.TURN_SIGNAL), timed, 3.0));
+		entityManager.flush();
+	}
+
+	private RecordedEvent turn(boolean signalOn) {
+		return new RecordedEvent(nextEventId(), TripEventType.TURN, null, "{\"signalOn\":" + signalOn + "}");
+	}
+
+	private String nextEventId() {
+		return "event-" + (++eventSeq);
+	}
+}

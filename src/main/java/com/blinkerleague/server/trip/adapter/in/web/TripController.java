@@ -19,6 +19,7 @@ import com.blinkerleague.server.common.error.ErrorResponse;
 import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.score.domain.PlayResult;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.application.service.GetTripScoreService;
 import com.blinkerleague.server.trip.application.service.ListRecentTripsService;
 import com.blinkerleague.server.trip.application.service.TripScoreView;
@@ -127,10 +128,10 @@ public class TripController {
 		}
 	}
 
-	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). mission은 feat/daily-mission 전까지 null이다. */
+	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). mission은 그날 운영 중인 미션이 없으면 null이다. */
 	public record TripResult(String tripId, TripStatus status, Integer score, String grade,
 		List<MetricResult> metrics, TurnsResult turns, SummaryResult summary, List<PlayItem> plays,
-		Object mission) {
+		MissionResult mission) {
 
 		static TripResult from(TripScoreView view) {
 			List<MetricResult> metrics = view.metrics().stream()
@@ -143,7 +144,15 @@ public class TripController {
 			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics,
 				new TurnsResult(view.turns().total(), view.turns().success()),
 				new SummaryResult(view.summary().goals(), view.summary().conceded(), view.summary().fouls()),
-				plays, null);
+				plays, MissionResult.from(view.mission()));
+		}
+	}
+
+	/** 이 운행을 반영한 그날 미션 판정. status는 IN_PROGRESS · ACHIEVED · FAILED(끝난 날의 미달성, D25). */
+	public record MissionResult(Long missionId, String status) {
+
+		static MissionResult from(TripMissionPort.TripMission mission) {
+			return mission == null ? null : new MissionResult(mission.missionId(), mission.status());
 		}
 	}
 
