@@ -69,6 +69,7 @@ public class WeeklyMission extends BaseTimeEntity {
 
 	/** 그 주의 해당 항목 평균 점수(측정하지 않았으면 null)와 주간 거리로 판정한다. */
 	public void judge(Integer weekAverage, double weekDistanceKm) {
-		throw new UnsupportedOperationException();
+		boolean achieved = weekAverage != null && weekAverage >= target && weekDistanceKm >= minDistanceKm;
+		this.status = achieved ? WeeklyMissionStatus.ACHIEVED : WeeklyMissionStatus.FAILED;
 	}
 }
