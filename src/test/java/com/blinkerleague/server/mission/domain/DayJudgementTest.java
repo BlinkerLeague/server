@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
+
 /** 하루 미션 판정: 라운드 하나라도 조건을 채우면 그날은 달성. */
 class DayJudgementTest {
 
@@ -16,5 +18,16 @@ class DayJudgementTest {
 		DayJudgement day = condition.judgeDay(List.of(new RoundTurns(1, 0), new RoundTurns(3, 3)));
 
 		assertThat(day.status()).isEqualTo(MissionStatus.ACHIEVED);
+	}
+
+	@Test
+	void 달성한_뒤_실패한_라운드가_와도_ACHIEVED이고_진행도는_달성한_라운드다() {
+		DayJudgement day = condition.judgeDay(List.of(new RoundTurns(3, 3), new RoundTurns(2, 1)));
+
+		assertThat(day.status()).isEqualTo(MissionStatus.ACHIEVED);
+		assertThat(day.shownRound()).isEqualTo(new RoundTurns(3, 3));
+		assertThat(day.conditions()).containsExactly(
+			new ConditionProgress(ConditionType.TURN_COUNT, 3, 3),
+			new ConditionProgress(ConditionType.SIGNAL_RATE, 100, 100));
 	}
 }
