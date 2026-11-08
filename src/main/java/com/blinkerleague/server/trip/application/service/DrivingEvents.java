@@ -6,6 +6,7 @@ import java.util.List;
 import com.blinkerleague.server.score.domain.DrivingEvent;
 import com.blinkerleague.server.score.domain.EventPayload;
 import com.blinkerleague.server.score.domain.SignalTiming;
+import com.blinkerleague.server.score.domain.TurnDirection;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.TripEvent;
 import com.blinkerleague.server.trip.domain.TripEventType;
@@ -45,7 +46,8 @@ final class DrivingEvents {
 		return new EventPayload(type == TripEventType.TURN && signalOn(json, timing), timing,
 			number(json.path("maxSpeedKmh")), integer(json.path("durationSec")), integer(json.path("headlightOffSec")),
 			integer(json.path("knownLimitSec")), integer(json.path("overRainLimitSec")),
-			bool(json.path("buckledAtDeparture")), integer(json.path("unbuckledMovingSec")));
+			bool(json.path("buckledAtDeparture")), integer(json.path("unbuckledMovingSec")),
+			type == TripEventType.TURN ? direction(json.path("direction")) : null);
 	}
 
 	// 단계가 있으면 제때 · 늦게만 켠 회전이다. 없으면 signalOn이 boolean true일 때만 켠 회전이다(D23).
@@ -63,6 +65,17 @@ final class DrivingEvents {
 		}
 		try {
 			return SignalTiming.valueOf(node.textValue());
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
+	private static TurnDirection direction(JsonNode node) {
+		if (!node.isTextual()) {
+			return null;
+		}
+		try {
+			return TurnDirection.valueOf(node.textValue());
 		} catch (IllegalArgumentException e) {
 			return null;
 		}
