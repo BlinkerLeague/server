@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.blinkerleague.server.mission.application.port.in.RecordMissionAfterTripUseCase;
 import com.blinkerleague.server.mission.application.port.out.DriverMissionStore;
+import com.blinkerleague.server.mission.application.port.out.DriverMissionStore.DriverMissionAlreadyExistsException;
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
 import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
 
@@ -38,10 +39,21 @@ public class RecordMissionAfterTripService implements RecordMissionAfterTripUseC
 		Mission mission = active.get();
 		List<RoundTurns> rounds = loadDailyRoundsPort.load(driverId, period.start(), period.end());
 		MissionStatus judged = mission.getCondition().judgeDay(rounds).status();
-		DriverMission record = driverMissionStore.find(driverId, mission.getId(), period.key())
-			.orElseGet(() -> DriverMission.start(driverId, mission.getId(), period.key()));
+		DriverMission record;
+		try {
+			record = applyAndSave(driverId, mission.getId(), period.key(), judged);
+		} catch (DriverMissionAlreadyExistsException e) {
+			// 같은 날 다른 운행의 판정이 먼저 기록됐다. 그 기록을 다시 읽어 반영한다.
+			record = applyAndSave(driverId, mission.getId(), period.key(), judged);
+		}
+		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
+	}
+
+	private DriverMission applyAndSave(Long driverId, Long missionId, String periodKey, MissionStatus judged) {
+		DriverMission record = driverMissionStore.find(driverId, missionId, periodKey)
+			.orElseGet(() -> DriverMission.start(driverId, missionId, periodKey));
 		record.apply(judged, clock.instant());
 		driverMissionStore.save(record);
-		return Optional.of(new MissionOutcome(mission.getId(), record.getStatus()));
+		return record;
 	}
 }
