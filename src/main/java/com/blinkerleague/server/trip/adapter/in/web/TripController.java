@@ -118,9 +118,13 @@ public class TripController {
 		@NotBlank @Size(max = 36) String eventId,
 		@NotNull TripEventType type,
 		@NotNull OffsetDateTime occurredAt,
-		@Schema(implementation = Object.class, description = "이벤트 타입별 추가 정보(선택). 서버는 해석하지 않고 JSON 그대로 저장한다. "
-			+ "TURN: { \"direction\": \"LEFT\" | \"RIGHT\", \"signalOn\": true | false } "
-			+ "(깜빡이 점수는 signalOn으로 계산한다). 다른 타입의 형식은 아직 정해지지 않아 저장만 한다.",
+		@Schema(implementation = Object.class, description = "이벤트 타입별 추가 정보(선택). 서버는 JSON 그대로 저장하고 점수에 쓰는 값만 읽는다(plan.md 4.1). "
+			+ "TURN: { direction: LEFT|RIGHT, signalOn, signalTiming: ON_TIME|LATE|WRONG_DIRECTION|NONE, leadDistanceM, maxSpeedKmh } "
+			+ "(signalTiming이 있으면 4단계, 없으면 signalOn으로 2단계 판정) / "
+			+ "SIGNAL_LEFT_ON: { durationSec } / SEAT_BELT(운행당 1건): { buckledAtDeparture, unbuckledMovingSec } / "
+			+ "NIGHT_SEGMENT: { durationSec, headlightOffSec } / "
+			+ "RAIN_SEGMENT: { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec } / "
+			+ "HARSH_ACCEL · HARSH_BRAKE · SAFETY_WARNING · LANE_CHANGE: 형식 없음(횟수만 셈). 원시 위치 좌표는 넣지 않는다.",
 			example = "{\"direction\": \"LEFT\", \"signalOn\": true}")
 		JsonNode payload) {
 
