@@ -24,7 +24,7 @@ public final class ThresholdsFixture {
 	public static Thresholds withGrades(List<GradeRule> grades) {
 		return new Thresholds(
 			new Thresholds.Trip(3.0, 3),
-			new Thresholds.Turn(5, 10, 60, 150, 5, 0.5, 30, 30),
+			new Thresholds.Turn(5, 10, 60, 150, 5, 0.5, 30, 30, 90, 20, 3),
 			new Thresholds.Harsh(10, 10),
 			new Thresholds.SafetyWarning(10, 20),
 			new Thresholds.SignalCancel(20, 30, 25),

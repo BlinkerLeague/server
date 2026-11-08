@@ -35,9 +35,15 @@ public record Thresholds(
 	public record Trip(double minDistanceKm, int parkEndMinutes) {
 	}
 
-	/** 앱의 회전 판정 기준(제때 깜빡이 signalLeadDistanceM 등), 서버의 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비)와 회전 속도 기준(turnSpeedKmh). */
+	/**
+	 * 회전 판정 기준. 앱이 쓰는 값: 핸들 각도로 회전 감지(steeringExitDeg를 넘은 때부터 다시 내려올 때까지 한 번의 조향,
+	 * 그 사이 steeringEnterDeg 이상이면 회전, mergeGapSec 안에 이어진 같은 방향 조향은 하나로 합침, 앱 요청 1번),
+	 * 제때 깜빡이 거리(signalLeadDistanceM). windowSec · minAngleDeg · uTurnAngleDeg는 진행 방향 감지용이었고 앱은 쓰지 않는다.
+	 * 서버가 쓰는 값: 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비), 회전 속도 기준(turnSpeedKmh).
+	 */
 	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec,
-		double lateSignalScore, int turnSpeedKmh, int signalLeadDistanceM) {
+		double lateSignalScore, int turnSpeedKmh, int signalLeadDistanceM, int steeringEnterDeg, int steeringExitDeg,
+		int mergeGapSec) {
 	}
 
 	/** 앱의 급가감속 판정 기준(deltaKmhPerSec)과 서버의 감점 폭(10km당 1회마다 penaltyPer10Km점). */
