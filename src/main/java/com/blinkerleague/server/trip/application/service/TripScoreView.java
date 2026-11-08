@@ -24,6 +24,10 @@ public record TripScoreView(String tripId, TripStatus status, Integer score, Str
 			report.summary(), report.plays(), null);
 	}
 
+	TripScoreView withMission(TripMissionPort.TripMission mission) {
+		return new TripScoreView(tripId, status, score, grade, metrics, turns, summary, plays, mission);
+	}
+
 	/** 점수가 없거나 최저 등급 기준 미만이면 등급이 없다. */
 	static String gradeOf(Integer score, Thresholds thresholds) {
 		return score == null ? null : thresholds.gradeOf(score).orElse(null);

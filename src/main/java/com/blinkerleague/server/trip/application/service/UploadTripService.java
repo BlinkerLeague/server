@@ -54,7 +54,12 @@ public class UploadTripService {
 			// 확인과 저장 사이에 같은 tripId가 먼저 저장된 동시 업로드. 먼저 저장된 운행이 기준이다.
 			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
-		return new Result(TripScoreView.of(trip, thresholds), true);
+		return new Result(withMission(TripScoreView.of(trip, thresholds), trip), true);
+	}
+
+	// 운행을 반영한 그날 미션 판정을 기록하고 결과에 담는다(plan.md 3.5 · 3.6).
+	private TripScoreView withMission(TripScoreView view, Trip trip) {
+		return view.withMission(tripMissionPort.recordAfterUpload(trip.getDriverId(), trip.getEndedAt()).orElse(null));
 	}
 
 	// 재전송은 처음 저장한 결과를 돌려주고, 남의 운행이면 결과를 알려주지 않고 거부한다.
