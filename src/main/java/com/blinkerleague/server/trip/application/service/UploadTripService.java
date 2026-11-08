@@ -63,11 +63,12 @@ public class UploadTripService {
 	}
 
 	// 재전송은 처음 저장한 결과를 돌려주고, 남의 운행이면 결과를 알려주지 않고 거부한다.
-	private static Result alreadyUploaded(Trip existing, Long driverId, Thresholds thresholds) {
+	private Result alreadyUploaded(Trip existing, Long driverId, Thresholds thresholds) {
 		if (!existing.getDriverId().equals(driverId)) {
 			throw new BusinessException(ErrorCode.CONFLICT, "이미 다른 운전자가 사용한 운행 ID입니다.");
 		}
-		return new Result(TripScoreView.of(existing, thresholds), false);
+		// 판정 기록은 한 번 달성한 날을 되돌리지 않으므로 다시 불러도 안전하다.
+		return new Result(withMission(TripScoreView.of(existing, thresholds), existing), false);
 	}
 
 	public record Command(String tripId, Instant startedAt, Instant endedAt, double distanceKm,
