@@ -11,7 +11,8 @@ public final class Streak {
 
 	/** 오늘(달성했으면) 또는 어제부터 거꾸로 이어진 달성 일수. 오늘 아직 달성하지 못한 것은 끊김이 아니다. */
 	public static int current(Set<LocalDate> achievedDays, LocalDate today) {
-		return endingAt(achievedDays, today);
+		LocalDate from = achievedDays.contains(today) ? today : today.minusDays(1);
+		return endingAt(achievedDays, from);
 	}
 
 	/** day부터 거꾸로 이어진 달성 일수. day를 달성하지 못했으면 0이다. */
