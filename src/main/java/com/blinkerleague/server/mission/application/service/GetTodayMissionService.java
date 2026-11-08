@@ -1,7 +1,6 @@
 package com.blinkerleague.server.mission.application.service;
 
 import java.time.Clock;
-import java.time.LocalDate;
 import java.util.List;
 
 import com.blinkerleague.server.mission.application.port.out.LoadActiveMissionPort;
@@ -25,7 +24,7 @@ public class GetTodayMissionService {
 
 	public TodayMission today(Long driverId) {
 		DailyPeriod period = DailyPeriod.of(clock.instant(), clock.getZone());
-		Mission mission = loadActiveMissionPort.findActiveDaily(LocalDate.parse(period.key())).orElseThrow();
+		Mission mission = loadActiveMissionPort.findActiveDaily(period.date()).orElseThrow();
 		DailyTurns turns = loadDailyTurnsPort.load(driverId, period.start(), period.end());
 		MissionJudgement judgement = mission.getCondition().judge(turns);
 		return new TodayMission(mission.getId(), mission.getTitle(), period.key(), judgement.status(),
