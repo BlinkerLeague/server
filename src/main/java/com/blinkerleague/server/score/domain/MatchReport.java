@@ -29,7 +29,11 @@ public record MatchReport(Summary summary, List<Play> plays) {
 	public record Summary(int goals, int conceded, int fouls) {
 	}
 
-	/** TURN이 아닌 이벤트는 result가 null이다. */
-	public record Play(Instant occurredAt, TripEventType type, PlayResult result) {
+	/** TURN이 아닌 이벤트는 direction · result가 null이다. */
+	public record Play(Instant occurredAt, TripEventType type, TurnDirection direction, PlayResult result) {
+
+		public Play(Instant occurredAt, TripEventType type, PlayResult result) {
+			this(occurredAt, type, null, result);
+		}
 	}
 }

@@ -32,4 +32,16 @@ class MatchReportTest {
 			new Play(T2, TripEventType.LANE_CHANGE, null),
 			new Play(T3, TripEventType.TURN, PlayResult.CONCEDED));
 	}
+
+	@Test
+	void 회전_기록에는_회전_방향을_담는다() {
+		List<DrivingEvent> events = List.of(
+			new DrivingEvent(TripEventType.TURN, T1,
+				new EventPayload(true, null, null, null, null, null, null, null, null, TurnDirection.LEFT)),
+			new DrivingEvent(TripEventType.HARSH_BRAKE, T2, EventPayload.EMPTY));
+
+		assertThat(MatchReport.of(events).plays()).containsExactly(
+			new Play(T1, TripEventType.TURN, TurnDirection.LEFT, PlayResult.GOAL),
+			new Play(T2, TripEventType.HARSH_BRAKE, null, null));
+	}
 }
