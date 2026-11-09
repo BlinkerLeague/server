@@ -53,7 +53,9 @@ public class EarnPointService implements EarnPointUseCase {
 
 	@Override
 	public int earnForSeasonLeague(Long driverId, String refId) {
-		throw new UnsupportedOperationException();
+		int reward = thresholdProvider.current().thresholds().league().seasonRewardPoint();
+		return earn(driverId, PointReason.SEASON_LEAGUE, refId, reward,
+			(amount, now) -> PointEntry.seasonLeague(driverId, refId, amount, now));
 	}
 
 	// 같은 운전자의 적립은 잠금 안에서 하나씩: 한 번만 적립 확인 → 오늘 합계로 상한 적용 → 저장.
