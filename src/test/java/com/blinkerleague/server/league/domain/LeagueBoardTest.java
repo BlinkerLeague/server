@@ -35,6 +35,23 @@ class LeagueBoardTest {
 		});
 	}
 
+	@Test
+	void 시즌_누적_50km_이상이거나_운행_10회_이상인_운전자만_순위에_오른다() {
+		List<MemberRecord> members = List.of(
+			member(1L, NORTHWEST, 2, 50, 50, 90 * 50),
+			member(2L, NORTHWEST, 10, 30, 30, 80 * 30),
+			member(3L, NORTHWEST, 9, 49.9, 49.9, 99 * 49.9));
+
+		LeagueBoard board = LeagueBoard.build(members, REGIONS, new LeagueBoard.Rules(1, 50, 10));
+
+		assertThat(board.region("SEOUL_NORTHWEST").rankings()).extracting(Ranked::driverId).containsExactly(1L, 2L);
+		assertThat(board.standingOf(3L)).hasValueSatisfying(standing -> {
+			assertThat(standing.eligible()).isFalse();
+			assertThat(standing.rank()).isNull();
+			assertThat(standing.score()).isEqualTo(99.0);
+		});
+	}
+
 	static MemberRecord member(Long driverId, LeagueRegion region, int trips, double distanceKm,
 		double scoredDistanceKm, double weightedScoreSum) {
 		return new MemberRecord(driverId, "driver" + driverId, region.code(), true, trips, distanceKm,
