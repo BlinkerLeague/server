@@ -44,9 +44,9 @@ public final class LeagueBoard {
 			Map<Long, Integer> ranks = new HashMap<>();
 			rankings.forEach(ranked -> ranks.put(ranked.driverId(), ranked.rank()));
 			inRegion.forEach(member -> standings.put(member.driverId(), new Standing(region.code(),
+				member.hasScore() ? averageOf(member) : null, member.seasonPoints(),
 				member.hasScore() ? scoreOf(member) : null, rules.eligible(member), ranks.get(member.driverId()),
-				member.trips(),
-				member.distanceKm())));
+				member.trips(), member.distanceKm())));
 		}
 		return new LeagueBoard(withRegionRanks(boards), standings);
 	}
@@ -112,13 +112,19 @@ public final class LeagueBoard {
 			MemberRecord member = sorted.get(i);
 			double score = scoreOf(member);
 			int rank = i > 0 && rankings.get(i - 1).score() == score ? rankings.get(i - 1).rank() : i + 1;
-			rankings.add(new Ranked(rank, member.driverId(), member.nickname(), score));
+			rankings.add(new Ranked(rank, member.driverId(), member.nickname(), averageOf(member),
+				member.seasonPoints(), score));
 		}
 		return rankings;
 	}
 
-	// 리그 점수의 거리 가중 평균, 소수 첫째 자리
+	// 순위 점수(D34): 리그 점수 거리 가중 평균 + 시즌 포인트
 	private static double scoreOf(MemberRecord member) {
+		return round1(averageOf(member) + member.seasonPoints());
+	}
+
+	// 리그 점수의 거리 가중 평균, 소수 첫째 자리
+	private static double averageOf(MemberRecord member) {
 		return round1(member.weightedScoreSum() / member.scoredDistanceKm());
 	}
 
@@ -138,16 +144,11 @@ public final class LeagueBoard {
 		Integer rank, List<Ranked> rankings) {
 	}
 
-	/** 운전자의 시즌 점수와 자격. rank는 순위가 공개되고 자격이 있을 때만 있다. */
-	public record Standing(String leagueCode, Double score, boolean eligible, Integer rank, int trips,
-		double distanceKm) {
-
-		public Double averageScore() {
-			throw new UnsupportedOperationException();
-		}
-
-		public int points() {
-			throw new UnsupportedOperationException();
-		}
+	/**
+	 * 운전자의 시즌 점수와 자격. score = averageScore + points(D34)이고, 리그 점수가 없으면 averageScore · score는 null이다.
+	 * rank는 순위가 공개되고 자격이 있을 때만 있다.
+	 */
+	public record Standing(String leagueCode, Double averageScore, int points, Double score, boolean eligible,
+		Integer rank, int trips, double distanceKm) {
 	}
 }
