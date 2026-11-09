@@ -2,6 +2,8 @@
 # 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
 # 환경: 실행 시 http-client.env.json의 "local"을 고른다.
 # 위에서부터 순서대로 실행한다. 0-A, 0-B에서 받은 토큰 · 날짜와 1번의 tripId를 다음 요청이 이어받는다.
+# 응답의 mission은 운행이 끝난 날의 미션 결과다. 1 ~ 7번은 어제 운행이고 조건을 못 채워 FAILED가 정상이다.
+# 미션 FAILED · ACHIEVED는 M-0 ~ M-3(운전자 C)에서 확인한다.
 # 운행 날짜는 0-A가 계산한 어제 날짜다(D17: 7일보다 오래되거나 5분 넘게 미래인 운행은 400).
 # 저장 결과는 http://localhost:8080/h2-console 에서 확인한다.
 #   JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa, 비밀번호 없음
@@ -429,6 +431,122 @@ Content-Type: application/json
     client.test("400 INVALID_INPUT", function () {
         client.assert(response.status === 400, "status: " + response.status);
         client.assert(response.body.code === "INVALID_INPUT", "code: " + response.body.code);
+    });
+%}
+
+### M-0. 미션 확인용 운전자 C 등록 → 201 (C의 accessToken, 오늘 운행 시각 저장)
+# M-1 ~ M-3은 오늘의 미션 "회전 깜빡이 완벽"(한 운행에서 회전 3회 이상 + 깜빡이 모두 켬)의 결과를 확인한다.
+# 미션은 운행이 끝난 날(한국 시간)로 판정한다. 그날이 지났는데 조건을 못 채웠으면 FAILED,
+# 채웠으면 ACHIEVED다(D25). 오늘 운행이 조건을 못 채우면 FAILED가 아니라 IN_PROGRESS다.
+# 운전자 A의 1 ~ 7번 운행은 모두 어제 날짜이고 조건(3회 · 모두 켬)을 못 채워 mission이 FAILED로 나온다.
+# 오늘 운행(M-2)은 지금 70분 전 ~ 10분 전이라 한국 시간 00:10 이후에 실행한다.
+POST {{host}}/api/drivers
+Content-Type: application/json
+
+{
+  "nickname": "미션C{{$randomInt}}",
+  "regionCode": "11440"
+}
+
+> {%
+    client.test("201 Created", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+    });
+    client.global.set("driverCToken", response.body.accessToken);
+    function kst(ms) { return new Date(ms + 9 * 60 * 60 * 1000).toISOString().substring(0, 19) + "+09:00"; }
+    var now = Date.now();
+    client.global.set("todayStart", kst(now - 70 * 60 * 1000));
+    client.global.set("todayTurn1", kst(now - 60 * 60 * 1000));
+    client.global.set("todayTurn2", kst(now - 50 * 60 * 1000));
+    client.global.set("todayTurn3", kst(now - 40 * 60 * 1000));
+    client.global.set("todayEnd", kst(now - 10 * 60 * 1000));
+%}
+
+### M-1. 미션 FAILED: 어제 운행, 회전 3회 중 1회 깜빡이 안 켬 → 201, mission FAILED
+# 어제는 이미 끝났고 이 운행은 조건(모두 켬)을 못 채웠다 → FAILED(D25)
+POST {{host}}/api/trips
+Authorization: Bearer {{driverCToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T08:10:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T08:20:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T08:30:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": false } }
+  ]
+}
+
+> {%
+    client.test("201 SCORED, mission FAILED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.status === "SCORED", "status: " + response.body.status);
+        client.assert(response.body.mission.status === "FAILED", "mission: " + JSON.stringify(response.body.mission));
+    });
+%}
+
+### M-2. 미션 ACHIEVED: 오늘 운행, 회전 3회 모두 깜빡이 켬 → 201, mission ACHIEVED
+POST {{host}}/api/trips
+Authorization: Bearer {{driverCToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{todayStart}}",
+  "endedAt": "{{todayEnd}}",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{todayTurn1}}",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{todayTurn2}}",
+      "payload": { "direction": "RIGHT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{todayTurn3}}",
+      "payload": { "direction": "LEFT", "signalOn": true } }
+  ]
+}
+
+> {%
+    client.test("201 SCORED 100점, mission ACHIEVED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.score === 100, "score: " + response.body.score);
+        client.assert(response.body.mission.status === "ACHIEVED", "mission: " + JSON.stringify(response.body.mission));
+    });
+%}
+
+### M-3. 미션 ACHIEVED(늦은 업로드): 어제 운행, 회전 3회 모두 켬 → 201, M-1에서 FAILED였던 어제가 ACHIEVED로 바뀜
+# 지난 날이라도 조건을 채운 운행을 늦게 올리면 ACHIEVED가 된다. 한 번 ACHIEVED면 되돌리지 않는다(D25).
+POST {{host}}/api/trips
+Authorization: Bearer {{driverCToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{yesterday}}T18:00:00+09:00",
+  "endedAt": "{{yesterday}}T18:40:00+09:00",
+  "distanceKm": 12.3,
+  "supported": ["TURN_SIGNAL"],
+  "events": [
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T18:10:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T18:20:00+09:00",
+      "payload": { "direction": "RIGHT", "signalOn": true } },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T18:30:00+09:00",
+      "payload": { "direction": "LEFT", "signalOn": true } }
+  ]
+}
+
+> {%
+    client.test("201 SCORED, mission ACHIEVED", function () {
+        client.assert(response.status === 201, "status: " + response.status);
+        client.assert(response.body.mission.status === "ACHIEVED", "mission: " + JSON.stringify(response.body.mission));
     });
 %}
 
