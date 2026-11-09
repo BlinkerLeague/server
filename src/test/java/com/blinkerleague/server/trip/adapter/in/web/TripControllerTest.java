@@ -320,6 +320,16 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 요청_본문이_1MB를_넘으면_413_PAYLOAD_TOO_LARGE를_반환한다() throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 12.3));
+		((ObjectNode)body.at("/events/0/payload")).put("memo", "x".repeat(1024 * 1024));
+
+		upload(1L, body.toString())
+			.andExpect(status().isPayloadTooLarge())
+			.andExpect(jsonPath("$.code").value("PAYLOAD_TOO_LARGE"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
