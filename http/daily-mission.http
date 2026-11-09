@@ -236,7 +236,7 @@ Content-Type: application/json
     client.global.set("missionBToken", response.body.accessToken);
 %}
 
-### 10-B. B: 오늘 2.9km 운행에서 회전 3회 성공 → 201 EXCLUDED_SHORT (3km 미만은 미션 집계 제외)
+### 10-B. B: 오늘 0.9km 운행에서 회전 3회 성공 → 201 EXCLUDED_SHORT (1km 미만은 미션 집계 제외)
 POST {{host}}/api/trips
 Authorization: Bearer {{missionBToken}}
 Content-Type: application/json
@@ -245,7 +245,7 @@ Content-Type: application/json
   "tripId": "{{$uuid}}",
   "startedAt": "{{today}}T07:00:00+09:00",
   "endedAt": "{{today}}T07:10:00+09:00",
-  "distanceKm": 2.9,
+  "distanceKm": 0.9,
   "supported": ["TURN_SIGNAL"],
   "events": [
     { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T07:02:00+09:00",
@@ -292,7 +292,7 @@ Content-Type: application/json
     });
 %}
 
-### 10-D. B의 오늘 미션 → IN_PROGRESS, 진행도 0 (3km 미만 · 어제 운행은 세지 않음. A의 달성도 섞이지 않음)
+### 10-D. B의 오늘 미션 → IN_PROGRESS, 진행도 0 (1km 미만 · 어제 운행은 세지 않음. A의 달성도 섞이지 않음)
 GET {{host}}/api/missions/today
 Authorization: Bearer {{missionBToken}}
 

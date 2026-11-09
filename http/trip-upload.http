@@ -110,7 +110,7 @@ Content-Type: application/json
     });
 %}
 
-### 4. 최소 거리 3km 미만(2.9km) → 201 + EXCLUDED_SHORT (D10)
+### 4. 최소 거리 1km 미만(0.9km) → 201 + EXCLUDED_SHORT (D10)
 POST {{host}}/api/trips
 Authorization: Bearer {{driverAToken}}
 Content-Type: application/json
@@ -119,7 +119,7 @@ Content-Type: application/json
   "tripId": "{{$uuid}}",
   "startedAt": "2026-11-03T09:00:00+09:00",
   "endedAt": "2026-11-03T09:10:00+09:00",
-  "distanceKm": 2.9,
+  "distanceKm": 0.9,
   "supported": ["TURN_SIGNAL"],
   "events": [
     { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "2026-11-03T09:05:00+09:00",
@@ -134,7 +134,7 @@ Content-Type: application/json
     });
 %}
 
-### 5. 정확히 3.0km → 201 + UPLOADED (경계값은 참여)
+### 5. 정확히 1.0km → 201 + UPLOADED (경계값은 참여)
 POST {{host}}/api/trips
 Authorization: Bearer {{driverAToken}}
 Content-Type: application/json
@@ -143,7 +143,7 @@ Content-Type: application/json
   "tripId": "{{$uuid}}",
   "startedAt": "2026-11-03T09:00:00+09:00",
   "endedAt": "2026-11-03T09:10:00+09:00",
-  "distanceKm": 3.0,
+  "distanceKm": 1.0,
   "supported": ["TURN_SIGNAL"],
   "events": []
 }
