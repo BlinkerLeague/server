@@ -21,6 +21,10 @@ public final class LeagueScore {
 		metrics.stream()
 			.filter(m -> m.status() == MetricStatus.SCORED && commonItems.contains(m.metric()))
 			.forEach(m -> scored.put(m.metric(), m.score()));
+		// 공통 항목을 하나도 측정하지 않은 운행은 리그 집계에서 빠진다.
+		if (scored.isEmpty()) {
+			return null;
+		}
 		Map<ScoreItem, Double> applied = WeightRedistribution.redistribute(weights, scored.keySet());
 		double total = applied.entrySet().stream().mapToDouble(e -> e.getValue() * scored.get(e.getKey())).sum();
 		return (int)Math.round(total);
