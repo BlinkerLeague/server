@@ -62,8 +62,8 @@ class LeagueRecordsAdapterTest {
 		List<MemberRecord> records = adapter.records(NOVEMBER);
 
 		assertThat(records).containsExactlyInAnyOrder(
-			new MemberRecord(me, "me", "SEOUL_NORTHWEST", true, 3, 45.0, 40.0, 90 * 10 + 70 * 30),
-			new MemberRecord(hidden, "hidden", "SEOUL_NORTHWEST", false, 1, 20.0, 20.0, 80 * 20));
+			new MemberRecord(me, "me", "SEOUL_NORTHWEST", true, 3, 45.0, 40.0, 90 * 10 + 70 * 30, 0),
+			new MemberRecord(hidden, "hidden", "SEOUL_NORTHWEST", false, 1, 20.0, 20.0, 80 * 20, 0));
 	}
 
 	private Long driver(String nickname, String regionCode) {

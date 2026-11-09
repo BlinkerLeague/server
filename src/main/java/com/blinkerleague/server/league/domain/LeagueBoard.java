@@ -141,5 +141,13 @@ public final class LeagueBoard {
 	/** 운전자의 시즌 점수와 자격. rank는 순위가 공개되고 자격이 있을 때만 있다. */
 	public record Standing(String leagueCode, Double score, boolean eligible, Integer rank, int trips,
 		double distanceKm) {
+
+		public Double averageScore() {
+			throw new UnsupportedOperationException();
+		}
+
+		public int points() {
+			throw new UnsupportedOperationException();
+		}
 	}
 }

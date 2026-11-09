@@ -44,7 +44,7 @@ public class LeagueRecordsAdapter implements LoadLeagueRecordsPort, LoadLeagueDr
 		return jdbcTemplate.query(RECORDS, (row, n) -> new MemberRecord(row.getLong("driver_id"),
 				row.getString("nickname"), row.getString("league_code"), row.getBoolean("league_visible"),
 				row.getInt("trips"), row.getDouble("distance"), row.getDouble("scored_distance"),
-				row.getDouble("weighted")),
+				row.getDouble("weighted"), 0),
 			Timestamp.from(season.startsAt()), Timestamp.from(season.endsAt()), season.id());
 	}
 

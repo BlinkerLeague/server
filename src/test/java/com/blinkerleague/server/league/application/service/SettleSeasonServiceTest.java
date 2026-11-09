@@ -28,11 +28,11 @@ class SettleSeasonServiceTest {
 		List<String> rewards = new ArrayList<>();
 		List<MemberRecord> members = new ArrayList<>();
 		for (long id = 1; id <= 10; id++) {
-			members.add(new MemberRecord(id, "n" + id, "BUSAN", true, 10, 60, 60, 90 * 60));
-			members.add(new MemberRecord(100 + id, "m" + id, "DAEGU", true, 10, 60, 60, 80 * 60));
+			members.add(new MemberRecord(id, "n" + id, "BUSAN", true, 10, 60, 60, 90 * 60, 0));
+			members.add(new MemberRecord(100 + id, "m" + id, "DAEGU", true, 10, 60, 60, 80 * 60, 0));
 		}
 		// 1위 권역이지만 자격(50km · 10회)이 없는 운전자
-		members.add(new MemberRecord(50L, "short", "BUSAN", true, 1, 5, 5, 90 * 5));
+		members.add(new MemberRecord(50L, "short", "BUSAN", true, 1, 5, 5, 90 * 5, 0));
 		SettleSeasonService service = new SettleSeasonService(
 			(LeagueSeason season) -> {
 				askedSeasons.add(season.id());
