@@ -361,6 +361,17 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 이미_저장된_운행은_7일이_지나_다시_올려도_200과_처음_결과를_돌려준다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
+		clock.setNow("2026-11-20T09:00:00+09:00");
+
+		upload(1L, tripBody(tripId, 12.3))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("SCORED"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
