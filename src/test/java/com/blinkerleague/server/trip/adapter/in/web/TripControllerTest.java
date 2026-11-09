@@ -304,6 +304,22 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 이벤트가_기본_상한_2000개를_넘으면_400_INVALID_INPUT을_반환한다() throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 120.0));
+		ArrayNode events = body.putArray("events");
+		for (int i = 0; i < 2001; i++) {
+			events.addObject()
+				.put("eventId", UUID.randomUUID().toString())
+				.put("type", "HARSH_BRAKE")
+				.put("occurredAt", "2026-11-03T08:%02d:%02d+09:00".formatted(1 + i / 60 % 38, i % 60));
+		}
+
+		upload(1L, body.toString())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
