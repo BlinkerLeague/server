@@ -11,7 +11,8 @@ class LeagueBoardTest {
 
 	private static final LeagueRegion NORTHWEST = new LeagueRegion("SEOUL_NORTHWEST", "서울 서북권");
 	private static final LeagueRegion BUSAN = new LeagueRegion("BUSAN", "부산");
-	private static final List<LeagueRegion> REGIONS = List.of(NORTHWEST, BUSAN);
+	private static final LeagueRegion DAEGU = new LeagueRegion("DAEGU", "대구");
+	private static final List<LeagueRegion> REGIONS = List.of(NORTHWEST, BUSAN, DAEGU);
 	// 테스트마다 한 규칙만 보도록 참여자 · 자격 기준을 낮춘 값
 	private static final LeagueBoard.Rules OPEN = new LeagueBoard.Rules(1, 0, 0);
 
@@ -87,6 +88,23 @@ class LeagueBoardTest {
 		assertThat(board.region("SEOUL_NORTHWEST").participants()).isEqualTo(10);
 		assertThat(board.region("SEOUL_NORTHWEST").rankings()).extracting(Ranked::driverId).doesNotContain(11L);
 		assertThat(board.standingOf(11L)).hasValueSatisfying(standing -> assertThat(standing.rank()).isNull());
+	}
+
+	@Test
+	void 지역_안전지수는_권역_리그_점수의_거리_가중_평균이고_높은_순으로_권역_순위를_매긴다() {
+		List<MemberRecord> members = List.of(
+			// 서북권: (90 × 10 + 60 × 30) ÷ 40 = 67.5. 순위 자격이 없어도 안전지수에는 들어간다.
+			member(1L, NORTHWEST, 1, 10, 10, 90 * 10),
+			member(2L, NORTHWEST, 1, 30, 30, 60 * 30),
+			// 순위 공개를 끈 운전자는 안전지수에서도 빠진다(D8).
+			hidden(member(3L, NORTHWEST, 10, 100, 100, 100 * 100)),
+			member(4L, BUSAN, 1, 20, 20, 80 * 20));
+
+		LeagueBoard board = LeagueBoard.build(members, REGIONS, new LeagueBoard.Rules(1, 50, 10));
+
+		assertThat(board.regions())
+			.extracting(r -> r.region().code(), LeagueBoard.RegionBoard::safetyIndex, LeagueBoard.RegionBoard::rank)
+			.containsExactly(tuple("SEOUL_NORTHWEST", 67.5, 2), tuple("BUSAN", 80.0, 1), tuple("DAEGU", null, null));
 	}
 
 	static MemberRecord hidden(MemberRecord member) {

@@ -39,7 +39,7 @@ public final class LeagueBoard {
 			List<Ranked> rankings = published
 				? rank(competing.stream().filter(rules::eligible).toList())
 				: List.of();
-			boards.put(region.code(), new RegionBoard(region, participants, published, null, rankings));
+			boards.put(region.code(), new RegionBoard(region, participants, published, null, null, rankings));
 			Map<Long, Integer> ranks = new HashMap<>();
 			rankings.forEach(ranked -> ranks.put(ranked.driverId(), ranked.rank()));
 			inRegion.forEach(member -> standings.put(member.driverId(), new Standing(region.code(),
@@ -52,6 +52,11 @@ public final class LeagueBoard {
 
 	public RegionBoard region(String leagueCode) {
 		return regions.get(leagueCode);
+	}
+
+	/** 매핑표 순서대로의 모든 권역(월드맵). */
+	public List<RegionBoard> regions() {
+		throw new UnsupportedOperationException();
 	}
 
 	public Optional<Standing> standingOf(Long driverId) {
@@ -92,7 +97,7 @@ public final class LeagueBoard {
 	}
 
 	public record RegionBoard(LeagueRegion region, int participants, boolean published, Double safetyIndex,
-		List<Ranked> rankings) {
+		Integer rank, List<Ranked> rankings) {
 	}
 
 	/** 운전자의 시즌 점수와 자격. rank는 순위가 공개되고 자격이 있을 때만 있다. */
