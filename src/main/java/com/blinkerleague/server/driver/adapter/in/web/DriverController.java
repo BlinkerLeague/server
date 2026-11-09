@@ -26,7 +26,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "운전자", description = "운전자 등록")
+@Tag(name = "운전자", description = "운전자 등록 · 리그 순위 공개 설정")
 @RestController
 @RequestMapping("/api/drivers")
 @RequiredArgsConstructor

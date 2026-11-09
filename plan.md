@@ -435,7 +435,17 @@ API: `GET /api/streak`
 
 ### 4.4 `feat/region-league` — 지역 리그 (FR-13)
 
-API: `GET /api/leagues/current`
+API: `GET /api/leagues/current`, `PUT /api/drivers/me/league-visibility`
+
+상태: 완료(11.9, `feat/region-league`, D5 · D8 · D11 · D12 · D13 · D19 · D29 ~ D31).
+- 리그 점수(D19): 업로드 때 공통 항목(`league.commonItems`)만으로 재분배한 점수를 `trip.league_score`에 저장(`score.domain.LeagueScore`). 공통 항목을 하나도 측정하지 않으면 `null`이고 리그 집계에서 빠진다
+- 권역(D11 · D31): `leagues/league-regions.json` 매핑표(서울 생활권 5개 + 시 · 도 16개, 옛 · 새 특별자치도 코드). 시군구 목록이 먼저, 없으면 앞 2자리. 매핑표에 없는 코드는 리그 없음
+- 시즌(D29): 한국 시간 달력 월(`LeagueSeason`, id `2026-11`). 소속(D12): 시즌 첫 참여 운행(최소 거리 이상) 업로드 때 그때 등록 지역으로 `league_member`(운전자 · 시즌 유니크)에 고정
+- 순위 · 안전지수(`LeagueBoard`, 순수 계산): 운전자 점수 = 리그 점수 거리 가중 평균(소수 첫째 자리), 같은 점수는 같은 순위(1, 2, 2, 4). 순위 자격 D13, 리그 점수가 있는 참여자 10명 미만이면 비공개(D11), 순위 공개를 끈 운전자는 모두에서 제외(D8). 안전지수(D5) = 권역 리그 점수 거리 가중 평균(순위 자격과 무관)
+- **Redis ZSET 대신 조회 때 RDB 집계(11.9):** 순위 공개 · 자격 · 비공개 제외 규칙을 한 곳(`LeagueBoard`)에서 계산하려고 `GET /api/leagues/current`가 시즌 기록을 JDBC로 한 번에 읽어 계산한다. 사용자가 늘어 느려지면 결과를 Redis에 캐시한다(9.5)
+- 시즌 정산(D30): 매월 1일 00:10(Asia/Seoul) `LeagueSeasonScheduler`가 지난 시즌의 순위 공개 권역 중 안전지수 1위 권역(같으면 모두)의 순위 자격자에게 `SEASON_LEAGUE` `league.seasonRewardPoint`(100P)를 적립(`ref_id = 운전자ID:시즌`, 한 번만, 일일 상한 안). 시즌 결과를 따로 저장하는 테이블은 두지 않았다(지난 시즌 조회 API가 생길 때 추가)
+- 순위 공개 설정(D8): `driver.league_visible`(기본 true), `PUT /api/drivers/me/league-visibility`
+- 기준값 `league`: `commonItems`, `minParticipants` 10, `minSeasonDistanceKm` 50, `minSeasonTrips` 10, `topN` 10, `seasonRewardPoint` 100
 
 - 시즌 4주. `league_season`: `season_id`, `region_code`, `starts_at`, `ends_at`, `safety_index`
 - 운행 점수 확정 시 Redis ZSET `league:{season}:{region}`에 운전자 시즌 점수 반영(`ZINCRBY` 또는 평균 계산용 합계 · 횟수 별도 키)
@@ -636,7 +646,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 ### 9.1 지금 상태
 
 - **P0(1차 제출 11.15)**: 6개 feat 모두 완료(#16 · #20 · #24 · #38 · #33, 공통 기반 #5, 계획에 없던 인증 #14 · Swagger #36). 남은 것은 차량 앱과의 연동 확인뿐이다. 릴리스(`develop` → `main`)는 하지 않는다
-- **P1(2차 PT 12.2)**: 5개 중 4개 완료 — 4.1 점수 항목 확장(#41), 4.2 포인트(#37 · #39), 4.3 연속 기록 · 배지(#40), 4.5 주간 리포트(#42). **4.4 지역 리그만 남음**
+- **P1(2차 PT 12.2)**: 5개 모두 완료 — 4.1 점수 항목 확장(#41), 4.2 포인트(#37 · #39), 4.3 연속 기록 · 배지(#40), 4.5 주간 리포트(#42), 4.4 지역 리그(11.9 `feat/region-league`, develop 머지 전)
 - **차량 앱 요청**(android-app `docs/server-requests.md`): 1 · 7 · 8번 반영(#43), 3 · 6 · 9번 반영, 2번 철회. **10번만 결정 대기**
 - `develop` 테스트 321개 통과, 공개 API 11개(README API 표 · Swagger)
 
@@ -666,7 +676,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
    - 응답 변경: `metrics`의 `status` · `reason` · `detail`, `plays`의 `direction`, `mission`, 기준값의 새 그룹(`signalCancel` · `seatBelt` · `rain` · `minSamples`) · `turn` 핸들 각도 값
    - 새 이벤트 · 항목 이름(`signalTiming`, `SIGNAL_LEFT_ON` · `SEAT_BELT` · `RAIN_SEGMENT`)은 서버 배포 후에만 보낸다(D21 A). 미션 · 배지는 지금도 `signalOn`을 쓰므로 계속 함께 보낸다
    - 새 API: `/api/points` · `/api/streak` · `/api/badges` · `/api/reports/weekly`
-3. **4.4 `feat/region-league`** (9.2의 2 ~ 5 결정 후, 12.2 PT 전): 리그 권역 매핑표, 4주 시즌 · 소속 고정(D12), 리그 점수(D19), 순위 자격(D13) · 10명 미만 미공개, Redis ZSET 순위, 시즌 종료 배치(상위 지역 100P, 원장 사유 `SEASON_LEAGUE`), `GET /api/leagues/current`
+3. ~~**4.4 `feat/region-league`**~~ → 완료(11.9). (9.2의 2 ~ 5 결정 후, 12.2 PT 전): 리그 권역 매핑표, 4주 시즌 · 소속 고정(D12), 리그 점수(D19), 순위 자격(D13) · 10명 미만 미공개, Redis ZSET 순위, 시즌 종료 배치(상위 지역 100P, 원장 사유 `SEASON_LEAGUE`), `GET /api/leagues/current`
 4. **4.6 `feat/score-navi-metrics`** (실차 확인 후): 제한속도 · 단속 구간 · 보호 구간 · 내비 회전 항목. 실차에서 NaviHelper 이벤트가 오는지 확인이 먼저(7장)
 5. ~~**5.1 `feat/reward-exchange`**~~ **보류(D33)**: 제휴처가 없어 개발하지 않음. 포인트 사용처는 미정
 
@@ -684,7 +694,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 | 항목 | 내용 | 시점 |
 | --- | --- | --- |
 | 업로드 비트랜잭션 | 운행 저장 · 적립 · 미션 기록 · 배지가 따로라 중간 실패 시 500, 같은 `tripId` 재전송으로 복구(모두 한 번만 반영) | 필요 시 |
-| 집계 비용 | 연속 기록 · 배지 · 주간 리포트가 조회 · 판정마다 전체 기록을 집계 | 기록이 많아지면 캐시 · 누적 카운터 |
+| 집계 비용 | 연속 기록 · 배지 · 주간 리포트 · 지역 리그가 조회 · 판정마다 전체 기록을 집계(리그는 Redis ZSET 대신 조회 때 RDB 집계, 4.4) | 기록이 많아지면 캐시 · 누적 카운터 |
 | 경고등 종류 | `safetyWarning.telltales`(점수에 셀 경고등) 미정 | 실차 확인 후 |
 | 최소 표본 | `minSamples` 기본 1(D27). 앱이 여러 항목을 보내기 시작하면 3으로 올림 | 2차 앱 배포 시 |
 | 다른 운행과 `event_id` 충돌 | 지금은 500(앱이 UUID를 쓰면 사실상 없음) | 필요 시 |
