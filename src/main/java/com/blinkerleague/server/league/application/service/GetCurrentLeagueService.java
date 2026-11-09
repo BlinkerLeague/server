@@ -44,6 +44,8 @@ public class GetCurrentLeagueService {
 		RegionBoard league = leagueCode.map(board::region).map(b -> top(b, rule.topN())).orElse(null);
 		Me me = new Me(driver.map(LeagueDriver::visible).orElse(true),
 			standing.map(Standing::eligible).orElse(false),
+			standing.map(Standing::averageScore).orElse(null),
+			standing.map(Standing::points).orElse(0),
 			standing.map(Standing::score).orElse(null),
 			standing.map(Standing::rank).orElse(null),
 			standing.map(Standing::trips).orElse(0),
@@ -61,7 +63,8 @@ public class GetCurrentLeagueService {
 	public record CurrentLeague(LeagueSeason season, RegionBoard league, Me me, List<RegionBoard> regions) {
 	}
 
-	/** 내 시즌 기록. rank는 순위가 공개되고 자격이 있고 순위 공개를 켰을 때만 있다. */
-	public record Me(boolean visible, boolean eligible, Double score, Integer rank, int trips, double distanceKm) {
+	/** 내 시즌 기록. score = averageScore + points(D34). rank는 순위가 공개되고 자격이 있고 순위 공개를 켰을 때만 있다. */
+	public record Me(boolean visible, boolean eligible, Double averageScore, int points, Double score, Integer rank,
+		int trips, double distanceKm) {
 	}
 }

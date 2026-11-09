@@ -33,7 +33,8 @@ public class LeagueController {
 
 	@Operation(summary = "이번 시즌 내 리그 조회",
 		description = "이번 시즌(한국 시간 달력 월, D29)의 내 리그 권역 순위, 내 순위, 모든 권역의 지역 안전지수를 돌려준다(SCR-04). "
-			+ "점수는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균이다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), "
+			+ "순위 점수(score)는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균(averageScore)에 시즌 안에 적립한 포인트(points)를 더한 값이다(D34). "
+			+ "지역 안전지수는 포인트 없이 리그 점수만으로 계산한다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), "
 			+ "리그 점수가 있는 참여자가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 리그에서 빠진다(D8). "
 			+ "응답에는 닉네임만 담는다.")
 	@ApiResponse(responseCode = "200", description = "이번 시즌 리그 현황. 등록 지역이 매핑표에 없으면 league는 null")
@@ -50,8 +51,9 @@ public class LeagueController {
 		static CurrentLeagueResponse from(CurrentLeague current) {
 			return new CurrentLeagueResponse(SeasonResponse.from(current.season()),
 				current.league() == null ? null : LeagueResponse.from(current.league()),
-				new MeResponse(current.me().visible(), current.me().eligible(), current.me().score(),
-					current.me().rank(), current.me().trips(), current.me().distanceKm()),
+				new MeResponse(current.me().visible(), current.me().eligible(), current.me().averageScore(),
+					current.me().points(), current.me().score(), current.me().rank(), current.me().trips(),
+					current.me().distanceKm()),
 				current.regions().stream().map(RegionResponse::from).toList());
 		}
 	}
@@ -70,16 +72,20 @@ public class LeagueController {
 		static LeagueResponse from(RegionBoard board) {
 			return new LeagueResponse(board.region().code(), board.region().name(), board.participants(),
 				board.published(), board.safetyIndex(), board.rank(),
-				board.rankings().stream().map(r -> new RankingResponse(r.rank(), r.nickname(), r.score())).toList());
+				board.rankings().stream()
+					.map(r -> new RankingResponse(r.rank(), r.nickname(), r.averageScore(), r.points(), r.score()))
+					.toList());
 		}
 	}
 
-	public record RankingResponse(int rank, String nickname, double score) {
+	@Schema(description = "순위 한 줄. score = averageScore(리그 점수 거리 가중 평균) + points(시즌 포인트)")
+	public record RankingResponse(int rank, String nickname, double averageScore, int points, double score) {
 	}
 
-	@Schema(description = "내 시즌 기록. rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다")
-	public record MeResponse(boolean visible, boolean eligible, Double score, Integer rank, int trips,
-		double distanceKm) {
+	@Schema(description = "내 시즌 기록. score = averageScore + points(D34), 리그 점수가 없으면 averageScore · score는 null. "
+		+ "rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다")
+	public record MeResponse(boolean visible, boolean eligible, Double averageScore, int points, Double score,
+		Integer rank, int trips, double distanceKm) {
 	}
 
 	@Schema(description = "월드맵용 권역별 지역 안전지수(D5)와 권역 순위. 리그 점수가 없는 권역은 null")
