@@ -1,8 +1,8 @@
 package com.blinkerleague.server.driver.domain;
 
-import com.blinkerleague.server.common.jpa.BaseTimeEntity;
-
 import org.hibernate.annotations.ColumnDefault;
+
+import com.blinkerleague.server.common.jpa.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -44,5 +44,9 @@ public class Driver extends BaseTimeEntity {
 
 	public static Driver register(String nickname, String regionCode) {
 		return new Driver(nickname, regionCode);
+	}
+
+	public void changeLeagueVisibility(boolean visible) {
+		this.leagueVisible = visible;
 	}
 }

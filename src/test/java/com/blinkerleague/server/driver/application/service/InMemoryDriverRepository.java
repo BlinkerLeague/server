@@ -2,6 +2,7 @@ package com.blinkerleague.server.driver.application.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.test.util.ReflectionTestUtils;
@@ -26,6 +27,11 @@ class InMemoryDriverRepository implements SaveDriverPort, LoadDriverPort {
 	@Override
 	public boolean existsByNickname(String nickname) {
 		return drivers.stream().anyMatch(driver -> driver.getNickname().equals(nickname));
+	}
+
+	@Override
+	public Optional<Driver> findById(Long driverId) {
+		return drivers.stream().filter(driver -> driver.getId().equals(driverId)).findFirst();
 	}
 
 	List<Driver> findAll() {
