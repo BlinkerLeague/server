@@ -322,6 +322,13 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 기본_기준값에서_1km_이상_3km_미만_운행도_경기에_참여한다() throws Exception {
+		upload(1L, tripBody(UUID.randomUUID().toString(), 2.0))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.status").value("SCORED"));
+	}
+
+	@Test
 	void 차선_변경_이벤트도_받아서_저장한다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(tripId, 12.3));
