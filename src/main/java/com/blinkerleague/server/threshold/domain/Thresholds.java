@@ -32,7 +32,8 @@ public record Thresholds(
 			.findFirst();
 	}
 
-	public record Trip(double minDistanceKm, int parkEndMinutes) {
+	/** 운행 참여 최소 거리(D10), 앱의 주차 판정 시간, 한 운행의 이벤트 상한(D16). */
+	public record Trip(double minDistanceKm, int parkEndMinutes, int maxEvents) {
 	}
 
 	/**

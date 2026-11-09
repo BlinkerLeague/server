@@ -26,6 +26,7 @@ class ThresholdControllerTest {
 			.andExpect(jsonPath("$.version").value(1))
 			.andExpect(jsonPath("$.trip.minDistanceKm").value(1.0))
 			.andExpect(jsonPath("$.trip.parkEndMinutes").value(3))
+			.andExpect(jsonPath("$.trip.maxEvents").value(2000))
 			.andExpect(jsonPath("$.turn.signalLeadSec").value(5))
 			.andExpect(jsonPath("$.turn.uTurnAngleDeg").value(150))
 			.andExpect(jsonPath("$.harsh.deltaKmhPerSec").value(10))

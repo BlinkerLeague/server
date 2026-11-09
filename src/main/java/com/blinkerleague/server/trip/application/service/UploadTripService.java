@@ -44,6 +44,11 @@ public class UploadTripService {
 		if (existing.isPresent()) {
 			return alreadyUploaded(existing.get(), driverId, thresholds);
 		}
+		// 상한은 새 운행에만 적용한다. 이미 저장된 운행의 재전송은 위에서 처음 결과를 돌려준다.
+		if (command.events().size() > thresholds.trip().maxEvents()) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT,
+				"한 운행의 이벤트는 %d개까지 올릴 수 있습니다.".formatted(thresholds.trip().maxEvents()));
+		}
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), thresholds.trip().minDistanceKm());
 		if (trip.getStatus() == TripStatus.UPLOADED) {
