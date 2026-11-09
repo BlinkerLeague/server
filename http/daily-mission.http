@@ -11,6 +11,7 @@
 #   - progress · conditions는 달성했으면 달성한 라운드, 아니면 가장 최근 라운드다.
 #
 # 미션은 서버의 실제 오늘 날짜로 판정하므로, 운행 시각은 0-A 응답 스크립트가 계산한 오늘(today) 날짜를 쓴다.
+# 오늘 운행은 07:00 ~ 10:40에 끝나므로 한국 시간 10:45 이후에 실행한다(D17: 종료 시각이 지금보다 5분 넘게 미래인 운행은 400).
 # 운전자 A는 매번 새로 등록하므로 몇 번을 다시 실행해도 처음 상태(라운드 없음)에서 시작한다.
 # 저장 결과 확인: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa)
 #   select * from mission;  select * from trip;  select * from trip_event;
@@ -292,15 +293,15 @@ Content-Type: application/json
     });
 %}
 
-### 10-D. B의 오늘 미션 → IN_PROGRESS, 진행도 0 (1km 미만 · 어제 운행은 세지 않음. A의 달성도 섞이지 않음)
+### 10-D. B의 오늘 미션 → 어제(마지막 미션 날)의 ACHIEVED (D25: 오늘 첫 라운드 전에는 마지막 미션 날의 결과를 보여 준다. 1km 미만 운행은 라운드가 아니다. A의 달성도 섞이지 않음)
 GET {{host}}/api/missions/today
 Authorization: Bearer {{missionBToken}}
 
 > {%
-    client.test("200 IN_PROGRESS · 진행도 0", function () {
+    client.test("200 어제의 ACHIEVED", function () {
         client.assert(response.status === 200, "status: " + response.status);
-        client.assert(response.body.status === "IN_PROGRESS", "status: " + response.body.status);
-        client.assert(response.body.progress.turns === 0, "turns: " + response.body.progress.turns);
+        client.assert(response.body.periodKey === client.global.get("yesterday"), "periodKey: " + response.body.periodKey);
+        client.assert(response.body.status === "ACHIEVED", "status: " + response.body.status);
     });
 %}
 

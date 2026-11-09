@@ -1,7 +1,8 @@
 ### 운행 업로드 API 로컬 수동 테스트 (IntelliJ HTTP Client)
 # 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
 # 환경: 실행 시 http-client.env.json의 "local"을 고른다.
-# 위에서부터 순서대로 실행한다. 0-A, 0-B에서 받은 토큰과 1번의 tripId를 다음 요청이 이어받는다.
+# 위에서부터 순서대로 실행한다. 0-A, 0-B에서 받은 토큰 · 날짜와 1번의 tripId를 다음 요청이 이어받는다.
+# 운행 날짜는 0-A가 계산한 어제 날짜다(D17: 7일보다 오래되거나 5분 넘게 미래인 운행은 400).
 # 저장 결과는 http://localhost:8080/h2-console 에서 확인한다.
 #   JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa, 비밀번호 없음
 #   select * from trip;  select * from trip_event;
@@ -22,6 +23,16 @@ Content-Type: application/json
         client.assert(response.status === 201, "status: " + response.status);
     });
     client.global.set("driverAToken", response.body.accessToken);
+    // 운행 시각 허용 범위(D17: 미래 5분 · 과거 7일) 때문에 날짜를 고정하지 않는다. 한국 시간(UTC+9) 기준 어제 날짜를 쓴다.
+    var kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    var kstYesterday = new Date(kstNow.getTime() - 24 * 60 * 60 * 1000);
+    client.global.set("yesterday", kstYesterday.toISOString().substring(0, 10));
+    // 16 · 17번용: 지금 + 10분(미래), 지금 − 8일(7일 초과)을 +09:00 형식으로
+    function kst(ms) { return new Date(ms + 9 * 60 * 60 * 1000).toISOString().substring(0, 19) + "+09:00"; }
+    client.global.set("futureStart", kst(Date.now() - 20 * 60 * 1000));
+    client.global.set("futureEnd", kst(Date.now() + 10 * 60 * 1000));
+    client.global.set("oldStart", kst(Date.now() - 8 * 24 * 60 * 60 * 1000));
+    client.global.set("oldEnd", kst(Date.now() - 8 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000));
 %}
 
 ### 0-B. 운전자 B 등록 → 201 (B의 accessToken 저장, 3번 409 확인용)
@@ -47,14 +58,14 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": [
-    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "2026-11-03T08:12:30+09:00",
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T08:12:30+09:00",
       "payload": { "direction": "LEFT", "signalOn": true } },
-    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "2026-11-03T08:20:00+09:00",
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T08:20:00+09:00",
       "payload": { "direction": "RIGHT", "signalOn": false } }
   ]
 }
@@ -74,8 +85,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{tripId}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 1.0,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -96,8 +107,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{tripId}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -117,12 +128,12 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T09:00:00+09:00",
-  "endedAt": "2026-11-03T09:10:00+09:00",
+  "startedAt": "{{yesterday}}T09:00:00+09:00",
+  "endedAt": "{{yesterday}}T09:10:00+09:00",
   "distanceKm": 0.9,
   "supported": ["TURN_SIGNAL"],
   "events": [
-    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "2026-11-03T09:05:00+09:00",
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T09:05:00+09:00",
       "payload": { "direction": "LEFT", "signalOn": true } }
   ]
 }
@@ -141,8 +152,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T09:00:00+09:00",
-  "endedAt": "2026-11-03T09:10:00+09:00",
+  "startedAt": "{{yesterday}}T09:00:00+09:00",
+  "endedAt": "{{yesterday}}T09:10:00+09:00",
   "distanceKm": 1.0,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -162,8 +173,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T10:00:00+09:00",
-  "endedAt": "2026-11-03T10:30:00+09:00",
+  "startedAt": "{{yesterday}}T10:00:00+09:00",
+  "endedAt": "{{yesterday}}T10:30:00+09:00",
   "distanceKm": 15.0,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -183,15 +194,15 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T11:00:00+09:00",
-  "endedAt": "2026-11-03T11:30:00+09:00",
+  "startedAt": "{{yesterday}}T11:00:00+09:00",
+  "endedAt": "{{yesterday}}T11:30:00+09:00",
   "distanceKm": 8.0,
   "supported": ["TURN_SIGNAL", "SMOOTH_DRIVING"],
   "events": [
-    { "eventId": "{{$uuid}}", "type": "LANE_CHANGE", "occurredAt": "2026-11-03T11:00:00+09:00",
+    { "eventId": "{{$uuid}}", "type": "LANE_CHANGE", "occurredAt": "{{yesterday}}T11:00:00+09:00",
       "payload": { "direction": "LEFT", "signalOn": true } },
-    { "eventId": "{{$uuid}}", "type": "HARSH_BRAKE", "occurredAt": "2026-11-03T11:15:00+09:00" },
-    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "2026-11-03T11:30:00+09:00",
+    { "eventId": "{{$uuid}}", "type": "HARSH_BRAKE", "occurredAt": "{{yesterday}}T11:15:00+09:00" },
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T11:30:00+09:00",
       "payload": { "direction": "RIGHT", "signalOn": true } }
   ]
 }
@@ -209,8 +220,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -230,8 +241,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:00:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:00:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -251,12 +262,12 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": [
-    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "2026-11-03T08:40:01+09:00",
+    { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{yesterday}}T08:40:01+09:00",
       "payload": { "direction": "LEFT", "signalOn": true } }
   ]
 }
@@ -275,14 +286,14 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": [
-    { "eventId": "duplicate-event", "type": "TURN", "occurredAt": "2026-11-03T08:10:00+09:00",
+    { "eventId": "duplicate-event", "type": "TURN", "occurredAt": "{{yesterday}}T08:10:00+09:00",
       "payload": { "direction": "LEFT", "signalOn": true } },
-    { "eventId": "duplicate-event", "type": "TURN", "occurredAt": "2026-11-03T08:20:00+09:00",
+    { "eventId": "duplicate-event", "type": "TURN", "occurredAt": "{{yesterday}}T08:20:00+09:00",
       "payload": { "direction": "RIGHT", "signalOn": true } }
   ]
 }
@@ -301,8 +312,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL", null],
   "events": []
@@ -322,8 +333,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": -0.1,
   "supported": ["TURN_SIGNAL"],
   "events": []
@@ -343,12 +354,12 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"],
   "events": [
-    { "eventId": "{{$uuid}}", "type": "UNKNOWN", "occurredAt": "2026-11-03T08:10:00+09:00" }
+    { "eventId": "{{$uuid}}", "type": "UNKNOWN", "occurredAt": "{{yesterday}}T08:10:00+09:00" }
   ]
 }
 
@@ -366,8 +377,8 @@ Content-Type: application/json
 
 {
   "tripId": "{{$uuid}}",
-  "startedAt": "2026-11-03T08:00:00+09:00",
-  "endedAt": "2026-11-03T08:40:00+09:00",
+  "startedAt": "{{yesterday}}T08:00:00+09:00",
+  "endedAt": "{{yesterday}}T08:40:00+09:00",
   "distanceKm": 12.3,
   "supported": ["TURN_SIGNAL"]
 }
@@ -378,3 +389,55 @@ Content-Type: application/json
         client.assert(response.body.code === "INVALID_INPUT", "code: " + response.body.code);
     });
 %}
+
+### 16. 종료 시각이 지금보다 10분 미래 → 400 INVALID_INPUT (D17: 미래는 5분까지)
+POST {{host}}/api/trips
+Authorization: Bearer {{driverAToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{futureStart}}",
+  "endedAt": "{{futureEnd}}",
+  "distanceKm": 5.0,
+  "supported": ["TURN_SIGNAL"],
+  "events": []
+}
+
+> {%
+    client.test("400 INVALID_INPUT", function () {
+        client.assert(response.status === 400, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_INPUT", "code: " + response.body.code);
+    });
+%}
+
+### 17. 시작 시각이 8일 전 → 400 INVALID_INPUT (D17: 과거는 7일까지)
+POST {{host}}/api/trips
+Authorization: Bearer {{driverAToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{$uuid}}",
+  "startedAt": "{{oldStart}}",
+  "endedAt": "{{oldEnd}}",
+  "distanceKm": 5.0,
+  "supported": ["TURN_SIGNAL"],
+  "events": []
+}
+
+> {%
+    client.test("400 INVALID_INPUT", function () {
+        client.assert(response.status === 400, "status: " + response.status);
+        client.assert(response.body.code === "INVALID_INPUT", "code: " + response.body.code);
+    });
+%}
+
+### 18 · 19. 이벤트 2,001개 → 400 INVALID_INPUT, 본문 1MB 초과 → 413 PAYLOAD_TOO_LARGE (D16)
+# 요청이 너무 커서 이 파일에 적지 않는다. 아래 스크립트로 확인한다(서버 실행 중, Git Bash).
+#   TOKEN=<0-A의 accessToken>
+#   python -c "import json,uuid,datetime as d;k=d.timezone(d.timedelta(hours=9));n=d.datetime.now(k);s=n-d.timedelta(hours=1);e=n-d.timedelta(minutes=1);print(json.dumps({'tripId':str(uuid.uuid4()),'startedAt':s.isoformat(timespec='seconds'),'endedAt':e.isoformat(timespec='seconds'),'distanceKm':30,'supported':['SMOOTH_DRIVING'],'events':[{'eventId':str(uuid.uuid4()),'type':'HARSH_BRAKE','occurredAt':(s+d.timedelta(seconds=1+i)).isoformat(timespec='seconds')} for i in range(2001)]}))" > e2001.json
+#   curl -s -X POST http://localhost:8080/api/trips -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary @e2001.json
+#     → 400 {"code":"INVALID_INPUT", ...} (range(2000)이면 201)
+#   python -c "print('{\"memo\":\"' + 'x' * 1100000 + '\"}')" > big.json
+#   curl -s -X POST http://localhost:8080/api/trips -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary @big.json
+#     → 413 {"code":"PAYLOAD_TOO_LARGE", ...} (-H "Transfer-Encoding: chunked"를 붙여도 413)
