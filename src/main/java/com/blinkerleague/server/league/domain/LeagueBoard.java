@@ -85,7 +85,16 @@ public final class LeagueBoard {
 
 	/** 시즌 보상(D30) 대상 운전자. */
 	public List<Long> seasonRewardees() {
-		throw new UnsupportedOperationException();
+		// 순위가 공개된 권역 중 안전지수가 가장 높은 권역(같으면 모두)의 순위 자격자다.
+		List<RegionBoard> candidates = regions.values().stream()
+			.filter(board -> board.published() && board.safetyIndex() != null)
+			.toList();
+		double best = candidates.stream().mapToDouble(RegionBoard::safetyIndex).max().orElse(Double.NaN);
+		return candidates.stream()
+			.filter(board -> board.safetyIndex() == best)
+			.flatMap(board -> board.rankings().stream())
+			.map(Ranked::driverId)
+			.toList();
 	}
 
 	public Optional<Standing> standingOf(Long driverId) {
