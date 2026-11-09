@@ -29,7 +29,7 @@ class AwardBadgesServiceTest {
 	void 기록이_조건에_닿았고_아직_받지_않은_배지만_새로_준다() {
 		store.saveIfAbsent(new BadgeAward(1L, "FIRST_TRIP", NOW.minusSeconds(86_400)));
 		AwardBadgesService service = new AwardBadgesService(() -> CATALOG,
-			driverId -> new BadgeProgress(5, 7, 40), store, Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+			driverId -> new BadgeProgress(5, 7, 40, 0), store, Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
 
 		List<String> awarded = service.awardEarned(1L);
 

@@ -48,7 +48,7 @@ public class BadgeProgressAdapter implements BadgeProgressPort {
 		Set<LocalDate> achieved = jdbcTemplate.queryForList(ACHIEVED_DAYS, String.class, driverId).stream()
 			.map(LocalDate::parse)
 			.collect(Collectors.toSet());
-		return new BadgeProgress(scoredTrips == null ? 0 : scoredTrips, LongestStreak.of(achieved), signalOnTurns);
+		return new BadgeProgress(scoredTrips == null ? 0 : scoredTrips, LongestStreak.of(achieved), signalOnTurns, 0);
 	}
 
 	// 점수 엔진과 같은 기준(D23): signalOn이 boolean true일 때만 켠 회전이다.

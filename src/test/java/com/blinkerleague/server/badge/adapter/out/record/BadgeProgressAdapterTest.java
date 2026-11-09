@@ -50,7 +50,7 @@ class BadgeProgressAdapterTest {
 		achieved(2L, "2026-11-01", "2026-11-02", "2026-11-03");
 		entityManager.flush();
 
-		assertThat(adapter.progress(1L)).isEqualTo(new BadgeProgress(1, 2, 2));
+		assertThat(adapter.progress(1L)).isEqualTo(new BadgeProgress(1, 2, 2, 0));
 	}
 
 	private void saveTrip(String tripId, Long driverId, double distanceKm, Integer score, RecordedEvent... events) {
