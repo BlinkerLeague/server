@@ -88,11 +88,15 @@ public class UploadTripService {
 		}
 	}
 
-	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 순서다(배지는 연속 달성 · 누적 기록을 본다).
+	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 → 리그 소속 순서다(배지는 연속 달성 · 누적 기록을 본다).
 	private TripScoreView afterUpload(Trip trip, Thresholds thresholds) {
 		earnPoints(trip);
 		TripScoreView view = withMission(TripScoreView.of(trip, thresholds), trip);
 		tripBadgePort.awardEarned(trip.getDriverId());
+		// 참여 운행(최소 거리 이상)이면 그 시즌 리그에 소속시킨다(D12). 소속은 처음 한 번만 정해진다.
+		if (trip.getStatus() != TripStatus.EXCLUDED_SHORT) {
+			tripLeaguePort.joinSeasonOf(trip.getDriverId(), trip.getEndedAt());
+		}
 		return view;
 	}
 
