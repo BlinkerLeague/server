@@ -11,7 +11,7 @@ import com.blinkerleague.server.threshold.domain.Thresholds.GradeRule;
 public final class ThresholdsFixture {
 
 	public static final Thresholds.League LEAGUE = new Thresholds.League(
-		List.of(ScoreItem.TURN_SIGNAL, ScoreItem.SMOOTH_DRIVING, ScoreItem.TURN_SPEED), 10, 50, 10, 10, 100);
+		List.of(ScoreItem.TURN_SIGNAL, ScoreItem.SMOOTH_DRIVING, ScoreItem.TURN_SPEED), 10, 50, 10, 10);
 
 	private ThresholdsFixture() {
 	}

@@ -13,6 +13,4 @@ public interface EarnPointUseCase {
 	/** 연속 달성 보상(기준값 point.streakRewardPoint). refId는 운전자 · 보상받는 날마다 하나다. */
 	int earnForStreak(Long driverId, String refId);
 
-	/** 시즌 리그 보상(기준값 league.seasonRewardPoint, D30). refId는 운전자 · 시즌마다 하나다. */
-	int earnForSeasonLeague(Long driverId, String refId);
 }
