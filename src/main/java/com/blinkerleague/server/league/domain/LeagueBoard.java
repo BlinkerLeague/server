@@ -29,12 +29,15 @@ public final class LeagueBoard {
 			List<MemberRecord> inRegion = members.stream()
 				.filter(member -> member.leagueCode().equals(region.code()))
 				.toList();
-			List<Ranked> rankings = rank(inRegion.stream().filter(MemberRecord::hasScore).toList());
+			List<Ranked> rankings = rank(inRegion.stream()
+				.filter(member -> member.hasScore() && rules.eligible(member))
+				.toList());
 			boards.put(region.code(), new RegionBoard(region, inRegion.size(), true, null, rankings));
 			Map<Long, Integer> ranks = new HashMap<>();
 			rankings.forEach(ranked -> ranks.put(ranked.driverId(), ranked.rank()));
 			inRegion.forEach(member -> standings.put(member.driverId(), new Standing(region.code(),
-				member.hasScore() ? scoreOf(member) : null, true, ranks.get(member.driverId()), member.trips(),
+				member.hasScore() ? scoreOf(member) : null, rules.eligible(member), ranks.get(member.driverId()),
+				member.trips(),
 				member.distanceKm())));
 		}
 		return new LeagueBoard(boards, standings);
@@ -75,6 +78,10 @@ public final class LeagueBoard {
 
 	/** 순위 공개 최소 참여자(D11), 순위 자격: 시즌 누적 거리 또는 운행 수(D13). */
 	public record Rules(int minParticipants, double minSeasonDistanceKm, int minSeasonTrips) {
+
+		boolean eligible(MemberRecord member) {
+			return member.distanceKm() >= minSeasonDistanceKm || member.trips() >= minSeasonTrips;
+		}
 	}
 
 	public record RegionBoard(LeagueRegion region, int participants, boolean published, Double safetyIndex,
