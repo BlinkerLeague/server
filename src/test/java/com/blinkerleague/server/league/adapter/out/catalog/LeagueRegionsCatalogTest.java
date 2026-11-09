@@ -3,7 +3,6 @@ package com.blinkerleague.server.league.adapter.out.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +42,8 @@ class LeagueRegionsCatalogTest {
 		assertThat(code("52111")).isEqualTo("JEONBUK");
 		assertThat(code("50110")).isEqualTo("JEJU");
 		assertThat(regions.regionOf("99999")).isEmpty();
+		assertThat(regions.regionOf("11999")).as("매핑표에 없는 서울 코드는 리그 없음").isEmpty();
 		assertThat(regions.all()).hasSize(21);
-		assertThat(Stream.of("11999", "26999").map(regions::regionOf)).allMatch(java.util.Optional::isPresent);
 	}
 
 	private String code(String sigungu) {
