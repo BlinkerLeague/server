@@ -62,7 +62,7 @@ Authorization: Bearer {{missionAToken}}
     });
 %}
 
-### 2. 1라운드(07시): 회전 1회, 깜빡이 안 켬 → 201 UPLOADED
+### 2. 1라운드(07시): 회전 1회, 깜빡이 안 켬 → 201 SCORED
 POST {{host}}/api/trips
 Authorization: Bearer {{missionAToken}}
 Content-Type: application/json
@@ -80,9 +80,9 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("201 UPLOADED", function () {
+    client.test("201 SCORED", function () {
         client.assert(response.status === 201, "status: " + response.status);
-        client.assert(response.body.status === "UPLOADED", "status: " + response.body.status);
+        client.assert(response.body.status === "SCORED", "status: " + response.body.status);
     });
 %}
 
@@ -101,7 +101,7 @@ Authorization: Bearer {{missionAToken}}
     });
 %}
 
-### 4. 2라운드(08시): 회전 2회, 모두 깜빡이 켬 → 201 UPLOADED
+### 4. 2라운드(08시): 회전 2회, 모두 깜빡이 켬 → 201 SCORED
 POST {{host}}/api/trips
 Authorization: Bearer {{missionAToken}}
 Content-Type: application/json
@@ -121,7 +121,7 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("201 UPLOADED", function () {
+    client.test("201 SCORED", function () {
         client.assert(response.status === 201, "status: " + response.status);
     });
 %}
@@ -143,7 +143,7 @@ Authorization: Bearer {{missionAToken}}
     });
 %}
 
-### 6. 3라운드(09시): 회전 3회, 모두 깜빡이 켬 → 201 UPLOADED
+### 6. 3라운드(09시): 회전 3회, 모두 깜빡이 켬 → 201 SCORED
 POST {{host}}/api/trips
 Authorization: Bearer {{missionAToken}}
 Content-Type: application/json
@@ -165,7 +165,7 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("201 UPLOADED", function () {
+    client.test("201 SCORED", function () {
         client.assert(response.status === 201, "status: " + response.status);
     });
 %}
@@ -184,7 +184,7 @@ Authorization: Bearer {{missionAToken}}
     });
 %}
 
-### 8. 4라운드(10시): 회전 1회, 깜빡이 안 켬 → 201 UPLOADED
+### 8. 4라운드(10시): 회전 1회, 깜빡이 안 켬 → 201 SCORED
 POST {{host}}/api/trips
 Authorization: Bearer {{missionAToken}}
 Content-Type: application/json
@@ -202,7 +202,7 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("201 UPLOADED", function () {
+    client.test("201 SCORED", function () {
         client.assert(response.status === 201, "status: " + response.status);
     });
 %}
@@ -236,7 +236,7 @@ Content-Type: application/json
     client.global.set("missionBToken", response.body.accessToken);
 %}
 
-### 10-B. B: 오늘 2.9km 운행에서 회전 3회 성공 → 201 EXCLUDED_SHORT (3km 미만은 미션 집계 제외)
+### 10-B. B: 오늘 0.9km 운행에서 회전 3회 성공 → 201 EXCLUDED_SHORT (1km 미만은 미션 집계 제외)
 POST {{host}}/api/trips
 Authorization: Bearer {{missionBToken}}
 Content-Type: application/json
@@ -245,7 +245,7 @@ Content-Type: application/json
   "tripId": "{{$uuid}}",
   "startedAt": "{{today}}T07:00:00+09:00",
   "endedAt": "{{today}}T07:10:00+09:00",
-  "distanceKm": 2.9,
+  "distanceKm": 0.9,
   "supported": ["TURN_SIGNAL"],
   "events": [
     { "eventId": "{{$uuid}}", "type": "TURN", "occurredAt": "{{today}}T07:02:00+09:00",
@@ -264,7 +264,7 @@ Content-Type: application/json
     });
 %}
 
-### 10-C. B: 어제 운행에서 회전 3회 성공 → 201 UPLOADED (어제 날짜라 오늘 미션에 안 들어감)
+### 10-C. B: 어제 운행에서 회전 3회 성공 → 201 SCORED (어제 날짜라 오늘 미션에 안 들어감)
 POST {{host}}/api/trips
 Authorization: Bearer {{missionBToken}}
 Content-Type: application/json
@@ -286,13 +286,13 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("201 UPLOADED", function () {
+    client.test("201 SCORED", function () {
         client.assert(response.status === 201, "status: " + response.status);
-        client.assert(response.body.status === "UPLOADED", "status: " + response.body.status);
+        client.assert(response.body.status === "SCORED", "status: " + response.body.status);
     });
 %}
 
-### 10-D. B의 오늘 미션 → IN_PROGRESS, 진행도 0 (3km 미만 · 어제 운행은 세지 않음. A의 달성도 섞이지 않음)
+### 10-D. B의 오늘 미션 → IN_PROGRESS, 진행도 0 (1km 미만 · 어제 운행은 세지 않음. A의 달성도 섞이지 않음)
 GET {{host}}/api/missions/today
 Authorization: Bearer {{missionBToken}}
 

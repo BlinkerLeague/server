@@ -49,7 +49,7 @@ These are product rules the code must follow. Do not change them without the use
 - **Ranking visibility toggle (D8, decided 2026-11-09):** option A, public by default. A driver can turn it off; a hidden driver is left out of the league entirely (ranking list, safety index, the 10-participant count, and season rewards).
 - **Upload limits (D16, D17, decided 2026-11-09):** at most 2,000 `events` per trip (400 `INVALID_INPUT`) and a 1MB request body; `endedAt` later than now + 5 minutes or `startedAt` earlier than now − 7 days is 400 `INVALID_INPUT`. Keep the numbers in the threshold config (the body size in server config) and judge time with the injected `Clock`.
 - **Production DB (D3, decided 2026-11-09):** PostgreSQL in docker-compose, schema managed by Flyway.
-- **Reward exchange on hold (D33, decided 2026-11-09):** there are no partners yet, so `feat/reward-exchange` (`plan.md` 5.1) is not built. Points only accumulate (no exchange, no negative entries); the game's goal is climbing the league ranking. Do not add exchange or coupon code until the user reopens it.
+- **Reward exchange on hold (D33, decided 2026-11-09):** there are no partners yet, so `feat/reward-exchange` (`plan.md` 5.1) is not built. Points are only earned for now; where they will be spent is undecided (D9 and retroactive P0 mission points are also deferred). The game's goal is climbing the league ranking. Do not add exchange or coupon code until the user reopens it.
 - All decided policies are summarized in `docs/policies.md`; update it together with `plan.md` §0 and this section.
 
 ## Architecture: hexagonal (ports and adapters) first
