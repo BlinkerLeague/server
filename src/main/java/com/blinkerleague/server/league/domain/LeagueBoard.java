@@ -39,7 +39,8 @@ public final class LeagueBoard {
 			List<Ranked> rankings = published
 				? rank(competing.stream().filter(rules::eligible).toList())
 				: List.of();
-			boards.put(region.code(), new RegionBoard(region, participants, published, null, null, rankings));
+			boards.put(region.code(), new RegionBoard(region, participants, published, safetyIndex(competing), null,
+				rankings));
 			Map<Long, Integer> ranks = new HashMap<>();
 			rankings.forEach(ranked -> ranks.put(ranked.driverId(), ranked.rank()));
 			inRegion.forEach(member -> standings.put(member.driverId(), new Standing(region.code(),
@@ -47,7 +48,7 @@ public final class LeagueBoard {
 				member.trips(),
 				member.distanceKm())));
 		}
-		return new LeagueBoard(boards, standings);
+		return new LeagueBoard(withRegionRanks(boards), standings);
 	}
 
 	public RegionBoard region(String leagueCode) {
@@ -56,7 +57,30 @@ public final class LeagueBoard {
 
 	/** 매핑표 순서대로의 모든 권역(월드맵). */
 	public List<RegionBoard> regions() {
-		throw new UnsupportedOperationException();
+		return List.copyOf(regions.values());
+	}
+
+	// 지역 안전지수(D5): 겨루는 운전자들의 리그 점수 거리 가중 평균. 리그 점수가 없으면 null이다.
+	private static Double safetyIndex(List<MemberRecord> competing) {
+		double distance = competing.stream().mapToDouble(MemberRecord::scoredDistanceKm).sum();
+		if (distance <= 0) {
+			return null;
+		}
+		return round1(competing.stream().mapToDouble(MemberRecord::weightedScoreSum).sum() / distance);
+	}
+
+	// 안전지수가 있는 권역끼리 높은 순으로 순위를 매긴다. 같은 지수는 같은 순위다.
+	private static Map<String, RegionBoard> withRegionRanks(Map<String, RegionBoard> boards) {
+		List<Double> indexes = boards.values().stream()
+			.map(RegionBoard::safetyIndex)
+			.filter(java.util.Objects::nonNull)
+			.sorted(Comparator.reverseOrder())
+			.toList();
+		Map<String, RegionBoard> ranked = new LinkedHashMap<>();
+		boards.forEach((code, board) -> ranked.put(code, board.safetyIndex() == null ? board
+			: new RegionBoard(board.region(), board.participants(), board.published(), board.safetyIndex(),
+				indexes.indexOf(board.safetyIndex()) + 1, board.rankings())));
+		return ranked;
 	}
 
 	public Optional<Standing> standingOf(Long driverId) {
