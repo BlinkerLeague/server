@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -26,6 +27,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.blinkerleague.server.support.MutableClock;
 import com.blinkerleague.server.support.MutableClockConfig;
 import com.blinkerleague.server.support.TestTokens;
 import com.fasterxml.jackson.core.JsonPointer;
@@ -38,6 +40,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @ActiveProfiles("test")
 @Import(MutableClockConfig.class)
 class TripControllerTest {
+
+	@Autowired
+	MutableClock clock;
+
+	@AfterEach
+	void resetClock() {
+		clock.reset();
+	}
 
 	@Autowired
 	MockMvc mockMvc;
@@ -330,6 +340,15 @@ class TripControllerTest {
 		upload(1L, body.toString())
 			.andExpect(status().isPayloadTooLarge())
 			.andExpect(jsonPath("$.code").value("PAYLOAD_TOO_LARGE"));
+	}
+
+	@Test
+	void 종료_시각이_서버_시각보다_5분_넘게_미래인_운행은_400_INVALID_INPUT을_반환한다() throws Exception {
+		clock.setNow("2026-11-03T08:34:59+09:00");
+
+		upload(1L, tripBody(UUID.randomUUID().toString(), 12.3))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
 	}
 
 	@Test
