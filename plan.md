@@ -221,7 +221,7 @@ API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
 
 ### 3.4 `feat/trip-upload` — 운행 · 이벤트 업로드 (FR-01, FR-04)
 
-상태: 완료. 응답은 지금 `{ tripId, status }`만 채운다(점수 · 미션 필드는 3.5 · 3.6에서 추가). 새로 저장하면 201, 재전송은 200. 동시 업로드는 `Trip`이 `Persistable`로 INSERT를 강제해 PK 충돌로 감지하고 다시 조회한다(merge로 덮어쓰지 않음). 이벤트 시각은 시작 · 종료 시각을 포함한 구간 안이어야 한다. 한 요청 안에서 `eventId`가 중복되거나 `supported`에 `null`이 있으면 400. 남은 항목: 점수 계산 · 미션 판정 확장 지점은 연결할 대상이 생기는 3.5에서 만든다. 다른 운행의 `event_id`와 충돌하면 지금은 저장 실패(500)로 끝난다(앱이 UUID를 쓰면 사실상 발생하지 않음). 이벤트 개수 · 요청 크기 상한(D16)과 운행 시각 허용 범위(D17)는 미정이라 지금은 제한하지 않는다.
+상태: 완료. 응답은 지금 `{ tripId, status }`만 채운다(점수 · 미션 필드는 3.5 · 3.6에서 추가). 새로 저장하면 201, 재전송은 200. 동시 업로드는 `Trip`이 `Persistable`로 INSERT를 강제해 PK 충돌로 감지하고 다시 조회한다(merge로 덮어쓰지 않음). 이벤트 시각은 시작 · 종료 시각을 포함한 구간 안이어야 한다. 한 요청 안에서 `eventId`가 중복되거나 `supported`에 `null`이 있으면 400. 남은 항목: 점수 계산 · 미션 판정 확장 지점은 연결할 대상이 생기는 3.5에서 만든다. 다른 운행의 `event_id`와 충돌하면 지금은 저장 실패(500)로 끝난다(앱이 UUID를 쓰면 사실상 발생하지 않음). **업로드 제한(11.9, `feat/upload-limits`)**: 새 운행만 대상으로 이벤트 `trip.maxEvents`(2,000)개 초과, 종료가 서버 시각 + `trip.maxFutureMinutes`(5분)보다 뒤, 시작이 서버 시각 − `trip.maxPastDays`(7일)보다 앞이면 400 `INVALID_INPUT`(D16 · D17). 이미 저장된 `tripId`의 재전송은 기간이 지나도 200으로 처음 결과를 돌려준다. 요청 본문은 `app.request.max-body-size`(1MB)를 넘으면 413 `PAYLOAD_TOO_LARGE`(`common.web.RequestBodyLimitFilter`, 인증보다 먼저, `Content-Length`가 없는 chunked 본문은 읽으면서 센다).
 
 API: `POST /api/trips` (인증 필요. 요청 형식은 아래 제안 형식, D15)
 
@@ -677,7 +677,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 - **secret**: 환경변수 → Vault(Spring Cloud Vault)
 - **기준값 갱신 경로**: 저장된 기준값은 시드가 덮어쓰지 않으므로 `ThresholdService.update`를 부를 관리자 API 또는 운영 절차가 필요
 - **배치 다중 서버**: 월요일 04:00 주간 리포트 배치(4.5)는 서버 1대 전제. 여러 대면 ShedLock 등 분산 잠금
-- **업로드 제한**(D16 · D17) 적용
+- ~~**업로드 제한**(D16 · D17) 적용~~ → 완료(11.9, `feat/upload-limits`)
 
 ### 9.5 알려진 제약 · 정리할 것
 

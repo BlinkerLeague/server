@@ -653,6 +653,18 @@
       },
       "Trip": {
         "properties": {
+          "maxEvents": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "maxFutureMinutes": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "maxPastDays": {
+            "format": "int32",
+            "type": "integer"
+          },
           "minDistanceKm": {
             "format": "double",
             "type": "number"
@@ -1304,7 +1316,7 @@
                 }
               }
             },
-            "description": "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null"
+            "description": "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null, 이벤트가 trip.maxEvents(기본 2,000)개 초과(D16), endedAt이 서버 시각 + trip.maxFutureMinutes(5분)보다 뒤이거나 startedAt이 서버 시각 − trip.maxPastDays(7일)보다 앞(D17). 상한과 시각 범위는 새 운행에만 적용하며, 이미 저장된 tripId의 재전송은 200"
           },
           "401": {
             "content": {
@@ -1325,6 +1337,16 @@
               }
             },
             "description": "CONFLICT: 다른 운전자가 이미 사용한 tripId"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: 요청 본문이 1MB(app.request.max-body-size)를 넘음(D16)"
           }
         },
         "summary": "운행 · 이벤트 업로드",

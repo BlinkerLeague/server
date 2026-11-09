@@ -12,12 +12,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,6 +27,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.blinkerleague.server.support.MutableClock;
+import com.blinkerleague.server.support.MutableClockConfig;
 import com.blinkerleague.server.support.TestTokens;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +38,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(MutableClockConfig.class)
 class TripControllerTest {
+
+	@Autowired
+	MutableClock clock;
+
+	@AfterEach
+	void resetClock() {
+		clock.reset();
+	}
 
 	@Autowired
 	MockMvc mockMvc;
@@ -304,6 +317,61 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 이벤트가_기본_상한_2000개를_넘으면_400_INVALID_INPUT을_반환한다() throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 120.0));
+		ArrayNode events = body.putArray("events");
+		for (int i = 0; i < 2001; i++) {
+			events.addObject()
+				.put("eventId", UUID.randomUUID().toString())
+				.put("type", "HARSH_BRAKE")
+				.put("occurredAt", "2026-11-03T08:%02d:%02d+09:00".formatted(1 + i / 60 % 38, i % 60));
+		}
+
+		upload(1L, body.toString())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@Test
+	void 요청_본문이_1MB를_넘으면_413_PAYLOAD_TOO_LARGE를_반환한다() throws Exception {
+		ObjectNode body = (ObjectNode)objectMapper.readTree(tripBody(UUID.randomUUID().toString(), 12.3));
+		((ObjectNode)body.at("/events/0/payload")).put("memo", "x".repeat(1024 * 1024));
+
+		upload(1L, body.toString())
+			.andExpect(status().isPayloadTooLarge())
+			.andExpect(jsonPath("$.code").value("PAYLOAD_TOO_LARGE"));
+	}
+
+	@Test
+	void 종료_시각이_서버_시각보다_5분_넘게_미래인_운행은_400_INVALID_INPUT을_반환한다() throws Exception {
+		clock.setNow("2026-11-03T08:34:59+09:00");
+
+		upload(1L, tripBody(UUID.randomUUID().toString(), 12.3))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@Test
+	void 시작_시각이_서버_시각보다_7일_넘게_지난_운행은_400_INVALID_INPUT을_반환한다() throws Exception {
+		clock.setNow("2026-11-10T08:00:01+09:00");
+
+		upload(1L, tripBody(UUID.randomUUID().toString(), 12.3))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@Test
+	void 이미_저장된_운행은_7일이_지나_다시_올려도_200과_처음_결과를_돌려준다() throws Exception {
+		String tripId = UUID.randomUUID().toString();
+		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
+		clock.setNow("2026-11-20T09:00:00+09:00");
+
+		upload(1L, tripBody(tripId, 12.3))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("SCORED"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
@@ -408,7 +476,7 @@ class TripControllerTest {
 
 	private ResultActions upload(Long driverId, String body) throws Exception {
 		return mockMvc.perform(post("/api/trips")
-			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId))
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(TestTokens.JWT, driverId, clock))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(body));
 	}

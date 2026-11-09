@@ -1,5 +1,7 @@
 package com.blinkerleague.server.trip.application.service;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +38,7 @@ public class UploadTripService {
 	private final TripMissionPort tripMissionPort;
 	private final TripPointPort tripPointPort;
 	private final TripBadgePort tripBadgePort;
+	private final Clock clock;
 	private final ScoreCalculator scoreCalculator = new ScoreCalculator();
 
 	public Result upload(Long driverId, Command command) {
@@ -44,6 +47,7 @@ public class UploadTripService {
 		if (existing.isPresent()) {
 			return alreadyUploaded(existing.get(), driverId, thresholds);
 		}
+		validateNewTrip(command, thresholds.trip());
 		Trip trip = Trip.upload(command.tripId(), driverId, command.startedAt(), command.endedAt(),
 			command.distanceKm(), command.supportedSignals(), command.events(), thresholds.trip().minDistanceKm());
 		if (trip.getStatus() == TripStatus.UPLOADED) {
@@ -61,6 +65,22 @@ public class UploadTripService {
 			return alreadyUploaded(loadTripPort.findById(command.tripId()).orElseThrow(() -> e), driverId, thresholds);
 		}
 		return new Result(afterUpload(trip, thresholds), true);
+	}
+
+	// 상한과 시각 범위는 새 운행에만 적용한다(D16 · D17). 이미 저장된 운행의 재전송은 처음 결과를 돌려준다.
+	private void validateNewTrip(Command command, Thresholds.Trip limits) {
+		if (command.events().size() > limits.maxEvents()) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT,
+				"한 운행의 이벤트는 %d개까지 올릴 수 있습니다.".formatted(limits.maxEvents()));
+		}
+		Instant now = clock.instant();
+		if (command.endedAt().isAfter(now.plus(Duration.ofMinutes(limits.maxFutureMinutes())))) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, "종료 시각이 현재보다 미래입니다.");
+		}
+		if (command.startedAt().isBefore(now.minus(Duration.ofDays(limits.maxPastDays())))) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT,
+				"%d일보다 오래된 운행은 올릴 수 없습니다.".formatted(limits.maxPastDays()));
+		}
 	}
 
 	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 순서다(배지는 연속 달성 · 누적 기록을 본다).

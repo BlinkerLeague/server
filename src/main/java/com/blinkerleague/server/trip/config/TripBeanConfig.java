@@ -1,5 +1,7 @@
 package com.blinkerleague.server.trip.config;
 
+import java.time.Clock;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,9 +23,9 @@ public class TripBeanConfig {
 	@Bean
 	public UploadTripService uploadTripService(LoadTripPort loadTripPort, SaveTripPort saveTripPort,
 		ThresholdProvider thresholdProvider, TripMissionPort tripMissionPort, TripPointPort tripPointPort,
-		TripBadgePort tripBadgePort) {
+		TripBadgePort tripBadgePort, Clock clock) {
 		return new UploadTripService(loadTripPort, saveTripPort, thresholdProvider, tripMissionPort, tripPointPort,
-			tripBadgePort);
+			tripBadgePort, clock);
 	}
 
 	@Bean

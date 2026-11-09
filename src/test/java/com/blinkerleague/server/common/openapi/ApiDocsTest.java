@@ -67,7 +67,7 @@ class ApiDocsTest {
 	@CsvSource({
 		"/api/drivers,         post, 201, 400 409",
 		"/api/auth/refresh,    post, 200, 400 401",
-		"/api/trips,           post, 201 200, 400 401 409",
+		"/api/trips,           post, 201 200, 400 401 409 413",
 		"/api/trips,           get,  200, 400 401",
 		"/api/trips/{tripId}/score, get, 200, 401 404",
 		"/api/missions/today,  get,  200, 401 404",

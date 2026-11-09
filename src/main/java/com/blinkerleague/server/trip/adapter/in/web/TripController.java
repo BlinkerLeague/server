@@ -58,11 +58,13 @@ public class TripController {
 		description = "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.")
 	@ApiResponse(responseCode = "201", description = "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 측정할 수 있는 항목이 하나도 없으면 NO_TURN(score=null, D28), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult")
 	@ApiResponse(responseCode = "200", description = "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다")
-	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null",
+	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null, 이벤트가 trip.maxEvents(기본 2,000)개 초과(D16), endedAt이 서버 시각 + trip.maxFutureMinutes(5분)보다 뒤이거나 startedAt이 서버 시각 − trip.maxPastDays(7일)보다 앞(D17). 상한과 시각 범위는 새 운행에만 적용하며, 이미 저장된 tripId의 재전송은 200",
 		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
 		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "409", description = "CONFLICT: 다른 운전자가 이미 사용한 tripId",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "413", description = "PAYLOAD_TOO_LARGE: 요청 본문이 1MB(app.request.max-body-size)를 넘음(D16)",
 		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@PostMapping
 	public ResponseEntity<TripResult> upload(@CurrentDriver Long driverId,

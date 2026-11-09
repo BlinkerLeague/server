@@ -3,6 +3,7 @@ package com.blinkerleague.server.common.error;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.blinkerleague.server.common.web.RequestBodyTooLargeException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +36,10 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
 	public ResponseEntity<ErrorResponse> handleUnreadable(Exception e) {
+		// 길이를 모르는 본문이 읽는 도중 크기 상한을 넘으면 Jackson이 이 예외로 감싼다(D16).
+		if (NestedExceptionUtils.getMostSpecificCause(e) instanceof RequestBodyTooLargeException) {
+			return respond(ErrorCode.PAYLOAD_TOO_LARGE, ErrorCode.PAYLOAD_TOO_LARGE.getDefaultMessage());
+		}
 		return respond(ErrorCode.INVALID_INPUT, ErrorCode.INVALID_INPUT.getDefaultMessage());
 	}
 
