@@ -30,4 +30,13 @@ class LeagueScoreTest {
 		// (100 × 0.25 + 60 × 0.15) ÷ 0.4 = 85
 		assertThat(LeagueScore.of(metrics, WEIGHTS, COMMON)).isEqualTo(85);
 	}
+
+	@Test
+	void 공통_항목을_하나도_측정하지_않으면_리그_점수가_없다() {
+		List<MetricScore> metrics = List.of(
+			MetricScore.excluded(ScoreItem.TURN_SIGNAL, MetricStatus.NOT_APPLICABLE, "NO_TURN"),
+			MetricScore.scored(ScoreItem.SEAT_BELT, 1.0, 100, 1.0, Map.of()));
+
+		assertThat(LeagueScore.of(metrics, WEIGHTS, COMMON)).isNull();
+	}
 }
