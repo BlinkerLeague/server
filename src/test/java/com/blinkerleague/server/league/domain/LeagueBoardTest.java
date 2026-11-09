@@ -52,6 +52,28 @@ class LeagueBoardTest {
 		});
 	}
 
+	@Test
+	void 리그_점수가_있는_참여자가_10명_미만인_권역은_순위를_공개하지_않는다() {
+		List<MemberRecord> members = new java.util.ArrayList<>();
+		for (long id = 1; id <= 9; id++) {
+			members.add(member(id, NORTHWEST, 10, 60, 60, 80 * 60));
+		}
+		members.add(member(10L, NORTHWEST, 1, 5, 0, 0));
+		for (long id = 11; id <= 20; id++) {
+			members.add(member(id, BUSAN, 10, 60, 60, 80 * 60));
+		}
+
+		LeagueBoard board = LeagueBoard.build(members, REGIONS, new LeagueBoard.Rules(10, 50, 10));
+
+		LeagueBoard.RegionBoard northwest = board.region("SEOUL_NORTHWEST");
+		assertThat(northwest.participants()).isEqualTo(9);
+		assertThat(northwest.published()).isFalse();
+		assertThat(northwest.rankings()).isEmpty();
+		assertThat(board.standingOf(1L)).hasValueSatisfying(standing -> assertThat(standing.rank()).isNull());
+		assertThat(board.region("BUSAN").published()).isTrue();
+		assertThat(board.region("BUSAN").rankings()).hasSize(10);
+	}
+
 	static MemberRecord member(Long driverId, LeagueRegion region, int trips, double distanceKm,
 		double scoredDistanceKm, double weightedScoreSum) {
 		return new MemberRecord(driverId, "driver" + driverId, region.code(), true, trips, distanceKm,
