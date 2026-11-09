@@ -352,6 +352,15 @@ class TripControllerTest {
 	}
 
 	@Test
+	void 시작_시각이_서버_시각보다_7일_넘게_지난_운행은_400_INVALID_INPUT을_반환한다() throws Exception {
+		clock.setNow("2026-11-10T08:00:01+09:00");
+
+		upload(1L, tripBody(UUID.randomUUID().toString(), 12.3))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+	}
+
+	@Test
 	void 같은_운행을_다시_올리면_200과_처음_저장한_결과를_돌려준다() throws Exception {
 		String tripId = UUID.randomUUID().toString();
 		upload(1L, tripBody(tripId, 12.3)).andExpect(status().isCreated());
@@ -456,7 +465,7 @@ class TripControllerTest {
 
 	private ResultActions upload(Long driverId, String body) throws Exception {
 		return mockMvc.perform(post("/api/trips")
-			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(driverId))
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestTokens.accessToken(TestTokens.JWT, driverId, clock))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(body));
 	}
