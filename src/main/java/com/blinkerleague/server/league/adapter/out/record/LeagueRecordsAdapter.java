@@ -14,15 +14,17 @@ import com.blinkerleague.server.league.domain.MemberRecord;
 
 import lombok.RequiredArgsConstructor;
 
-/** 리그 집계용 읽기. trip · driver · league_member를 JDBC로 읽는다. */
+/** 리그 집계용 읽기. trip · driver · league_member · point_ledger를 JDBC로 읽는다. */
 @Component
 @RequiredArgsConstructor
 public class LeagueRecordsAdapter implements LoadLeagueRecordsPort, LoadLeagueDriverPort {
 
 	// 시즌 소속 운전자마다 시즌 안에 끝난 참여 운행(최소 거리 이상)의 수 · 거리(D13)와,
-	// 리그 점수가 있는 운행의 거리 합 · (리그 점수 × 거리) 합(D19 · D5)
+	// 리그 점수가 있는 운행의 거리 합 · (리그 점수 × 거리) 합(D19 · D5), 시즌 안에 적립한 포인트 합(D34)
 	private static final String RECORDS = """
 		select m.driver_id, d.nickname, m.league_code, d.league_visible,
+		       coalesce((select sum(p.amount) from point_ledger p
+		                  where p.driver_id = m.driver_id and p.earned_at >= ? and p.earned_at < ?), 0) as points,
 		       count(t.trip_id) as trips,
 		       coalesce(sum(t.distance_km), 0) as distance,
 		       coalesce(sum(case when t.league_score is not null then t.distance_km end), 0) as scored_distance,
@@ -44,7 +46,8 @@ public class LeagueRecordsAdapter implements LoadLeagueRecordsPort, LoadLeagueDr
 		return jdbcTemplate.query(RECORDS, (row, n) -> new MemberRecord(row.getLong("driver_id"),
 				row.getString("nickname"), row.getString("league_code"), row.getBoolean("league_visible"),
 				row.getInt("trips"), row.getDouble("distance"), row.getDouble("scored_distance"),
-				row.getDouble("weighted"), 0),
+				row.getDouble("weighted"), row.getInt("points")),
+			Timestamp.from(season.startsAt()), Timestamp.from(season.endsAt()),
 			Timestamp.from(season.startsAt()), Timestamp.from(season.endsAt()), season.id());
 	}
 
