@@ -5,47 +5,43 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.blinkerleague.server.support.MutableClock;
+import com.blinkerleague.server.support.MutableClockConfig;
 import com.blinkerleague.server.support.TestTokens;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(WeeklyReportControllerTest.FixedClock.class)
+@Import(MutableClockConfig.class)
 class WeeklyReportControllerTest {
 
 	// 한국 시간 2026-11-09(월) 09:00 → 지난주는 2026-W45(11-02 ~ 11-08)
-	static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-09T00:00:00Z"), ZoneId.of("Asia/Seoul"));
-
-	@TestConfiguration
-	static class FixedClock {
-		@Bean
-		@Primary
-		Clock fixedClock() {
-			return CLOCK;
-		}
-	}
+	static final String REPORT_TIME = "2026-11-09T09:00:00+09:00";
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Autowired
+	MutableClock clock;
+
+	@BeforeEach
+	void setClock() {
+		clock.setNow(REPORT_TIME);
+	}
 
 	// 다른 테스트와 같은 H2를 쓰므로 이 클래스만 쓰는 운전자 id를 쓴다.
 	@Test
@@ -55,6 +51,7 @@ class WeeklyReportControllerTest {
 		trip(driverId, "2026-11-03", 20.0, true, 1).andExpect(status().isCreated());
 		// 지지난주(W44) 운행: 깜빡이 0점
 		trip(driverId, "2026-10-27", 20.0, false, 0).andExpect(status().isCreated());
+		clock.setNow(REPORT_TIME);
 
 		mockMvc.perform(get("/api/reports/weekly").header(HttpHeaders.AUTHORIZATION, bearer(driverId)))
 			.andExpect(status().isOk())
@@ -78,6 +75,8 @@ class WeeklyReportControllerTest {
 
 	private ResultActions trip(Long driverId, String date, double distanceKm, boolean signalOn, int warnings)
 		throws Exception {
+		// 운행은 끝난 직후에 올린다(7일보다 오래된 운행은 받지 않음, D17).
+		clock.setNow(date + "T09:00:00+09:00");
 		StringBuilder events = new StringBuilder("""
 			{ "eventId": "%s", "type": "TURN", "occurredAt": "%sT08:10:00+09:00",
 			  "payload": { "direction": "LEFT", "signalOn": %s } }""".formatted(UUID.randomUUID(), date, signalOn));
@@ -93,7 +92,7 @@ class WeeklyReportControllerTest {
 			.contentType(MediaType.APPLICATION_JSON).content(body));
 	}
 
-	private static String bearer(Long driverId) {
-		return "Bearer " + TestTokens.accessToken(TestTokens.JWT, driverId, CLOCK);
+	private String bearer(Long driverId) {
+		return "Bearer " + TestTokens.accessToken(TestTokens.JWT, driverId, clock);
 	}
 }

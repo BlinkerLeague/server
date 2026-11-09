@@ -32,8 +32,9 @@ public record Thresholds(
 			.findFirst();
 	}
 
-	/** 운행 참여 최소 거리(D10), 앱의 주차 판정 시간, 한 운행의 이벤트 상한(D16), 서버 시각보다 미래로 허용하는 종료 시각(분, D17). */
-	public record Trip(double minDistanceKm, int parkEndMinutes, int maxEvents, int maxFutureMinutes) {
+	/** 운행 참여 최소 거리(D10), 앱의 주차 판정 시간, 한 운행의 이벤트 상한(D16), 서버 시각 기준 허용 범위(종료는 maxFutureMinutes분 뒤까지, 시작은 maxPastDays일 전까지, D17). */
+	public record Trip(double minDistanceKm, int parkEndMinutes, int maxEvents, int maxFutureMinutes,
+		int maxPastDays) {
 	}
 
 	/**

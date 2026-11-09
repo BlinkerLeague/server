@@ -77,6 +77,10 @@ public class UploadTripService {
 		if (command.endedAt().isAfter(now.plus(Duration.ofMinutes(limits.maxFutureMinutes())))) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT, "종료 시각이 현재보다 미래입니다.");
 		}
+		if (command.startedAt().isBefore(now.minus(Duration.ofDays(limits.maxPastDays())))) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT,
+				"%d일보다 오래된 운행은 올릴 수 없습니다.".formatted(limits.maxPastDays()));
+		}
 	}
 
 	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 순서다(배지는 연속 달성 · 누적 기록을 본다).
