@@ -30,6 +30,10 @@ public class Driver extends BaseTimeEntity {
 	@Column(name = "region_code", nullable = false, length = 5)
 	private String regionCode;
 
+	/** 리그 순위 공개(D8). 기본 공개이고, 끄면 리그(순위 · 안전지수 · 참여자 수 · 시즌 보상)에서 빠진다. */
+	@Column(name = "league_visible", nullable = false)
+	private boolean leagueVisible = true;
+
 	private Driver(String nickname, String regionCode) {
 		this.nickname = nickname;
 		this.regionCode = regionCode;
