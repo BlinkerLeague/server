@@ -40,10 +40,11 @@
 | D27 | 항목별 최소 표본 기본값 | 제안은 회전 3번 미만이면 깜빡이 항목 제외. MVP 앱은 깜빡이 1항목만 보내 회전 1~2번 운행은 점수 · 포인트가 사라짐 | **결정(11.8): 기준값 `minSamples`(항목별)로 두고 기본 1**(P0 동작 그대로). 2차에 앱이 여러 항목을 보내기 시작하면 설정만 3으로 올린다 |
 | D28 | 측정할 항목이 하나도 없는 운행의 상태 | 4.1은 "`NO_TURN`을 없애고 이름은 착수 시 확정". 앱은 `SCORED` · `NO_TURN` · `EXCLUDED_SHORT`를 가정 | **결정(11.8): `NO_TURN` 이름 유지**, 뜻을 "측정할 수 있는 항목이 하나도 없음"으로 넓힌다. 회전이 0회여도 다른 항목을 측정하면 `SCORED` |
 | D29 | 리그 시즌 주기 | 4.4는 "시즌 4주" | **결정(11.9): 달력 월 단위.** 매월 1일 00:00(Asia/Seoul)에 시작해 다음 달 1일 00:00에 끝난다(시즌 길이 28~31일). 시즌 ID는 `2026-11` 형식 |
-| D30 | 시즌 리그 보상 대상 | 4.4는 "상위 지역 참여자 100P" | **결정(11.9): 안전지수 1위 권역의 순위 자격자(D13) 전원에게 `SEASON_LEAGUE` 100P.** 순위가 공개된(참여자 10명 이상) 권역만 1위 후보. 보상 값은 기준값 설정 |
+| D30 | 시즌 리그 보상 대상 | 4.4는 "상위 지역 참여자 100P" | **결정(11.9): 안전지수 1위 권역의 순위 자격자(D13) 전원.** 순위가 공개된(참여자 10명 이상) 권역만 1위 후보. **보상은 포인트가 아니라 시즌 우승 칭호 + 우승 배지(11.9 변경, D34)** |
 | D31 | 초기 리그 권역 매핑(D11) | 매핑표의 첫 묶음 | **결정(11.9): 서울은 생활권 5개(도심권 · 동북권 · 서북권 · 서남권 · 동남권), 나머지는 시 · 도 단위.** 사용자가 늘면 매핑만 바꿔 나눈다 |
 | D32 | 주간 맞춤 미션 보상 | 원장 사유가 없어 적립 안 함(4.5) | **결정(11.9): 적립하지 않음(지금 그대로)** |
-| D33 | 보상 교환(FR-15)과 포인트의 쓰임 | 5.1은 제휴 쿠폰 교환을 가정 | **결정(11.9): 보상 교환은 보류.** 제휴처가 없어 개발하지 않는다. 게임의 목표는 리그 순위를 올리는 것이고, 포인트는 지금은 적립만 하는 단위다. **포인트를 어디에 쓸지는 아직 정하지 않았다.** 제휴가 생기면 5.1을 다시 연다 |
+| D33 | 보상 교환(FR-15)과 포인트의 쓰임 | 5.1은 제휴 쿠폰 교환을 가정 | **결정(11.9): 보상 교환은 보류.** 제휴처가 없어 개발하지 않는다. 게임의 목표는 리그 순위를 올리는 것이고, 포인트는 지금은 적립만 하는 단위다. 제휴가 생기면 5.1을 다시 연다. 포인트의 쓰임은 D34 |
+| D34 | 포인트의 쓰임 · 시즌 보상 | 교환할 리워드 상품이 없어 적립한 포인트에 쓸 곳이 없음 | **결정(11.9): 포인트는 리그 순위 점수에 더한다.** 순위 점수 = 리그 점수 거리 가중 평균(0 ~ 100) + 그 시즌 안에 적립한 포인트 합. 지역 안전지수(D5)에는 포인트를 넣지 않는다. 적립 방법(운행 · 오늘의 미션 · 연속 기록)과 일일 상한은 그대로. 시즌 1위 권역 보상(D30)은 포인트 대신 시즌 우승 칭호(`league_champion`) + `SEASON_CHAMPION` 배지 |
 
 ### 화면 기획서 반영 (2026-11-01)
 
@@ -408,7 +409,7 @@ API: `GET /api/points` (잔액 + 최근 원장 20건)
 
 - `todayEarned` · `dailyCap`: 오늘(Asia/Seoul) 적립 합계와 일일 상한(SCR-06)
 - 원장 항목별 설명(거리 × 평점, SCR-06): 적립 시점 값을 보여줘야 하므로 원장에 남긴다(운행을 다시 조회해 계산하지 않음)
-- `point_ledger`: `ledger_id`, `driver_id`, `amount`, `reason`(`TRIP`/`DAILY_MISSION`/`STREAK_7`/`SEASON_LEAGUE`), `ref_id`, `distance_km`(nullable), `score`(nullable), `created_at`. (`reason`, `ref_id`) 유니크. `distance_km` · `score`는 `TRIP` 적립 시점 값
+- `point_ledger`: `ledger_id`, `driver_id`, `amount`, `reason`(`TRIP`/`DAILY_MISSION`/`STREAK_7`; `SEASON_LEAGUE`는 D34로 없앰), `ref_id`, `distance_km`(nullable), `score`(nullable), `created_at`. (`reason`, `ref_id`) 유니크. `distance_km` · `score`는 `TRIP` 적립 시점 값
 - 잔액 = `SUM(amount)` (잔액 컬럼 따로 두지 않음)
 - 운행 적립: `floor(min(distanceKm, 50) × score ÷ 100)`, `ref_id = tripId`
 - 일간 미션 달성 시 20P(미션의 `rewardPoint`), `ref_id = 운전자ID:미션ID:period_key`(driver_mission 행 ID 대신, 저장 전에도 정해지고 운전자 · 미션 · 날짜마다 하나)
@@ -437,15 +438,15 @@ API: `GET /api/streak`
 
 API: `GET /api/leagues/current`, `PUT /api/drivers/me/league-visibility`
 
-상태: 완료(11.9, `feat/region-league`, D5 · D8 · D11 · D12 · D13 · D19 · D29 ~ D31).
+상태: 완료(11.9, `feat/region-league`, D5 · D8 · D11 · D12 · D13 · D19 · D29 ~ D31). 포인트 합산 · 우승 칭호는 `feat/league-point-ranking`(D34).
 - 리그 점수(D19): 업로드 때 공통 항목(`league.commonItems`)만으로 재분배한 점수를 `trip.league_score`에 저장(`score.domain.LeagueScore`). 공통 항목을 하나도 측정하지 않으면 `null`이고 리그 집계에서 빠진다
 - 권역(D11 · D31): `leagues/league-regions.json` 매핑표(서울 생활권 5개 + 시 · 도 16개, 옛 · 새 특별자치도 코드). 시군구 목록이 먼저, 없으면 앞 2자리. 매핑표에 없는 코드는 리그 없음
 - 시즌(D29): 한국 시간 달력 월(`LeagueSeason`, id `2026-11`). 소속(D12): 시즌 첫 참여 운행(최소 거리 이상) 업로드 때 그때 등록 지역으로 `league_member`(운전자 · 시즌 유니크)에 고정
-- 순위 · 안전지수(`LeagueBoard`, 순수 계산): 운전자 점수 = 리그 점수 거리 가중 평균(소수 첫째 자리), 같은 점수는 같은 순위(1, 2, 2, 4). 순위 자격 D13, 리그 점수가 있는 참여자 10명 미만이면 비공개(D11), 순위 공개를 끈 운전자는 모두에서 제외(D8). 안전지수(D5) = 권역 리그 점수 거리 가중 평균(순위 자격과 무관)
+- 순위 · 안전지수(`LeagueBoard`, 순수 계산): 순위 점수 = 리그 점수 거리 가중 평균(`averageScore`, 소수 첫째 자리) + 시즌 포인트(`points`, 그 시즌 안에 `earned_at`이 있는 원장 합, D34), 같은 점수는 같은 순위(1, 2, 2, 4). 순위 자격 D13, 리그 점수가 있는 참여자 10명 미만이면 비공개(D11), 순위 공개를 끈 운전자는 모두에서 제외(D8). 안전지수(D5) = 권역 리그 점수 거리 가중 평균(순위 자격과 무관, 포인트 미포함)
 - **Redis ZSET 대신 조회 때 RDB 집계(11.9):** 순위 공개 · 자격 · 비공개 제외 규칙을 한 곳(`LeagueBoard`)에서 계산하려고 `GET /api/leagues/current`가 시즌 기록을 JDBC로 한 번에 읽어 계산한다. 사용자가 늘어 느려지면 결과를 Redis에 캐시한다(9.5)
-- 시즌 정산(D30): 매월 1일 00:10(Asia/Seoul) `LeagueSeasonScheduler`가 지난 시즌의 순위 공개 권역 중 안전지수 1위 권역(같으면 모두)의 순위 자격자에게 `SEASON_LEAGUE` `league.seasonRewardPoint`(100P)를 적립(`ref_id = 운전자ID:시즌`, 한 번만, 일일 상한 안). 시즌 결과를 따로 저장하는 테이블은 두지 않았다(지난 시즌 조회 API가 생길 때 추가)
+- 시즌 정산(D30): 매월 1일 00:10(Asia/Seoul) `LeagueSeasonScheduler`가 지난 시즌의 순위 공개 권역 중 안전지수 1위 권역(같으면 모두)의 순위 자격자에게 우승 칭호를 남기고(`league_champion`: 시즌 · 운전자 · 권역, 시즌 · 운전자 유니크) 배지를 판정한다(`SEASON_CHAMPION`, 규칙 `SEASON_CHAMPIONS` 1회, D34). 우승 칭호는 `GET /api/leagues/current`의 `me.championships`. 권역 순위 등 나머지 시즌 결과는 저장하지 않는다(지난 시즌 조회 API가 생길 때 추가)
 - 순위 공개 설정(D8): `driver.league_visible`(기본 true), `PUT /api/drivers/me/league-visibility`
-- 기준값 `league`: `commonItems`, `minParticipants` 10, `minSeasonDistanceKm` 50, `minSeasonTrips` 10, `topN` 10, `seasonRewardPoint` 100
+- 기준값 `league`: `commonItems`, `minParticipants` 10, `minSeasonDistanceKm` 50, `minSeasonTrips` 10, `topN` 10(`seasonRewardPoint`는 D34로 없앰)
 
 - 시즌 4주. `league_season`: `season_id`, `region_code`, `starts_at`, `ends_at`, `safety_index`
 - 운행 점수 확정 시 Redis ZSET `league:{season}:{region}`에 운전자 시즌 점수 반영(`ZINCRBY` 또는 평균 계산용 합계 · 횟수 별도 키)
@@ -652,7 +653,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 
 ### 9.2 결정 대기 항목 (11.9 정리)
 
-11.9에 대부분 결정했다. 남은 것은 뒤로 미룬 항목과 포인트 사용처다.
+11.9에 대부분 결정했다. 남은 것은 뒤로 미룬 항목이다.
 
 | 순서 | 항목 | 상태 |
 | --- | --- | --- |
@@ -667,7 +668,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 | 9 | 주간 미션 보상 | **결정(11.9, D32): 적립 안 함** |
 | 10 | P0 달성분 소급 적립 | **뒤로 미룸(11.9).** 운영 데이터가 생기기 전이라 해당 없음 |
 | 11 | D3 운영 DB | **결정(11.9): PostgreSQL + Flyway**(배포 준비 때 작업) |
-| 12 | 포인트 사용처 | **미정(11.9).** 보상 교환은 보류(D33). 지금은 적립만 한다 |
+| 12 | 포인트 사용처 | **결정(11.9, D34): 리그 순위 점수에 더함.** 보상 교환은 보류(D33). 시즌 보상도 포인트 대신 우승 칭호 · 배지 → `feat/league-point-ranking` |
 
 ### 9.3 개발할 것 (우선순위)
 
@@ -678,7 +679,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
    - 새 API: `/api/points` · `/api/streak` · `/api/badges` · `/api/reports/weekly`
 3. ~~**4.4 `feat/region-league`**~~ → 완료(11.9). (9.2의 2 ~ 5 결정 후, 12.2 PT 전): 리그 권역 매핑표, 4주 시즌 · 소속 고정(D12), 리그 점수(D19), 순위 자격(D13) · 10명 미만 미공개, Redis ZSET 순위, 시즌 종료 배치(상위 지역 100P, 원장 사유 `SEASON_LEAGUE`), `GET /api/leagues/current`
 4. **4.6 `feat/score-navi-metrics`** (실차 확인 후): 제한속도 · 단속 구간 · 보호 구간 · 내비 회전 항목. 실차에서 NaviHelper 이벤트가 오는지 확인이 먼저(7장)
-5. ~~**5.1 `feat/reward-exchange`**~~ **보류(D33)**: 제휴처가 없어 개발하지 않음. 포인트 사용처는 미정
+5. ~~**5.1 `feat/reward-exchange`**~~ **보류(D33)**: 제휴처가 없어 개발하지 않음. 포인트는 리그 순위 점수에 더한다(D34)
 
 ### 9.4 배포 준비 (서버를 실제로 띄우기 전)
 

@@ -22,6 +22,21 @@
         },
         "type": "object"
       },
+      "ChampionshipResponse": {
+        "description": "시즌 우승 칭호(D30 · D34): 그 시즌 안전지수 1위 권역의 순위 자격자",
+        "properties": {
+          "leagueCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "seasonId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ConditionProgress": {
         "properties": {
           "current": {
@@ -92,8 +107,7 @@
             "enum": [
               "TRIP",
               "DAILY_MISSION",
-              "STREAK_7",
-              "SEASON_LEAGUE"
+              "STREAK_7"
             ],
             "type": "string"
           }
@@ -207,10 +221,6 @@
             "format": "int32",
             "type": "integer"
           },
-          "seasonRewardPoint": {
-            "format": "int32",
-            "type": "integer"
-          },
           "topN": {
             "format": "int32",
             "type": "integer"
@@ -271,14 +281,28 @@
         "type": "object"
       },
       "MeResponse": {
-        "description": "내 시즌 기록. rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다",
+        "description": "내 시즌 기록. score = averageScore + points(D34), 리그 점수가 없으면 averageScore · score는 null. rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다. championships는 지난 시즌 우승 칭호(오래된 시즌부터)",
         "properties": {
+          "averageScore": {
+            "format": "double",
+            "type": "number"
+          },
+          "championships": {
+            "items": {
+              "$ref": "#/components/schemas/ChampionshipResponse"
+            },
+            "type": "array"
+          },
           "distanceKm": {
             "format": "double",
             "type": "number"
           },
           "eligible": {
             "type": "boolean"
+          },
+          "points": {
+            "format": "int32",
+            "type": "integer"
           },
           "rank": {
             "format": "int32",
@@ -534,9 +558,18 @@
         "type": "object"
       },
       "RankingResponse": {
+        "description": "순위 한 줄. score = averageScore(리그 점수 거리 가중 평균) + points(시즌 포인트)",
         "properties": {
+          "averageScore": {
+            "format": "double",
+            "type": "number"
+          },
           "nickname": {
             "type": "string"
+          },
+          "points": {
+            "format": "int32",
+            "type": "integer"
           },
           "rank": {
             "format": "int32",
@@ -1321,7 +1354,7 @@
     },
     "/api/leagues/current": {
       "get": {
-        "description": "이번 시즌(한국 시간 달력 월, D29)의 내 리그 권역 순위, 내 순위, 모든 권역의 지역 안전지수를 돌려준다(SCR-04). 점수는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균이다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), 리그 점수가 있는 참여자가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 리그에서 빠진다(D8). 응답에는 닉네임만 담는다.",
+        "description": "이번 시즌(한국 시간 달력 월, D29)의 내 리그 권역 순위, 내 순위, 모든 권역의 지역 안전지수를 돌려준다(SCR-04). 순위 점수(score)는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균(averageScore)에 시즌 안에 적립한 포인트(points)를 더한 값이다(D34). 지역 안전지수는 포인트 없이 리그 점수만으로 계산한다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), 리그 점수가 있는 참여자가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 리그에서 빠진다(D8). 시즌 1위 권역의 순위 자격자는 포인트 대신 우승 칭호(me.championships)와 시즌 우승 배지를 받는다(D30 · D34). 응답에는 닉네임만 담는다.",
         "operationId": "current",
         "responses": {
           "200": {
