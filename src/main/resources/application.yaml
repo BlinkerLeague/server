@@ -32,3 +32,8 @@ jwt:
   secret: ${JWT_SECRET}
   access-ttl: 1h
   refresh-ttl: 30d
+
+# 요청 본문 크기 상한(D16). 넘으면 413 PAYLOAD_TOO_LARGE. 이벤트 개수 상한은 기준값 trip.maxEvents에 있다.
+app:
+  request:
+    max-body-size: 1MB
