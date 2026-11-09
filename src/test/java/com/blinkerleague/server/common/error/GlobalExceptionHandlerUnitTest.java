@@ -7,11 +7,15 @@ import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.blinkerleague.server.common.web.RequestBodyTooLargeException;
 
 /** 스프링 컨텍스트 없이 핸들러 메서드를 직접 호출해 상태 코드와 응답 본문을 확인한다. */
 class GlobalExceptionHandlerUnitTest {
@@ -49,6 +53,17 @@ class GlobalExceptionHandlerUnitTest {
 
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 		assertThat(response.getBody()).isEqualTo(ErrorResponse.of(ErrorCode.INVALID_INPUT));
+	}
+
+	@Test
+	void 본문을_읽다가_크기_상한을_넘으면_413_PAYLOAD_TOO_LARGE로_응답한다() {
+		HttpMessageNotReadableException e = new HttpMessageNotReadableException("I/O error",
+			new RequestBodyTooLargeException(1024), new MockHttpInputMessage(new byte[0]));
+
+		ResponseEntity<ErrorResponse> response = handler.handleUnreadable(e);
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+		assertThat(response.getBody()).isEqualTo(ErrorResponse.of(ErrorCode.PAYLOAD_TOO_LARGE));
 	}
 
 	@Test
