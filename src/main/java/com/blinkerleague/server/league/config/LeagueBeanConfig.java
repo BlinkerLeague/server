@@ -7,8 +7,11 @@ import org.springframework.context.annotation.Configuration;
 
 import com.blinkerleague.server.league.application.port.out.LeagueMemberStore;
 import com.blinkerleague.server.league.application.port.out.LoadLeagueDriverPort;
+import com.blinkerleague.server.league.application.port.out.LoadLeagueRecordsPort;
 import com.blinkerleague.server.league.application.port.out.LoadLeagueRegionsPort;
+import com.blinkerleague.server.league.application.service.GetCurrentLeagueService;
 import com.blinkerleague.server.league.application.service.JoinSeasonService;
+import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 
 /** league 유스케이스에 포트 구현(어댑터)을 연결한다. */
 @Configuration
@@ -18,5 +21,13 @@ public class LeagueBeanConfig {
 	public JoinSeasonService joinSeasonService(LeagueMemberStore leagueMemberStore,
 		LoadLeagueDriverPort loadLeagueDriverPort, LoadLeagueRegionsPort loadLeagueRegionsPort, Clock clock) {
 		return new JoinSeasonService(leagueMemberStore, loadLeagueDriverPort, loadLeagueRegionsPort, clock.getZone());
+	}
+
+	@Bean
+	public GetCurrentLeagueService getCurrentLeagueService(LoadLeagueRecordsPort loadLeagueRecordsPort,
+		LoadLeagueRegionsPort loadLeagueRegionsPort, LoadLeagueDriverPort loadLeagueDriverPort,
+		ThresholdProvider thresholdProvider, Clock clock) {
+		return new GetCurrentLeagueService(loadLeagueRecordsPort, loadLeagueRegionsPort, loadLeagueDriverPort,
+			thresholdProvider, clock);
 	}
 }

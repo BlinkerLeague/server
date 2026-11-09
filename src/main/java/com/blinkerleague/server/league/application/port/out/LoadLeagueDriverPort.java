@@ -5,6 +5,9 @@ import java.util.Optional;
 /** 리그가 읽는 운전자 정보. */
 public interface LoadLeagueDriverPort {
 
-	/** 운전자가 지금 등록한 시군구 코드. */
-	Optional<String> regionCodeOf(Long driverId);
+	Optional<LeagueDriver> find(Long driverId);
+
+	/** 지금 등록한 시군구 코드와 리그 순위 공개 여부(D8). */
+	record LeagueDriver(String regionCode, boolean visible) {
+	}
 }

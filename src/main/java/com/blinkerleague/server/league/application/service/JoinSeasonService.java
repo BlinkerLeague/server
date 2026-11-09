@@ -28,7 +28,8 @@ public class JoinSeasonService implements JoinSeasonUseCase {
 			return;
 		}
 		// 매핑표에 없는 지역의 운전자는 리그에 들어가지 않는다.
-		loadLeagueDriverPort.regionCodeOf(driverId)
+		loadLeagueDriverPort.find(driverId)
+			.map(LoadLeagueDriverPort.LeagueDriver::regionCode)
 			.flatMap(regionCode -> loadLeagueRegionsPort.load().regionOf(regionCode))
 			.ifPresent(region -> leagueMemberStore.saveIfAbsent(new LeagueMember(season.id(), driverId, region.code())));
 	}

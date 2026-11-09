@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.common.time.TimeConfig;
 import com.blinkerleague.server.league.application.port.out.LeagueMemberStore;
+import com.blinkerleague.server.league.application.port.out.LoadLeagueDriverPort;
 import com.blinkerleague.server.league.domain.LeagueMember;
 import com.blinkerleague.server.league.domain.LeagueRegion;
 import com.blinkerleague.server.league.domain.LeagueRegions;
@@ -25,7 +26,8 @@ class JoinSeasonServiceTest {
 	private final Map<String, LeagueMember> members = new HashMap<>();
 	private final Map<Long, String> regionCodes = new HashMap<>();
 	private final JoinSeasonService service = new JoinSeasonService(new InMemoryMembers(),
-		driverId -> Optional.ofNullable(regionCodes.get(driverId)),
+		driverId -> Optional.ofNullable(regionCodes.get(driverId))
+			.map(code -> new LoadLeagueDriverPort.LeagueDriver(code, true)),
 		() -> new LeagueRegions(List.of(
 			new LeagueRegions.Rule(new LeagueRegion("SEOUL_NORTHWEST", "서울 서북권"), List.of("11440"), List.of()),
 			new LeagueRegions.Rule(new LeagueRegion("BUSAN", "부산"), List.of(), List.of("26")))),

@@ -1,5 +1,6 @@
 package com.blinkerleague.server.league.adapter.in.web;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,7 +78,7 @@ class LeagueControllerTest {
 			.andExpect(jsonPath("$.me.trips").value(1))
 			.andExpect(jsonPath("$.me.distanceKm").value(60.0))
 			.andExpect(jsonPath("$.regions[?(@.leagueCode == 'BUSAN')].safetyIndex").value(90.0))
-			.andExpect(jsonPath("$.regions[?(@.leagueCode == 'JEJU')].safetyIndex").value(nullValue()));
+			.andExpect(jsonPath("$.regions[?(@.leagueCode == 'JEJU')].safetyIndex").value(contains(nullValue())));
 	}
 
 	private ResultActions upload(Long driverId, boolean signalOn) throws Exception {

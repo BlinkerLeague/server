@@ -49,8 +49,9 @@ public class LeagueRecordsAdapter implements LoadLeagueRecordsPort, LoadLeagueDr
 	}
 
 	@Override
-	public Optional<String> regionCodeOf(Long driverId) {
-		return jdbcTemplate.query("select region_code from driver where driver_id = ?",
-			(row, n) -> row.getString("region_code"), driverId).stream().findFirst();
+	public Optional<LeagueDriver> find(Long driverId) {
+		return jdbcTemplate.query("select region_code, league_visible from driver where driver_id = ?",
+			(row, n) -> new LeagueDriver(row.getString("region_code"), row.getBoolean("league_visible")), driverId)
+			.stream().findFirst();
 	}
 }
