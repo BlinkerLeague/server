@@ -29,10 +29,13 @@ public final class LeagueBoard {
 			List<MemberRecord> inRegion = members.stream()
 				.filter(member -> member.leagueCode().equals(region.code()))
 				.toList();
-			List<Ranked> rankings = rank(inRegion.stream()
-				.filter(member -> member.hasScore() && rules.eligible(member))
-				.toList());
-			boards.put(region.code(), new RegionBoard(region, inRegion.size(), true, null, rankings));
+			// 참여자 = 리그 점수가 있는 운전자. 적으면 순위를 공개하지 않는다(D11).
+			int participants = (int)inRegion.stream().filter(MemberRecord::hasScore).count();
+			boolean published = participants >= rules.minParticipants();
+			List<Ranked> rankings = published
+				? rank(inRegion.stream().filter(member -> member.hasScore() && rules.eligible(member)).toList())
+				: List.of();
+			boards.put(region.code(), new RegionBoard(region, participants, published, null, rankings));
 			Map<Long, Integer> ranks = new HashMap<>();
 			rankings.forEach(ranked -> ranks.put(ranked.driverId(), ranked.rank()));
 			inRegion.forEach(member -> standings.put(member.driverId(), new Standing(region.code(),
