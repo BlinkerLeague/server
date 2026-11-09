@@ -111,4 +111,18 @@ class EarnPointServiceTest {
 			assertThat(entry.getAmount()).isEqualTo(50);
 		});
 	}
+
+	@Test
+	void 시즌_리그_보상은_기준값의_포인트를_SEASON_LEAGUE로_운전자_시즌마다_한_번_적립한다() {
+		int earned = service.earnForSeasonLeague(1L, "1:2026-11");
+		int again = service.earnForSeasonLeague(1L, "1:2026-11");
+
+		assertThat(earned).isEqualTo(100);
+		assertThat(again).isZero();
+		assertThat(ledger.entries()).singleElement().satisfies(entry -> {
+			assertThat(entry.getReason()).isEqualTo(PointReason.SEASON_LEAGUE);
+			assertThat(entry.getRefId()).isEqualTo("1:2026-11");
+			assertThat(entry.getAmount()).isEqualTo(100);
+		});
+	}
 }
