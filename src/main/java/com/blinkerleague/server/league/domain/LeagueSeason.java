@@ -8,18 +8,22 @@ import java.time.ZoneId;
 public record LeagueSeason(YearMonth month, ZoneId zone) {
 
 	public static LeagueSeason containing(Instant at, ZoneId zone) {
-		throw new UnsupportedOperationException();
+		return new LeagueSeason(YearMonth.from(at.atZone(zone)), zone);
 	}
 
 	public String id() {
-		throw new UnsupportedOperationException();
+		return month.toString();
 	}
 
 	public Instant startsAt() {
-		throw new UnsupportedOperationException();
+		return month.atDay(1).atStartOfDay(zone).toInstant();
 	}
 
 	public Instant endsAt() {
-		throw new UnsupportedOperationException();
+		return month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+	}
+
+	public LeagueSeason previous() {
+		return new LeagueSeason(month.minusMonths(1), zone);
 	}
 }
