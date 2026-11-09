@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.league.application.port.out.SeasonChampionStore;
 import com.blinkerleague.server.league.application.service.SettleSeasonService;
 import com.blinkerleague.server.league.domain.LeagueRegions;
+import com.blinkerleague.server.league.domain.SeasonChampion;
 import com.blinkerleague.server.threshold.ThresholdsFixture;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
 
@@ -30,7 +32,17 @@ class LeagueSeasonSchedulerTest {
 			settled.add(season.id());
 			return List.of();
 		}, () -> new LeagueRegions(List.of()), () -> new VersionedThresholds(1, ThresholdsFixture.planExample()),
-			(driverId, refId) -> 0, Clock.fixed(Instant.parse("2026-11-30T15:10:00Z"), TimeConfig.ZONE));
+			new SeasonChampionStore() {
+				@Override
+				public void saveIfAbsent(SeasonChampion champion) {
+				}
+
+				@Override
+				public List<SeasonChampion> findByDriver(Long driverId) {
+					return List.of();
+				}
+			}, driverId -> {
+			}, Clock.fixed(Instant.parse("2026-11-30T15:10:00Z"), TimeConfig.ZONE));
 
 		new LeagueSeasonScheduler(service).run();
 

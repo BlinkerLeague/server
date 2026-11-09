@@ -37,6 +37,27 @@ class LeagueBoardTest {
 	}
 
 	@Test
+	void 순위_점수는_리그_점수_거리_가중_평균에_시즌_포인트를_더한_값이다() {
+		List<MemberRecord> members = List.of(
+			// 평균 90.0 + 포인트 10 = 100.0
+			withPoints(member(1L, NORTHWEST, 1, 20, 20, 90 * 20), 10),
+			// 평균 80.0 + 포인트 35 = 115.0 → 평균은 낮아도 포인트로 1위
+			withPoints(member(2L, NORTHWEST, 1, 20, 20, 80 * 20), 35));
+
+		LeagueBoard board = LeagueBoard.build(members, REGIONS, OPEN);
+
+		assertThat(board.region("SEOUL_NORTHWEST").rankings())
+			.extracting(Ranked::rank, Ranked::driverId, Ranked::averageScore, Ranked::points, Ranked::score)
+			.containsExactly(tuple(1, 2L, 80.0, 35, 115.0), tuple(2, 1L, 90.0, 10, 100.0));
+		assertThat(board.standingOf(1L)).hasValueSatisfying(standing -> {
+			assertThat(standing.averageScore()).isEqualTo(90.0);
+			assertThat(standing.points()).isEqualTo(10);
+			assertThat(standing.score()).isEqualTo(100.0);
+			assertThat(standing.rank()).isEqualTo(2);
+		});
+	}
+
+	@Test
 	void 시즌_누적_50km_이상이거나_운행_10회_이상인_운전자만_순위에_오른다() {
 		List<MemberRecord> members = List.of(
 			member(1L, NORTHWEST, 2, 50, 50, 90 * 50),
@@ -132,12 +153,17 @@ class LeagueBoardTest {
 
 	static MemberRecord hidden(MemberRecord member) {
 		return new MemberRecord(member.driverId(), member.nickname(), member.leagueCode(), false, member.trips(),
-			member.distanceKm(), member.scoredDistanceKm(), member.weightedScoreSum());
+			member.distanceKm(), member.scoredDistanceKm(), member.weightedScoreSum(), member.seasonPoints());
 	}
 
 	static MemberRecord member(Long driverId, LeagueRegion region, int trips, double distanceKm,
 		double scoredDistanceKm, double weightedScoreSum) {
 		return new MemberRecord(driverId, "driver" + driverId, region.code(), true, trips, distanceKm,
-			scoredDistanceKm, weightedScoreSum);
+			scoredDistanceKm, weightedScoreSum, 0);
+	}
+
+	static MemberRecord withPoints(MemberRecord member, int seasonPoints) {
+		return new MemberRecord(member.driverId(), member.nickname(), member.leagueCode(), member.visible(),
+			member.trips(), member.distanceKm(), member.scoredDistanceKm(), member.weightedScoreSum(), seasonPoints);
 	}
 }

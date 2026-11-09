@@ -77,8 +77,4 @@ public class PointEntry extends BaseTimeEntity {
 	public static PointEntry streak(Long driverId, String refId, int amount, Instant earnedAt) {
 		return new PointEntry(driverId, amount, PointReason.STREAK_7, refId, null, null, earnedAt);
 	}
-
-	public static PointEntry seasonLeague(Long driverId, String refId, int amount, Instant earnedAt) {
-		return new PointEntry(driverId, amount, PointReason.SEASON_LEAGUE, refId, null, null, earnedAt);
-	}
 }

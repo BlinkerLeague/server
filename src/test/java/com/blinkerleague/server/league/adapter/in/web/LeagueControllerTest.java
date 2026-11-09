@@ -50,6 +50,8 @@ class LeagueControllerTest {
 			drivers.add(registerDriver("26440"));
 		}
 		Long me = drivers.get(0);
+		jdbcTemplate.update("insert into league_champion (season_id, driver_id, league_code, created_at, updated_at) "
+			+ "values ('2026-10', ?, 'BUSAN', current_timestamp, current_timestamp)", me);
 		// 9명은 깜빡이를 모두 켜고(리그 점수 100) 1명은 켜지 않는다(0). 모두 60km라 순위 자격(D13)이 있다.
 		for (Long driver : drivers) {
 			upload(driver, !driver.equals(drivers.get(9))).andExpect(status().isCreated());
@@ -68,15 +70,25 @@ class LeagueControllerTest {
 			.andExpect(jsonPath("$.league.safetyIndex").value(90.0))
 			.andExpect(jsonPath("$.league.rankings.length()").value(10))
 			.andExpect(jsonPath("$.league.rankings[0].rank").value(1))
-			.andExpect(jsonPath("$.league.rankings[0].score").value(100.0))
+			// 순위 점수 = 평균 100 + 시즌 포인트 50P(운행 포인트: 최대 50km × 100점 ÷ 100) (D34)
+			.andExpect(jsonPath("$.league.rankings[0].averageScore").value(100.0))
+			.andExpect(jsonPath("$.league.rankings[0].points").value(50))
+			.andExpect(jsonPath("$.league.rankings[0].score").value(150.0))
 			.andExpect(jsonPath("$.league.rankings[9].rank").value(10))
 			.andExpect(jsonPath("$.league.rankings[9].score").value(0.0))
 			.andExpect(jsonPath("$.me.visible").value(true))
 			.andExpect(jsonPath("$.me.eligible").value(true))
-			.andExpect(jsonPath("$.me.score").value(100.0))
+			.andExpect(jsonPath("$.me.averageScore").value(100.0))
+			.andExpect(jsonPath("$.me.points").value(50))
+			.andExpect(jsonPath("$.me.score").value(150.0))
 			.andExpect(jsonPath("$.me.rank").value(1))
 			.andExpect(jsonPath("$.me.trips").value(1))
 			.andExpect(jsonPath("$.me.distanceKm").value(60.0))
+			// 지난 시즌 우승 칭호(D30 · D34)
+			.andExpect(jsonPath("$.me.championships.length()").value(1))
+			.andExpect(jsonPath("$.me.championships[0].seasonId").value("2026-10"))
+			.andExpect(jsonPath("$.me.championships[0].leagueCode").value("BUSAN"))
+			.andExpect(jsonPath("$.me.championships[0].name").value("부산"))
 			.andExpect(jsonPath("$.regions[?(@.leagueCode == 'BUSAN')].safetyIndex").value(90.0))
 			.andExpect(jsonPath("$.regions[?(@.leagueCode == 'JEJU')].safetyIndex").value(contains(nullValue())));
 	}

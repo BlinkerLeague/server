@@ -4,6 +4,5 @@ package com.blinkerleague.server.point.domain;
 public enum PointReason {
 	TRIP,
 	DAILY_MISSION,
-	STREAK_7,
-	SEASON_LEAGUE
+	STREAK_7
 }

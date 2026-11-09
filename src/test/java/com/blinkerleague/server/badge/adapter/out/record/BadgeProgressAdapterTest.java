@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.blinkerleague.server.badge.domain.BadgeProgress;
 import com.blinkerleague.server.common.jpa.JpaAuditingConfig;
 import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.league.domain.SeasonChampion;
 import com.blinkerleague.server.mission.domain.DriverMission;
 import com.blinkerleague.server.mission.domain.MissionStatus;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
@@ -50,7 +51,17 @@ class BadgeProgressAdapterTest {
 		achieved(2L, "2026-11-01", "2026-11-02", "2026-11-03");
 		entityManager.flush();
 
-		assertThat(adapter.progress(1L)).isEqualTo(new BadgeProgress(1, 2, 2));
+		assertThat(adapter.progress(1L)).isEqualTo(new BadgeProgress(1, 2, 2, 0));
+	}
+
+	@Test
+	void 지역_리그_시즌_우승_횟수를_센다() {
+		entityManager.persist(new SeasonChampion("2026-10", 1L, "BUSAN"));
+		entityManager.persist(new SeasonChampion("2026-11", 1L, "BUSAN"));
+		entityManager.persist(new SeasonChampion("2026-11", 2L, "BUSAN"));
+		entityManager.flush();
+
+		assertThat(adapter.progress(1L).seasonChampions()).isEqualTo(2);
 	}
 
 	private void saveTrip(String tripId, Long driverId, double distanceKm, Integer score, RecordedEvent... events) {

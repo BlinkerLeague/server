@@ -20,6 +20,7 @@ import com.blinkerleague.server.driver.domain.Driver;
 import com.blinkerleague.server.league.domain.LeagueMember;
 import com.blinkerleague.server.league.domain.LeagueSeason;
 import com.blinkerleague.server.league.domain.MemberRecord;
+import com.blinkerleague.server.point.domain.PointEntry;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.trip.domain.Trip;
 
@@ -62,8 +63,31 @@ class LeagueRecordsAdapterTest {
 		List<MemberRecord> records = adapter.records(NOVEMBER);
 
 		assertThat(records).containsExactlyInAnyOrder(
-			new MemberRecord(me, "me", "SEOUL_NORTHWEST", true, 3, 45.0, 40.0, 90 * 10 + 70 * 30),
-			new MemberRecord(hidden, "hidden", "SEOUL_NORTHWEST", false, 1, 20.0, 20.0, 80 * 20));
+			new MemberRecord(me, "me", "SEOUL_NORTHWEST", true, 3, 45.0, 40.0, 90 * 10 + 70 * 30, 0),
+			new MemberRecord(hidden, "hidden", "SEOUL_NORTHWEST", false, 1, 20.0, 20.0, 80 * 20, 0));
+	}
+
+	@Test
+	void 시즌_소속_운전자마다_시즌_안에_적립한_포인트_합을_읽는다() {
+		Long me = driver("me", "11440");
+		Long other = driver("other", "11440");
+		member(me, "SEOUL_NORTHWEST");
+		member(other, "SEOUL_NORTHWEST");
+		Instant inSeason = NOVEMBER.startsAt().plusSeconds(86_400);
+		trip("t1", me, inSeason, 10.0, 90);
+		entityManager.persist(PointEntry.trip(me, "t1", 9, 10.0, 90, inSeason));
+		entityManager.persist(PointEntry.dailyMission(me, "m1", 30, inSeason.plusSeconds(60)));
+		entityManager.persist(PointEntry.streak(me, "s1", 50, NOVEMBER.endsAt().minusSeconds(1)));
+		// 시즌 밖에 적립한 포인트와 다른 운전자의 포인트는 세지 않는다
+		entityManager.persist(PointEntry.dailyMission(me, "m0", 30, NOVEMBER.startsAt().minusSeconds(1)));
+		entityManager.persist(PointEntry.dailyMission(me, "m2", 30, NOVEMBER.endsAt()));
+		entityManager.persist(PointEntry.dailyMission(other, "o1", 30, inSeason));
+		entityManager.flush();
+
+		List<MemberRecord> records = adapter.records(NOVEMBER);
+
+		assertThat(records).filteredOn(record -> record.driverId().equals(me))
+			.singleElement().extracting(MemberRecord::seasonPoints).isEqualTo(9 + 30 + 50);
 	}
 
 	private Long driver(String nickname, String regionCode) {

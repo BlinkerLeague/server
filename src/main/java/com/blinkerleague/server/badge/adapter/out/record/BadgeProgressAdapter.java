@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
-/** 저장된 운행(trip · trip_event)과 미션 기록(driver_mission)을 읽어 배지 판정용 누적 기록을 만든다. */
+/** 저장된 운행(trip · trip_event), 미션 기록(driver_mission), 리그 우승 칭호(league_champion)를 읽어 배지 판정용 누적 기록을 만든다. */
 @Component
 @RequiredArgsConstructor
 public class BadgeProgressAdapter implements BadgeProgressPort {
@@ -37,6 +37,8 @@ public class BadgeProgressAdapter implements BadgeProgressPort {
 	private static final String ACHIEVED_DAYS =
 		"select period_key from driver_mission where driver_id = ? and status = 'ACHIEVED'";
 
+	private static final String SEASON_CHAMPIONS = "select count(*) from league_champion where driver_id = ?";
+
 	private final JdbcTemplate jdbcTemplate;
 
 	@Override
@@ -48,7 +50,9 @@ public class BadgeProgressAdapter implements BadgeProgressPort {
 		Set<LocalDate> achieved = jdbcTemplate.queryForList(ACHIEVED_DAYS, String.class, driverId).stream()
 			.map(LocalDate::parse)
 			.collect(Collectors.toSet());
-		return new BadgeProgress(scoredTrips == null ? 0 : scoredTrips, LongestStreak.of(achieved), signalOnTurns);
+		Integer seasonChampions = jdbcTemplate.queryForObject(SEASON_CHAMPIONS, Integer.class, driverId);
+		return new BadgeProgress(scoredTrips == null ? 0 : scoredTrips, LongestStreak.of(achieved), signalOnTurns,
+			seasonChampions == null ? 0 : seasonChampions);
 	}
 
 	// 점수 엔진과 같은 기준(D23): signalOn이 boolean true일 때만 켠 회전이다.

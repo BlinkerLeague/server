@@ -51,6 +51,7 @@ public class Badge {
 			case SCORED_TRIPS -> progress.scoredTrips();
 			case STREAK_DAYS -> progress.longestStreakDays();
 			case SIGNAL_ON_TURNS -> progress.signalOnTurns();
+			case SEASON_CHAMPIONS -> progress.seasonChampions();
 		};
 		return value >= target;
 	}

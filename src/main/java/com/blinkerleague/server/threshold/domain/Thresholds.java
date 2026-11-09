@@ -76,10 +76,10 @@ public record Thresholds(
 
 	/**
 	 * 지역 리그(plan.md 4.4). 리그 점수에 쓰는 공통 항목(D19), 순위 공개 최소 참여자(D11), 순위 자격(D13: 시즌 누적
-	 * minSeasonDistanceKm 이상 또는 minSeasonTrips회 이상), 순위 목록 길이, 시즌 1위 권역 보상(D30).
+	 * minSeasonDistanceKm 이상 또는 minSeasonTrips회 이상), 순위 목록 길이. 시즌 1위 권역 보상은 포인트가 아니라 우승 칭호 · 배지다(D30 · D34).
 	 */
 	public record League(List<ScoreItem> commonItems, int minParticipants, double minSeasonDistanceKm,
-		int minSeasonTrips, int topN, int seasonRewardPoint) {
+		int minSeasonTrips, int topN) {
 	}
 
 	public record GradeRule(String grade, int minScore) {

@@ -19,7 +19,7 @@
   "minSamples": {"TURN_SIGNAL": 1},
   "point": {"tripMaxKm": 50, "dailyCap": 150, "streakRewardDays": 7, "streakRewardPoint": 50},
   "league": {"commonItems": ["TURN_SIGNAL", "SMOOTH_DRIVING", "TURN_SPEED"], "minParticipants": 10,
-    "minSeasonDistanceKm": 50, "minSeasonTrips": 10, "topN": 10, "seasonRewardPoint": 100},
+    "minSeasonDistanceKm": 50, "minSeasonTrips": 10, "topN": 10},
   "grades": [
     {
       "grade": "S",
