@@ -47,7 +47,7 @@ class BadgeControllerTest {
 
 		mockMvc.perform(get("/api/badges").header(HttpHeaders.AUTHORIZATION, bearer(driverId)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.length()").value(3))
+			.andExpect(jsonPath("$.length()").value(4))
 			.andExpect(jsonPath("$[0].code").value("FIRST_TRIP"))
 			.andExpect(jsonPath("$[0].earned").value(true))
 			.andExpect(jsonPath("$[0].awardedAt").value(matchesPattern(".+\\+09:00$")))
@@ -56,7 +56,10 @@ class BadgeControllerTest {
 			.andExpect(jsonPath("$[1].awardedAt").value(nullValue()))
 			.andExpect(jsonPath("$[2].code").value("SIGNAL_100"))
 			.andExpect(jsonPath("$[2].name").isString())
-			.andExpect(jsonPath("$[2].condition").isString());
+			.andExpect(jsonPath("$[2].condition").isString())
+			// 지역 리그 시즌 우승 배지(D34)
+			.andExpect(jsonPath("$[3].code").value("SEASON_CHAMPION"))
+			.andExpect(jsonPath("$[3].earned").value(false));
 	}
 
 	private static String bearer(Long driverId) {
