@@ -107,6 +107,24 @@ class LeagueBoardTest {
 			.containsExactly(tuple("SEOUL_NORTHWEST", 67.5, 2), tuple("BUSAN", 80.0, 1), tuple("DAEGU", null, null));
 	}
 
+	@Test
+	void 시즌_보상은_순위가_공개된_권역_중_안전지수_1위_권역의_자격자에게_간다() {
+		List<MemberRecord> members = List.of(
+			member(1L, NORTHWEST, 10, 60, 60, 90 * 60),
+			member(2L, NORTHWEST, 1, 10, 10, 90 * 10),
+			hidden(member(3L, NORTHWEST, 10, 60, 60, 90 * 60)),
+			member(4L, NORTHWEST, 10, 60, 60, 90 * 60),
+			// 부산은 안전지수가 더 높지만 참여자가 기준(2명) 미만이라 순위 비공개 → 1위 후보가 아니다
+			member(5L, BUSAN, 10, 60, 60, 99 * 60),
+			member(6L, DAEGU, 10, 60, 60, 80 * 60),
+			member(7L, DAEGU, 10, 60, 60, 80 * 60));
+
+		LeagueBoard board = LeagueBoard.build(members, REGIONS, new LeagueBoard.Rules(2, 50, 10));
+
+		// 2번은 자격 미달(10km · 1회), 3번은 순위 공개를 껐다
+		assertThat(board.seasonRewardees()).containsExactlyInAnyOrder(1L, 4L);
+	}
+
 	static MemberRecord hidden(MemberRecord member) {
 		return new MemberRecord(member.driverId(), member.nickname(), member.leagueCode(), false, member.trips(),
 			member.distanceKm(), member.scoredDistanceKm(), member.weightedScoreSum());

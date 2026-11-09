@@ -83,6 +83,11 @@ public final class LeagueBoard {
 		return ranked;
 	}
 
+	/** 시즌 보상(D30) 대상 운전자. */
+	public List<Long> seasonRewardees() {
+		throw new UnsupportedOperationException();
+	}
+
 	public Optional<Standing> standingOf(Long driverId) {
 		return Optional.ofNullable(standings.get(driverId));
 	}
