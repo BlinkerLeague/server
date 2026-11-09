@@ -10,11 +10,22 @@ import java.util.Optional;
 public record LeagueRegions(List<Rule> rules) {
 
 	public Optional<LeagueRegion> regionOf(String regionCode) {
-		throw new UnsupportedOperationException();
+		Optional<LeagueRegion> exact = rules.stream()
+			.filter(rule -> rule.sigungu().contains(regionCode))
+			.map(Rule::region)
+			.findFirst();
+		if (exact.isPresent()) {
+			return exact;
+		}
+		return rules.stream()
+			.filter(rule -> rule.sidoPrefixes().stream().anyMatch(regionCode::startsWith))
+			.map(Rule::region)
+			.findFirst();
 	}
 
+	/** 매핑표 순서대로의 모든 권역(월드맵 목록). */
 	public List<LeagueRegion> all() {
-		throw new UnsupportedOperationException();
+		return rules.stream().map(Rule::region).toList();
 	}
 
 	public record Rule(LeagueRegion region, List<String> sigungu, List<String> sidoPrefixes) {
