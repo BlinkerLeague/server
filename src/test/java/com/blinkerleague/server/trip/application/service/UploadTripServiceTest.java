@@ -36,6 +36,7 @@ class UploadTripServiceTest {
 	private final List<Object[]> missionCalls = new ArrayList<>();
 	private final List<Object[]> pointCalls = new ArrayList<>();
 	private final List<Long> badgeCalls = new ArrayList<>();
+	private final List<Object[]> leagueCalls = new ArrayList<>();
 	private final UploadTripService service = new UploadTripService(trips, trips,
 		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)),
 		new TripMissionPort() {
@@ -51,7 +52,8 @@ class UploadTripServiceTest {
 			}
 		},
 		(driverId, tripId, distanceKm, score) -> pointCalls.add(new Object[] {driverId, tripId, distanceKm, score}),
-		badgeCalls::add, Clock.fixed(ENDED_AT, java.time.ZoneOffset.UTC));
+		badgeCalls::add, (driverId, endedAt) -> leagueCalls.add(new Object[] {driverId, endedAt}),
+		Clock.fixed(ENDED_AT, java.time.ZoneOffset.UTC));
 
 	@Test
 	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {
@@ -85,6 +87,14 @@ class UploadTripServiceTest {
 		Trip saved = trips.findById("trip-1").orElseThrow();
 		assertThat(saved.getScore()).isLessThan(100);
 		assertThat(saved.getLeagueScore()).isEqualTo(100);
+	}
+
+	@Test
+	void 참여_운행을_올리면_운행이_끝난_시즌의_리그에_소속시키고_최소_거리_미만_운행은_소속시키지_않는다() {
+		service.upload(1L, command("trip-1", 12.3));
+		service.upload(2L, command("trip-2", 0.5));
+
+		assertThat(leagueCalls).singleElement().satisfies(call -> assertThat(call).containsExactly(1L, ENDED_AT));
 	}
 
 	@ParameterizedTest(name = "{0}km → {1}")
