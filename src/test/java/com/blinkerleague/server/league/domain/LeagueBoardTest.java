@@ -74,6 +74,26 @@ class LeagueBoardTest {
 		assertThat(board.region("BUSAN").rankings()).hasSize(10);
 	}
 
+	@Test
+	void 순위_공개를_끈_운전자는_참여자_수와_순위에서_빠진다() {
+		List<MemberRecord> members = new java.util.ArrayList<>();
+		for (long id = 1; id <= 10; id++) {
+			members.add(member(id, NORTHWEST, 10, 60, 60, 80 * 60));
+		}
+		members.add(hidden(member(11L, NORTHWEST, 10, 60, 60, 100 * 60)));
+
+		LeagueBoard board = LeagueBoard.build(members, REGIONS, new LeagueBoard.Rules(10, 50, 10));
+
+		assertThat(board.region("SEOUL_NORTHWEST").participants()).isEqualTo(10);
+		assertThat(board.region("SEOUL_NORTHWEST").rankings()).extracting(Ranked::driverId).doesNotContain(11L);
+		assertThat(board.standingOf(11L)).hasValueSatisfying(standing -> assertThat(standing.rank()).isNull());
+	}
+
+	static MemberRecord hidden(MemberRecord member) {
+		return new MemberRecord(member.driverId(), member.nickname(), member.leagueCode(), false, member.trips(),
+			member.distanceKm(), member.scoredDistanceKm(), member.weightedScoreSum());
+	}
+
 	static MemberRecord member(Long driverId, LeagueRegion region, int trips, double distanceKm,
 		double scoredDistanceKm, double weightedScoreSum) {
 		return new MemberRecord(driverId, "driver" + driverId, region.code(), true, trips, distanceKm,
