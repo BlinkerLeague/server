@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
+import com.blinkerleague.server.score.domain.LeagueScore;
 import com.blinkerleague.server.score.domain.ScoreCalculator;
 import com.blinkerleague.server.score.domain.ScoreResult;
 import com.blinkerleague.server.score.domain.TripFacts;
@@ -57,6 +58,8 @@ public class UploadTripService {
 				.map(m -> new TripMetric(m.metric(), m.status().name(), m.reason(), m.value(), m.score(), m.weight(),
 					MetricDetails.toJson(m.detail())))
 				.toList());
+			trip.applyLeagueScore(LeagueScore.of(score.metrics(), thresholds.weights(),
+				Set.copyOf(thresholds.league().commonItems())));
 		}
 		try {
 			saveTripPort.saveNew(trip);

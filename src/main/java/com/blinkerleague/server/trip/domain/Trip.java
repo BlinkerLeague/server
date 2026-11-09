@@ -106,6 +106,11 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 		this.status = score == null ? TripStatus.NO_TURN : TripStatus.SCORED;
 	}
 
+	/** 공통 항목만으로 매긴 리그 점수(D19)를 남긴다. 지역 리그 순위 · 안전지수가 이 값을 쓴다. */
+	public void applyLeagueScore(Integer leagueScore) {
+		this.leagueScore = leagueScore;
+	}
+
 	@Override
 	public boolean isNew() {
 		return newEntity;
