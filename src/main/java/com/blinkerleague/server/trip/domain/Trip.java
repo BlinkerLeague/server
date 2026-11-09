@@ -62,6 +62,10 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 
 	private Integer score;
 
+	/** 공통 항목만으로 매긴 리그 점수(D19). 공통 항목을 측정하지 않았으면 null이다. */
+	@Column(name = "league_score")
+	private Integer leagueScore;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private TripStatus status;

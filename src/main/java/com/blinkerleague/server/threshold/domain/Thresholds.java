@@ -20,6 +20,7 @@ public record Thresholds(
 	Map<ScoreItem, Double> weights,
 	Map<ScoreItem, Integer> minSamples,
 	Point point,
+	League league,
 	List<GradeRule> grades,
 	Map<ScoreItem, String> tips) {
 
@@ -71,6 +72,14 @@ public record Thresholds(
 	}
 
 	public record Point(int tripMaxKm, int dailyCap, int streakRewardDays, int streakRewardPoint) {
+	}
+
+	/**
+	 * 지역 리그(plan.md 4.4). 리그 점수에 쓰는 공통 항목(D19), 순위 공개 최소 참여자(D11), 순위 자격(D13: 시즌 누적
+	 * minSeasonDistanceKm 이상 또는 minSeasonTrips회 이상), 순위 목록 길이, 시즌 1위 권역 보상(D30).
+	 */
+	public record League(List<ScoreItem> commonItems, int minParticipants, double minSeasonDistanceKm,
+		int minSeasonTrips, int topN, int seasonRewardPoint) {
 	}
 
 	public record GradeRule(String grade, int minScore) {

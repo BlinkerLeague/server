@@ -72,6 +72,21 @@ class UploadTripServiceTest {
 		});
 	}
 
+	@Test
+	void 점수가_난_운행에는_공통_항목만으로_매긴_리그_점수를_함께_저장한다() {
+		// 깜빡이 100점, 안전 경고 2회(12.3km → 0점). 안전 경고는 공통 항목이 아니라 리그 점수에서 빠진다(D19).
+		service.upload(1L, new UploadTripService.Command("trip-1", STARTED_AT, ENDED_AT, 12.3,
+			Set.of(ScoreItem.TURN_SIGNAL, ScoreItem.SAFETY_WARNING), List.of(
+				new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600),
+					"{\"direction\":\"LEFT\",\"signalOn\":true}"),
+				new RecordedEvent("event-2", TripEventType.SAFETY_WARNING, STARTED_AT.plusSeconds(900), null),
+				new RecordedEvent("event-3", TripEventType.SAFETY_WARNING, STARTED_AT.plusSeconds(1500), null))));
+
+		Trip saved = trips.findById("trip-1").orElseThrow();
+		assertThat(saved.getScore()).isLessThan(100);
+		assertThat(saved.getLeagueScore()).isEqualTo(100);
+	}
+
 	@ParameterizedTest(name = "{0}km → {1}")
 	@CsvSource({"0.0, EXCLUDED_SHORT", "2.9, EXCLUDED_SHORT", "3.0, NO_TURN", "3.1, NO_TURN"})
 	void 기준값의_최소_거리_미만_운행은_EXCLUDED_SHORT로_저장한다(double distanceKm, TripStatus expected) {

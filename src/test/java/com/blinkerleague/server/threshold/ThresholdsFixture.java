@@ -10,6 +10,9 @@ import com.blinkerleague.server.threshold.domain.Thresholds.GradeRule;
 /** 테스트용 기준값. plan.md 3.3 예시 값을 쓴다. */
 public final class ThresholdsFixture {
 
+	public static final Thresholds.League LEAGUE = new Thresholds.League(
+		List.of(ScoreItem.TURN_SIGNAL, ScoreItem.SMOOTH_DRIVING, ScoreItem.TURN_SPEED), 10, 50, 10, 10, 100);
+
 	private ThresholdsFixture() {
 	}
 
@@ -34,6 +37,7 @@ public final class ThresholdsFixture {
 				ScoreItem.SAFETY_WARNING, 0.2, ScoreItem.NIGHT_HEADLIGHT, 0.1),
 			Map.of(ScoreItem.TURN_SIGNAL, 1),
 			new Thresholds.Point(50, 150, 7, 50),
+			LEAGUE,
 			grades,
 			Map.of(ScoreItem.TURN_SIGNAL, "회전 5초 전에 깜빡이를 켜 보세요.",
 				ScoreItem.SMOOTH_DRIVING, "천천히 출발하고 미리 감속해 보세요.",
@@ -45,13 +49,13 @@ public final class ThresholdsFixture {
 	public static Thresholds withMinDistanceKm(double minDistanceKm) {
 		Thresholds base = planExample();
 		return new Thresholds(new Thresholds.Trip(minDistanceKm, base.trip().parkEndMinutes(), base.trip().maxEvents(), base.trip().maxFutureMinutes(), base.trip().maxPastDays()), base.turn(),
-			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), base.minSamples(), base.point(), base.grades(), base.tips());
+			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), base.minSamples(), base.point(), base.league(), base.grades(), base.tips());
 	}
 
 	/** 같은 구조에서 항목별 최소 표본만 바꾼 값. */
 	public static Thresholds withMinSamples(Map<ScoreItem, Integer> minSamples) {
 		Thresholds base = planExample();
 		return new Thresholds(base.trip(), base.turn(), base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), minSamples,
-			base.point(), base.grades(), base.tips());
+			base.point(), base.league(), base.grades(), base.tips());
 	}
 }
