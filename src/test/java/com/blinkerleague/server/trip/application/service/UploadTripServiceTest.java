@@ -36,6 +36,7 @@ class UploadTripServiceTest {
 	private final List<Object[]> missionCalls = new ArrayList<>();
 	private final List<Object[]> pointCalls = new ArrayList<>();
 	private final List<Long> badgeCalls = new ArrayList<>();
+	private final List<Object[]> leagueCalls = new ArrayList<>();
 	private final UploadTripService service = new UploadTripService(trips, trips,
 		() -> new VersionedThresholds(1, ThresholdsFixture.withMinDistanceKm(3.0)),
 		new TripMissionPort() {
@@ -51,7 +52,8 @@ class UploadTripServiceTest {
 			}
 		},
 		(driverId, tripId, distanceKm, score) -> pointCalls.add(new Object[] {driverId, tripId, distanceKm, score}),
-		badgeCalls::add, Clock.fixed(ENDED_AT, java.time.ZoneOffset.UTC));
+		badgeCalls::add, (driverId, endedAt) -> leagueCalls.add(new Object[] {driverId, endedAt}),
+		Clock.fixed(ENDED_AT, java.time.ZoneOffset.UTC));
 
 	@Test
 	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {
@@ -70,6 +72,29 @@ class UploadTripServiceTest {
 			assertThat(event.getType()).isEqualTo(TripEventType.TURN);
 			assertThat(event.getPayload()).isEqualTo("{\"direction\":\"LEFT\",\"signalOn\":true}");
 		});
+	}
+
+	@Test
+	void 점수가_난_운행에는_공통_항목만으로_매긴_리그_점수를_함께_저장한다() {
+		// 깜빡이 100점, 안전 경고 2회(12.3km → 0점). 안전 경고는 공통 항목이 아니라 리그 점수에서 빠진다(D19).
+		service.upload(1L, new UploadTripService.Command("trip-1", STARTED_AT, ENDED_AT, 12.3,
+			Set.of(ScoreItem.TURN_SIGNAL, ScoreItem.SAFETY_WARNING), List.of(
+				new RecordedEvent("event-1", TripEventType.TURN, STARTED_AT.plusSeconds(600),
+					"{\"direction\":\"LEFT\",\"signalOn\":true}"),
+				new RecordedEvent("event-2", TripEventType.SAFETY_WARNING, STARTED_AT.plusSeconds(900), null),
+				new RecordedEvent("event-3", TripEventType.SAFETY_WARNING, STARTED_AT.plusSeconds(1500), null))));
+
+		Trip saved = trips.findById("trip-1").orElseThrow();
+		assertThat(saved.getScore()).isLessThan(100);
+		assertThat(saved.getLeagueScore()).isEqualTo(100);
+	}
+
+	@Test
+	void 참여_운행을_올리면_운행이_끝난_시즌의_리그에_소속시키고_최소_거리_미만_운행은_소속시키지_않는다() {
+		service.upload(1L, command("trip-1", 12.3));
+		service.upload(2L, command("trip-2", 0.5));
+
+		assertThat(leagueCalls).singleElement().satisfies(call -> assertThat(call).containsExactly(1L, ENDED_AT));
 	}
 
 	@ParameterizedTest(name = "{0}km → {1}")

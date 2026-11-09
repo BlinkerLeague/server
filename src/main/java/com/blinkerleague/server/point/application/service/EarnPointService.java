@@ -51,6 +51,13 @@ public class EarnPointService implements EarnPointUseCase {
 			(amount, now) -> PointEntry.streak(driverId, refId, amount, now));
 	}
 
+	@Override
+	public int earnForSeasonLeague(Long driverId, String refId) {
+		int reward = thresholdProvider.current().thresholds().league().seasonRewardPoint();
+		return earn(driverId, PointReason.SEASON_LEAGUE, refId, reward,
+			(amount, now) -> PointEntry.seasonLeague(driverId, refId, amount, now));
+	}
+
 	// 같은 운전자의 적립은 잠금 안에서 하나씩: 한 번만 적립 확인 → 오늘 합계로 상한 적용 → 저장.
 	private int earn(Long driverId, PointReason reason, String refId, int requested,
 		BiFunction<Integer, Instant, PointEntry> entry) {

@@ -62,6 +62,10 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 
 	private Integer score;
 
+	/** 공통 항목만으로 매긴 리그 점수(D19). 공통 항목을 측정하지 않았으면 null이다. */
+	@Column(name = "league_score")
+	private Integer leagueScore;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private TripStatus status;
@@ -100,6 +104,11 @@ public class Trip extends BaseTimeEntity implements Persistable<String> {
 		metrics.forEach(metric -> metric.assignTo(this));
 		this.metrics.addAll(metrics);
 		this.status = score == null ? TripStatus.NO_TURN : TripStatus.SCORED;
+	}
+
+	/** 공통 항목만으로 매긴 리그 점수(D19)를 남긴다. 지역 리그 순위 · 안전지수가 이 값을 쓴다. */
+	public void applyLeagueScore(Integer leagueScore) {
+		this.leagueScore = leagueScore;
 	}
 
 	@Override

@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.blinkerleague.server.common.error.BusinessException;
 import com.blinkerleague.server.common.error.ErrorCode;
+import com.blinkerleague.server.score.domain.LeagueScore;
 import com.blinkerleague.server.score.domain.ScoreCalculator;
 import com.blinkerleague.server.score.domain.ScoreResult;
 import com.blinkerleague.server.score.domain.TripFacts;
@@ -18,6 +19,7 @@ import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.trip.application.port.out.LoadTripPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort;
 import com.blinkerleague.server.trip.application.port.out.TripBadgePort;
+import com.blinkerleague.server.trip.application.port.out.TripLeaguePort;
 import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
 import com.blinkerleague.server.trip.application.port.out.TripPointPort;
 import com.blinkerleague.server.trip.application.port.out.SaveTripPort.TripAlreadyExistsException;
@@ -38,6 +40,7 @@ public class UploadTripService {
 	private final TripMissionPort tripMissionPort;
 	private final TripPointPort tripPointPort;
 	private final TripBadgePort tripBadgePort;
+	private final TripLeaguePort tripLeaguePort;
 	private final Clock clock;
 	private final ScoreCalculator scoreCalculator = new ScoreCalculator();
 
@@ -57,6 +60,8 @@ public class UploadTripService {
 				.map(m -> new TripMetric(m.metric(), m.status().name(), m.reason(), m.value(), m.score(), m.weight(),
 					MetricDetails.toJson(m.detail())))
 				.toList());
+			trip.applyLeagueScore(LeagueScore.of(score.metrics(), thresholds.weights(),
+				Set.copyOf(thresholds.league().commonItems())));
 		}
 		try {
 			saveTripPort.saveNew(trip);
@@ -83,11 +88,15 @@ public class UploadTripService {
 		}
 	}
 
-	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 순서다(배지는 연속 달성 · 누적 기록을 본다).
+	// 운행 적립 → 그날 미션 판정 · 보상 → 배지 판정 → 리그 소속 순서다(배지는 연속 달성 · 누적 기록을 본다).
 	private TripScoreView afterUpload(Trip trip, Thresholds thresholds) {
 		earnPoints(trip);
 		TripScoreView view = withMission(TripScoreView.of(trip, thresholds), trip);
 		tripBadgePort.awardEarned(trip.getDriverId());
+		// 참여 운행(최소 거리 이상)이면 그 시즌 리그에 소속시킨다(D12). 소속은 처음 한 번만 정해진다.
+		if (trip.getStatus() != TripStatus.EXCLUDED_SHORT) {
+			tripLeaguePort.joinSeasonOf(trip.getDriverId(), trip.getEndedAt());
+		}
 		return view;
 	}
 

@@ -1,0 +1,28 @@
+{
+  "description": "시군구(법정동 코드 앞 5자리) → 리그 권역 매핑표(D11, 초기 묶음 D31). sigungu가 먼저, 없으면 sidoPrefixes(앞 2자리)로 찾는다. 순서가 월드맵 목록 순서다.",
+  "regions": [
+    {"code": "SEOUL_CENTRAL", "name": "서울 도심권", "sigungu": ["11110", "11140", "11170"]},
+    {"code": "SEOUL_NORTHEAST", "name": "서울 동북권",
+     "sigungu": ["11200", "11215", "11230", "11260", "11290", "11305", "11320", "11350"]},
+    {"code": "SEOUL_NORTHWEST", "name": "서울 서북권", "sigungu": ["11380", "11410", "11440"]},
+    {"code": "SEOUL_SOUTHWEST", "name": "서울 서남권",
+     "sigungu": ["11470", "11500", "11530", "11545", "11560", "11590", "11620"]},
+    {"code": "SEOUL_SOUTHEAST", "name": "서울 동남권", "sigungu": ["11650", "11680", "11710", "11740"]},
+    {"code": "BUSAN", "name": "부산", "sidoPrefixes": ["26"]},
+    {"code": "DAEGU", "name": "대구", "sidoPrefixes": ["27"]},
+    {"code": "INCHEON", "name": "인천", "sidoPrefixes": ["28"]},
+    {"code": "GWANGJU", "name": "광주", "sidoPrefixes": ["29"]},
+    {"code": "DAEJEON", "name": "대전", "sidoPrefixes": ["30"]},
+    {"code": "ULSAN", "name": "울산", "sidoPrefixes": ["31"]},
+    {"code": "SEJONG", "name": "세종", "sidoPrefixes": ["36"]},
+    {"code": "GYEONGGI", "name": "경기", "sidoPrefixes": ["41"]},
+    {"code": "GANGWON", "name": "강원", "sidoPrefixes": ["42", "51"]},
+    {"code": "CHUNGBUK", "name": "충북", "sidoPrefixes": ["43"]},
+    {"code": "CHUNGNAM", "name": "충남", "sidoPrefixes": ["44"]},
+    {"code": "JEONBUK", "name": "전북", "sidoPrefixes": ["45", "52"]},
+    {"code": "JEONNAM", "name": "전남", "sidoPrefixes": ["46"]},
+    {"code": "GYEONGBUK", "name": "경북", "sidoPrefixes": ["47"]},
+    {"code": "GYEONGNAM", "name": "경남", "sidoPrefixes": ["48"]},
+    {"code": "JEJU", "name": "제주", "sidoPrefixes": ["50"]}
+  ]
+}

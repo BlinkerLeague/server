@@ -42,6 +42,26 @@
         },
         "type": "object"
       },
+      "CurrentLeagueResponse": {
+        "properties": {
+          "league": {
+            "$ref": "#/components/schemas/LeagueResponse"
+          },
+          "me": {
+            "$ref": "#/components/schemas/MeResponse"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/RegionResponse"
+            },
+            "type": "array"
+          },
+          "season": {
+            "$ref": "#/components/schemas/SeasonResponse"
+          }
+        },
+        "type": "object"
+      },
       "Description": {
         "properties": {
           "distanceKm": {
@@ -72,7 +92,8 @@
             "enum": [
               "TRIP",
               "DAILY_MISSION",
-              "STREAK_7"
+              "STREAK_7",
+              "SEASON_LEAGUE"
             ],
             "type": "string"
           }
@@ -152,6 +173,127 @@
           "penaltyPer10Km": {
             "format": "double",
             "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "League": {
+        "properties": {
+          "commonItems": {
+            "items": {
+              "enum": [
+                "TURN_SIGNAL",
+                "SMOOTH_DRIVING",
+                "SAFETY_WARNING",
+                "NIGHT_HEADLIGHT",
+                "SIGNAL_CANCEL",
+                "TURN_SPEED",
+                "SEAT_BELT",
+                "RAIN_DRIVING"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "minParticipants": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minSeasonDistanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "minSeasonTrips": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "seasonRewardPoint": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "topN": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "LeagueResponse": {
+        "description": "내 리그 권역. rankings는 순위가 공개됐을 때만 상위 N명(기준값 league.topN)",
+        "properties": {
+          "leagueCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "participants": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rankingPublished": {
+            "type": "boolean"
+          },
+          "rankings": {
+            "items": {
+              "$ref": "#/components/schemas/RankingResponse"
+            },
+            "type": "array"
+          },
+          "safetyIndex": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "LeagueVisibilityRequest": {
+        "properties": {
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "visible"
+        ],
+        "type": "object"
+      },
+      "LeagueVisibilityResponse": {
+        "properties": {
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "MeResponse": {
+        "description": "내 시즌 기록. rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다",
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          },
+          "trips": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "visible": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -391,6 +533,22 @@
         },
         "type": "object"
       },
+      "RankingResponse": {
+        "properties": {
+          "nickname": {
+            "type": "string"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
       "RecentTripResult": {
         "properties": {
           "distanceKm": {
@@ -432,6 +590,26 @@
         "required": [
           "refreshToken"
         ],
+        "type": "object"
+      },
+      "RegionResponse": {
+        "description": "월드맵용 권역별 지역 안전지수(D5)와 권역 순위. 리그 점수가 없는 권역은 null",
+        "properties": {
+          "leagueCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "safetyIndex": {
+            "format": "double",
+            "type": "number"
+          }
+        },
         "type": "object"
       },
       "RegisterDriverRequest": {
@@ -482,6 +660,22 @@
           "penaltyPer100Km": {
             "format": "double",
             "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "SeasonResponse": {
+        "properties": {
+          "endsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "seasonId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
           }
         },
         "type": "object"
@@ -555,6 +749,9 @@
           },
           "harsh": {
             "$ref": "#/components/schemas/Harsh"
+          },
+          "league": {
+            "$ref": "#/components/schemas/League"
           },
           "minSamples": {
             "additionalProperties": {
@@ -1060,6 +1257,100 @@
         ]
       }
     },
+    "/api/drivers/me/league-visibility": {
+      "put": {
+        "description": "내 리그 순위 공개를 켜고 끈다(D8, SCR-08). 기본은 공개다. 끄면 순위 목록 · 지역 안전지수 · 시즌 보상에서 빠지고 내 순위도 보이지 않는다. 순위 공개 기준 인원(10명)에는 남아 다른 운전자의 순위는 계속 공개된다.",
+        "operationId": "changeLeagueVisibility",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeagueVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueVisibilityResponse"
+                }
+              }
+            },
+            "description": "바뀐 설정"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: visible 누락"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 토큰의 운전자가 없음"
+          }
+        },
+        "summary": "리그 순위 공개 설정",
+        "tags": [
+          "운전자"
+        ]
+      }
+    },
+    "/api/leagues/current": {
+      "get": {
+        "description": "이번 시즌(한국 시간 달력 월, D29)의 내 리그 권역 순위, 내 순위, 모든 권역의 지역 안전지수를 돌려준다(SCR-04). 점수는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균이다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), 리그 점수가 있는 참여자(순위 공개를 끈 운전자 포함)가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 순위 목록 · 안전지수에서 빠지고 나머지 운전자끼리 순위를 매긴다(D8). 응답에는 닉네임만 담는다.",
+        "operationId": "current",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentLeagueResponse"
+                }
+              }
+            },
+            "description": "이번 시즌 리그 현황. 등록 지역이 매핑표에 없으면 league는 null"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "이번 시즌 내 리그 조회",
+        "tags": [
+          "지역 리그"
+        ]
+      }
+    },
     "/api/missions/today": {
       "get": {
         "description": "오늘(Asia/Seoul) 운영 중인 일일 미션과 내 진행도. 운행 1건이 1라운드이고, 그날 라운드 중 하나라도 조건을 채우면 ACHIEVED로 확정된다. progress는 달성했으면 달성한 라운드, 아니면 가장 최근 라운드의 회전 수다. 최소 거리 미만 운행은 세지 않는다. 그날이 끝날 때까지 달성하지 못하면 FAILED이고, 오늘 첫 운행 전에는 마지막 미션 날의 최종 상태(ACHIEVED · FAILED)를 그 날의 periodKey로 보여 준다(D25).",
@@ -1423,12 +1714,16 @@
       "name": "리포트"
     },
     {
-      "description": "운전자 등록",
+      "description": "판정 기준값 · 점수 가중치 · 등급",
+      "name": "설정"
+    },
+    {
+      "description": "운전자 등록 · 리그 순위 공개 설정",
       "name": "운전자"
     },
     {
-      "description": "판정 기준값 · 점수 가중치 · 등급",
-      "name": "설정"
+      "description": "시즌(달력 월) 지역 리그 순위와 지역 안전지수",
+      "name": "지역 리그"
     },
     {
       "description": "운행(라운드) · 이벤트 업로드",

@@ -1,5 +1,7 @@
 package com.blinkerleague.server.driver.adapter.out.persistence;
 
+import java.util.Optional;
+
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -35,6 +37,11 @@ public class DriverPersistenceAdapter implements SaveDriverPort, LoadDriverPort 
 	@Override
 	public boolean existsByNickname(String nickname) {
 		return repository.existsByNickname(nickname);
+	}
+
+	@Override
+	public Optional<Driver> findById(Long driverId) {
+		return repository.findById(driverId);
 	}
 
 	// driver 테이블의 유니크 제약은 닉네임 하나뿐이다.

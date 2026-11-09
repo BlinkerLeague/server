@@ -51,13 +51,14 @@ public class ThresholdController {
 		Map<ScoreItem, Double> weights,
 		Map<ScoreItem, Integer> minSamples,
 		Thresholds.Point point,
+		Thresholds.League league,
 		List<Thresholds.GradeRule> grades,
 		Map<ScoreItem, String> tips) {
 
 		static ThresholdsResponse from(VersionedThresholds current) {
 			Thresholds t = current.thresholds();
 			return new ThresholdsResponse(current.version(), t.trip(), t.turn(), t.harsh(), t.safetyWarning(),
-				t.signalCancel(), t.seatBelt(), t.rain(), t.weights(), t.minSamples(), t.point(), t.grades(), t.tips());
+				t.signalCancel(), t.seatBelt(), t.rain(), t.weights(), t.minSamples(), t.point(), t.league(), t.grades(), t.tips());
 		}
 	}
 }
