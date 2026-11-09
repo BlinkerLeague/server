@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +51,7 @@ class UploadTripServiceTest {
 			}
 		},
 		(driverId, tripId, distanceKm, score) -> pointCalls.add(new Object[] {driverId, tripId, distanceKm, score}),
-		badgeCalls::add);
+		badgeCalls::add, Clock.fixed(ENDED_AT, java.time.ZoneOffset.UTC));
 
 	@Test
 	void 최소_거리_이상_운행은_이벤트와_함께_저장하고_새로_만들었다고_알린다() {

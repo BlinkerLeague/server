@@ -23,7 +23,7 @@ public final class ThresholdsFixture {
 
 	public static Thresholds withGrades(List<GradeRule> grades) {
 		return new Thresholds(
-			new Thresholds.Trip(3.0, 3, 2000),
+			new Thresholds.Trip(3.0, 3, 2000, 5),
 			new Thresholds.Turn(5, 10, 60, 150, 5, 0.5, 30, 30, 90, 20, 3, false),
 			new Thresholds.Harsh(10, 10),
 			new Thresholds.SafetyWarning(10, 20),
@@ -44,7 +44,7 @@ public final class ThresholdsFixture {
 	/** 같은 구조에서 운행 최소 거리만 바꾼 값. 변경 테스트용. */
 	public static Thresholds withMinDistanceKm(double minDistanceKm) {
 		Thresholds base = planExample();
-		return new Thresholds(new Thresholds.Trip(minDistanceKm, base.trip().parkEndMinutes(), base.trip().maxEvents()), base.turn(),
+		return new Thresholds(new Thresholds.Trip(minDistanceKm, base.trip().parkEndMinutes(), base.trip().maxEvents(), base.trip().maxFutureMinutes()), base.turn(),
 			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), base.minSamples(), base.point(), base.grades(), base.tips());
 	}
 
