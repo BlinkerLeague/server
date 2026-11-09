@@ -29,11 +29,12 @@ public final class LeagueBoard {
 			List<MemberRecord> inRegion = members.stream()
 				.filter(member -> member.leagueCode().equals(region.code()))
 				.toList();
-			// 순위 공개를 끈 운전자는 리그에서 빠진다(D8). 참여자 = 겨루는 운전자 중 리그 점수가 있는 운전자.
+			// 참여자 = 리그 점수가 있는 운전자(순위 공개를 끈 운전자 포함). 순위 공개를 끈 운전자는
+			// 순위 · 안전지수 · 시즌 보상에서만 빠지고 나머지 운전자끼리 순위를 매긴다(D8).
+			int participants = (int) inRegion.stream().filter(MemberRecord::hasScore).count();
 			List<MemberRecord> competing = inRegion.stream()
 				.filter(member -> member.visible() && member.hasScore())
 				.toList();
-			int participants = competing.size();
 			// 참여자가 적으면 순위를 공개하지 않는다(D11).
 			boolean published = participants >= rules.minParticipants();
 			List<Ranked> rankings = published
