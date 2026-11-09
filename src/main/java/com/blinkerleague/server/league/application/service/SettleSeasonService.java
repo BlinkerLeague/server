@@ -5,7 +5,8 @@ import java.util.List;
 
 import com.blinkerleague.server.league.application.port.out.LoadLeagueRecordsPort;
 import com.blinkerleague.server.league.application.port.out.LoadLeagueRegionsPort;
-import com.blinkerleague.server.league.application.port.out.SeasonRewardPort;
+import com.blinkerleague.server.league.application.port.out.ChampionBadgePort;
+import com.blinkerleague.server.league.application.port.out.SeasonChampionStore;
 import com.blinkerleague.server.league.domain.LeagueBoard;
 import com.blinkerleague.server.league.domain.LeagueSeason;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
@@ -23,7 +24,8 @@ public class SettleSeasonService {
 	private final LoadLeagueRecordsPort loadLeagueRecordsPort;
 	private final LoadLeagueRegionsPort loadLeagueRegionsPort;
 	private final ThresholdProvider thresholdProvider;
-	private final SeasonRewardPort seasonRewardPort;
+	private final SeasonChampionStore seasonChampionStore;
+	private final ChampionBadgePort championBadgePort;
 	private final Clock clock;
 
 	/** 지난 시즌을 정산하고 보상받은 운전자 수를 돌려준다. */
@@ -33,7 +35,6 @@ public class SettleSeasonService {
 		LeagueBoard board = LeagueBoard.build(loadLeagueRecordsPort.records(season), loadLeagueRegionsPort.load().all(),
 			new LeagueBoard.Rules(rule.minParticipants(), rule.minSeasonDistanceKm(), rule.minSeasonTrips()));
 		List<Long> rewardees = board.seasonRewardees();
-		rewardees.forEach(driverId -> seasonRewardPort.rewardSeason(driverId, driverId + ":" + season.id()));
 		return rewardees.size();
 	}
 }

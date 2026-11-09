@@ -5,11 +5,12 @@ import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.blinkerleague.server.league.application.port.out.ChampionBadgePort;
 import com.blinkerleague.server.league.application.port.out.LeagueMemberStore;
 import com.blinkerleague.server.league.application.port.out.LoadLeagueDriverPort;
 import com.blinkerleague.server.league.application.port.out.LoadLeagueRecordsPort;
 import com.blinkerleague.server.league.application.port.out.LoadLeagueRegionsPort;
-import com.blinkerleague.server.league.application.port.out.SeasonRewardPort;
+import com.blinkerleague.server.league.application.port.out.SeasonChampionStore;
 import com.blinkerleague.server.league.application.service.GetCurrentLeagueService;
 import com.blinkerleague.server.league.application.service.JoinSeasonService;
 import com.blinkerleague.server.league.application.service.SettleSeasonService;
@@ -36,8 +37,8 @@ public class LeagueBeanConfig {
 	@Bean
 	public SettleSeasonService settleSeasonService(LoadLeagueRecordsPort loadLeagueRecordsPort,
 		LoadLeagueRegionsPort loadLeagueRegionsPort, ThresholdProvider thresholdProvider,
-		SeasonRewardPort seasonRewardPort, Clock clock) {
+		SeasonChampionStore seasonChampionStore, ChampionBadgePort championBadgePort, Clock clock) {
 		return new SettleSeasonService(loadLeagueRecordsPort, loadLeagueRegionsPort, thresholdProvider,
-			seasonRewardPort, clock);
+			seasonChampionStore, championBadgePort, clock);
 	}
 }
