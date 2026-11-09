@@ -76,18 +76,23 @@ class LeagueBoardTest {
 	}
 
 	@Test
-	void 순위_공개를_끈_운전자는_참여자_수와_순위에서_빠진다() {
+	void 순위_공개를_끈_운전자는_순위에서만_빠지고_참여자_수에는_남아_나머지끼리_순위를_매긴다() {
 		List<MemberRecord> members = new java.util.ArrayList<>();
-		for (long id = 1; id <= 10; id++) {
-			members.add(member(id, NORTHWEST, 10, 60, 60, 80 * 60));
+		for (long id = 1; id <= 9; id++) {
+			members.add(member(id, NORTHWEST, 10, 60, 60, (70 + id) * 60));
 		}
-		members.add(hidden(member(11L, NORTHWEST, 10, 60, 60, 100 * 60)));
+		// 가장 점수가 높지만 순위 공개를 껐다. 참여자 10명 기준에는 들어가 다른 운전자의 순위가 비공개되지 않는다.
+		members.add(hidden(member(10L, NORTHWEST, 10, 60, 60, 100 * 60)));
 
 		LeagueBoard board = LeagueBoard.build(members, REGIONS, new LeagueBoard.Rules(10, 50, 10));
 
-		assertThat(board.region("SEOUL_NORTHWEST").participants()).isEqualTo(10);
-		assertThat(board.region("SEOUL_NORTHWEST").rankings()).extracting(Ranked::driverId).doesNotContain(11L);
-		assertThat(board.standingOf(11L)).hasValueSatisfying(standing -> assertThat(standing.rank()).isNull());
+		LeagueBoard.RegionBoard northwest = board.region("SEOUL_NORTHWEST");
+		assertThat(northwest.participants()).isEqualTo(10);
+		assertThat(northwest.published()).isTrue();
+		assertThat(northwest.rankings()).extracting(Ranked::rank, Ranked::driverId)
+			.startsWith(tuple(1, 9L), tuple(2, 8L)).hasSize(9)
+			.extracting(t -> t.toList().get(1)).doesNotContain(10L);
+		assertThat(board.standingOf(10L)).hasValueSatisfying(standing -> assertThat(standing.rank()).isNull());
 	}
 
 	@Test
