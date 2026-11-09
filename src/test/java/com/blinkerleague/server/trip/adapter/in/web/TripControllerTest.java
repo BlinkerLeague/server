@@ -242,7 +242,7 @@ class TripControllerTest {
 		String shortTrip = UUID.randomUUID().toString();
 		upload(me, tripBodyEndingAt(older, 12.3, "2026-11-03T08:40:00+09:00")).andExpect(status().isCreated());
 		upload(me, tripBodyEndingAt(newest, 12.3, "2026-11-03T18:40:00+09:00")).andExpect(status().isCreated());
-		upload(me, tripBodyEndingAt(shortTrip, 2.0, "2026-11-03T12:40:00+09:00")).andExpect(status().isCreated());
+		upload(me, tripBodyEndingAt(shortTrip, 0.5, "2026-11-03T12:40:00+09:00")).andExpect(status().isCreated());
 		upload(1002L, tripBodyEndingAt(UUID.randomUUID().toString(), 12.3, "2026-11-03T20:40:00+09:00"))
 			.andExpect(status().isCreated());
 
@@ -315,8 +315,8 @@ class TripControllerTest {
 	}
 
 	@Test
-	void 기본_기준값의_최소_거리_3km_미만_운행은_EXCLUDED_SHORT로_저장한다() throws Exception {
-		upload(1L, tripBody(UUID.randomUUID().toString(), 2.9))
+	void 기본_기준값의_최소_거리_1km_미만_운행은_EXCLUDED_SHORT로_저장한다() throws Exception {
+		upload(1L, tripBody(UUID.randomUUID().toString(), 0.9))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.status").value("EXCLUDED_SHORT"));
 	}
