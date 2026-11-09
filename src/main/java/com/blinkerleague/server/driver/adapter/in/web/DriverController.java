@@ -53,7 +53,7 @@ public class DriverController {
 	}
 
 	@Operation(summary = "리그 순위 공개 설정",
-		description = "내 리그 순위 공개를 켜고 끈다(D8, SCR-08). 기본은 공개다. 끄면 리그에서 빠진다: 순위 목록 · 지역 안전지수 · 순위 공개 기준 인원(10명) · 시즌 보상에 들어가지 않는다.")
+		description = "내 리그 순위 공개를 켜고 끈다(D8, SCR-08). 기본은 공개다. 끄면 순위 목록 · 지역 안전지수 · 시즌 보상에서 빠지고 내 순위도 보이지 않는다. 순위 공개 기준 인원(10명)에는 남아 다른 운전자의 순위는 계속 공개된다.")
 	@ApiResponse(responseCode = "200", description = "바뀐 설정")
 	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: visible 누락",
 		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))

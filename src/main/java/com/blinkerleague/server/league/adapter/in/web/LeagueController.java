@@ -34,7 +34,8 @@ public class LeagueController {
 	@Operation(summary = "이번 시즌 내 리그 조회",
 		description = "이번 시즌(한국 시간 달력 월, D29)의 내 리그 권역 순위, 내 순위, 모든 권역의 지역 안전지수를 돌려준다(SCR-04). "
 			+ "점수는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균이다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), "
-			+ "리그 점수가 있는 참여자가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 리그에서 빠진다(D8). "
+			+ "리그 점수가 있는 참여자(순위 공개를 끈 운전자 포함)가 10명 미만인 권역은 순위를 공개하지 않는다(D11). "
+			+ "순위 공개를 끈 운전자는 순위 목록 · 안전지수에서 빠지고 나머지 운전자끼리 순위를 매긴다(D8). "
 			+ "응답에는 닉네임만 담는다.")
 	@ApiResponse(responseCode = "200", description = "이번 시즌 리그 현황. 등록 지역이 매핑표에 없으면 league는 null")
 	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
