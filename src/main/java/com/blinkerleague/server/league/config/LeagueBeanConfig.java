@@ -29,9 +29,9 @@ public class LeagueBeanConfig {
 	@Bean
 	public GetCurrentLeagueService getCurrentLeagueService(LoadLeagueRecordsPort loadLeagueRecordsPort,
 		LoadLeagueRegionsPort loadLeagueRegionsPort, LoadLeagueDriverPort loadLeagueDriverPort,
-		ThresholdProvider thresholdProvider, Clock clock) {
+		SeasonChampionStore seasonChampionStore, ThresholdProvider thresholdProvider, Clock clock) {
 		return new GetCurrentLeagueService(loadLeagueRecordsPort, loadLeagueRegionsPort, loadLeagueDriverPort,
-			thresholdProvider, clock);
+			seasonChampionStore, thresholdProvider, clock);
 	}
 
 	@Bean

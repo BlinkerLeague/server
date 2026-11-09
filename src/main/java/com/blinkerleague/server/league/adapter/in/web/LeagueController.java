@@ -36,6 +36,7 @@ public class LeagueController {
 			+ "순위 점수(score)는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균(averageScore)에 시즌 안에 적립한 포인트(points)를 더한 값이다(D34). "
 			+ "지역 안전지수는 포인트 없이 리그 점수만으로 계산한다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), "
 			+ "리그 점수가 있는 참여자가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 리그에서 빠진다(D8). "
+			+ "시즌 1위 권역의 순위 자격자는 포인트 대신 우승 칭호(me.championships)와 시즌 우승 배지를 받는다(D30 · D34). "
 			+ "응답에는 닉네임만 담는다.")
 	@ApiResponse(responseCode = "200", description = "이번 시즌 리그 현황. 등록 지역이 매핑표에 없으면 league는 null")
 	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
@@ -53,7 +54,8 @@ public class LeagueController {
 				current.league() == null ? null : LeagueResponse.from(current.league()),
 				new MeResponse(current.me().visible(), current.me().eligible(), current.me().averageScore(),
 					current.me().points(), current.me().score(), current.me().rank(), current.me().trips(),
-					current.me().distanceKm()),
+					current.me().distanceKm(), current.me().championships().stream()
+					.map(c -> new ChampionshipResponse(c.seasonId(), c.leagueCode(), c.name())).toList()),
 				current.regions().stream().map(RegionResponse::from).toList());
 		}
 	}
@@ -83,9 +85,13 @@ public class LeagueController {
 	}
 
 	@Schema(description = "내 시즌 기록. score = averageScore + points(D34), 리그 점수가 없으면 averageScore · score는 null. "
-		+ "rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다")
+		+ "rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다. championships는 지난 시즌 우승 칭호(오래된 시즌부터)")
 	public record MeResponse(boolean visible, boolean eligible, Double averageScore, int points, Double score,
-		Integer rank, int trips, double distanceKm) {
+		Integer rank, int trips, double distanceKm, List<ChampionshipResponse> championships) {
+	}
+
+	@Schema(description = "시즌 우승 칭호(D30 · D34): 그 시즌 안전지수 1위 권역의 순위 자격자")
+	public record ChampionshipResponse(String seasonId, String leagueCode, String name) {
 	}
 
 	@Schema(description = "월드맵용 권역별 지역 안전지수(D5)와 권역 순위. 리그 점수가 없는 권역은 null")
