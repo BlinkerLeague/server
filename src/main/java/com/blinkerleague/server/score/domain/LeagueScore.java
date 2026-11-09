@@ -1,5 +1,6 @@
 package com.blinkerleague.server.score.domain;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +17,12 @@ public final class LeagueScore {
 	}
 
 	public static Integer of(List<MetricScore> metrics, Map<ScoreItem, Double> weights, Set<ScoreItem> commonItems) {
-		throw new UnsupportedOperationException();
+		Map<ScoreItem, Integer> scored = new EnumMap<>(ScoreItem.class);
+		metrics.stream()
+			.filter(m -> m.status() == MetricStatus.SCORED && commonItems.contains(m.metric()))
+			.forEach(m -> scored.put(m.metric(), m.score()));
+		Map<ScoreItem, Double> applied = WeightRedistribution.redistribute(weights, scored.keySet());
+		double total = applied.entrySet().stream().mapToDouble(e -> e.getValue() * scored.get(e.getKey())).sum();
+		return (int)Math.round(total);
 	}
 }
