@@ -9,6 +9,7 @@ import com.blinkerleague.server.league.application.port.out.ChampionBadgePort;
 import com.blinkerleague.server.league.application.port.out.SeasonChampionStore;
 import com.blinkerleague.server.league.domain.LeagueBoard;
 import com.blinkerleague.server.league.domain.LeagueSeason;
+import com.blinkerleague.server.league.domain.SeasonChampion;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 
@@ -16,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 끝난 시즌 정산(plan.md 4.4, D30). 지난 시즌의 안전지수 1위 권역(순위 공개 권역 중)의 순위 자격자에게
- * 시즌 보상을 적립한다. 보상은 운전자 · 시즌마다 한 번이라 다시 돌려도 안전하다.
+ * 우승 칭호를 남기고 우승 배지를 준다(포인트 보상 없음, D34). 칭호는 운전자 · 시즌마다 하나라 다시 돌려도 안전하다.
  */
 @RequiredArgsConstructor
 public class SettleSeasonService {
@@ -28,13 +29,18 @@ public class SettleSeasonService {
 	private final ChampionBadgePort championBadgePort;
 	private final Clock clock;
 
-	/** 지난 시즌을 정산하고 보상받은 운전자 수를 돌려준다. */
+	/** 지난 시즌을 정산하고 우승 칭호를 받은 운전자 수를 돌려준다. */
 	public int settleLastSeason() {
 		LeagueSeason season = LeagueSeason.containing(clock.instant(), clock.getZone()).previous();
 		Thresholds.League rule = thresholdProvider.current().thresholds().league();
 		LeagueBoard board = LeagueBoard.build(loadLeagueRecordsPort.records(season), loadLeagueRegionsPort.load().all(),
 			new LeagueBoard.Rules(rule.minParticipants(), rule.minSeasonDistanceKm(), rule.minSeasonTrips()));
-		List<Long> rewardees = board.seasonRewardees();
-		return rewardees.size();
+		List<Long> champions = board.seasonRewardees();
+		for (Long driverId : champions) {
+			String leagueCode = board.standingOf(driverId).orElseThrow().leagueCode();
+			seasonChampionStore.saveIfAbsent(new SeasonChampion(season.id(), driverId, leagueCode));
+			championBadgePort.awardBadges(driverId);
+		}
+		return champions.size();
 	}
 }
