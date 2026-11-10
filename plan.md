@@ -685,6 +685,8 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 
 ### 9.4 배포 준비 (서버를 실제로 띄우기 전)
 
+설계와 결정이 필요한 항목(D36 ~ D40, 제안)은 [`docs/deployment.md`](docs/deployment.md)에 정리했다.
+
 - **HTTPS**: TLS 1.2 이상(1.3 권장), 공인 인증서 · 도메인, TLS 종단 위치(로드밸런서 또는 `server.ssl.*`)를 이 문서에 기록하고 프로토콜 버전 확인 테스트 추가(CLAUDE.md Pleos 보안 가이드)
 - **운영 DB**(D3)와 스키마 마이그레이션. 지금은 `ddl-auto: create`
 - **secret**: 환경변수 → Vault(Spring Cloud Vault)

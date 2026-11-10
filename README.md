@@ -15,6 +15,8 @@ BlinkerLeague 백엔드 서버입니다.
 
 ## 실행 방법
 
+> 처음부터 끝까지의 순서(설치, 실행, 등록 → 운행 업로드 → 점수 확인, 문제 해결)는 [`docs/server-run-guide.md`](docs/server-run-guide.md)에 있습니다. 배포 · 운영 DB 설계는 [`docs/deployment.md`](docs/deployment.md)입니다.
+
 JDK 17이 필요합니다. (IntelliJ: Settings → Build Tools → Gradle → Gradle JVM을 17로)
 
 1. 로컬 secret 파일을 만듭니다. `.env`는 git에 올라가지 않습니다.
