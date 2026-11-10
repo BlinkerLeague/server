@@ -13,7 +13,7 @@
 | # | 항목 | 현재 상태 | 제안 |
 | --- | --- | --- | --- |
 | D2 | 운전자 인증 | 기획서에 정의 없음. Spring Security가 모든 엔드포인트를 막고 있음 | **JWT(Access + Refresh, Refresh는 Redis)로 결정 → 8장.** 기존 제안: `POST /api/drivers`에서 `driverId` + 랜덤 토큰 발급, 이후 `Authorization: Bearer <token>` 헤더로 식별 |
-| D3 | 운영 DB | H2 인메모리만 있음 | **결정(11.9): PostgreSQL.** docker-compose에 추가하고 스키마는 Flyway로 관리(`ddl-auto: validate`). 테스트 · `local`은 H2 유지 여부를 작업 때 정한다 |
+| D3 | 운영 DB | H2 인메모리만 있음 | **결정(11.9): PostgreSQL.** docker-compose에 추가하고 스키마는 Flyway로 관리(`ddl-auto: validate`). **`local`도 Docker PostgreSQL, 테스트는 H2 + PostgreSQL 스키마 검증 테스트(11.10 결정, `docs/deployment.md` D37) → `feat/postgres-flyway`에서 완료** |
 | D4 | 시간대 | — | 모든 일 단위 집계(미션 period_key, 일일 상한)는 `Asia/Seoul` 기준 |
 | D5 | 지역 안전지수 정의 | 기획서에 계산식 없음 | **결정(11.9): 시즌 안에 그 권역 운전자들이 낸 운행 리그 점수(D19)의 거리 가중 평균**(0~100). 리그 점수가 없는 운행 · 순위 공개를 끈 운전자(D8)는 빠진다 |
 | D6 | 홈(SCR-01) 연승 표시 | 화면은 P0 홈에 "5일 연승"을 보여주지만 연승 계산은 P1 `feat/streak-badge` | **결정(11.8): B) P0 동안 화면에서 연승 카드를 숨김.** `GET /api/missions/today`에 `streakDays`를 넣지 않는다. 연승은 P1 `feat/streak-badge`에서 계산하고 그때 카드를 다시 보여 준다 |
@@ -151,7 +151,7 @@ com.blinkerleague.server
 - 공통 에러 응답(`{ code, message }`)과 `@RestControllerAdvice`
 - `SecurityConfig`: CSRF 비활성화, 세션 STATELESS, `/api/drivers`(POST) · `/api/config/**` · H2 콘솔은 허용, 나머지는 인증 필요 (인증 필터 자체는 D2 확정 후 `feat/driver-register`에서 구현)
 - `application.yaml`: JPA `ddl-auto`, 시간대 `Asia/Seoul`, Jackson 날짜를 ISO-8601 오프셋 형식으로
-- 프로필 분리: `local`(H2 + 로컬 Redis), `test`
+- 프로필 분리: `local`(H2 + 로컬 Redis → 11.10부터 Docker PostgreSQL + Redis), `test`(H2)
 
 완료 기준: `./gradlew build` 통과, 허용 경로 외 요청은 401.
 
@@ -688,7 +688,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 설계와 결정이 필요한 항목(D36 ~ D40, 제안)은 [`docs/deployment.md`](docs/deployment.md)에 정리했다.
 
 - **HTTPS**: TLS 1.2 이상(1.3 권장), 공인 인증서 · 도메인, TLS 종단 위치(로드밸런서 또는 `server.ssl.*`)를 이 문서에 기록하고 프로토콜 버전 확인 테스트 추가(CLAUDE.md Pleos 보안 가이드)
-- **운영 DB**(D3)와 스키마 마이그레이션. 지금은 `ddl-auto: create`
+- ~~**운영 DB**(D3)와 스키마 마이그레이션~~ → 완료(11.10, `feat/postgres-flyway`): Flyway `V1__init.sql`, `local`은 Docker PostgreSQL + `validate`. 운영 프로필(`prod`)은 `docs/deployment.md` 7장 2번
 - **secret**: 환경변수 → Vault(Spring Cloud Vault)
 - **기준값 갱신 경로**: 저장된 기준값은 시드가 덮어쓰지 않으므로 `ThresholdService.update`를 부를 관리자 API 또는 운영 절차가 필요
 - **배치 다중 서버**: 월요일 04:00 주간 리포트 배치(4.5)는 서버 1대 전제. 여러 대면 ShedLock 등 분산 잠금

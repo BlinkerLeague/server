@@ -1,8 +1,8 @@
 ### 운전자 등록 API 로컬 수동 테스트 (IntelliJ HTTP Client)
-# 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
+# 준비: .env 설정(JWT_SECRET, DB_*), docker compose up -d (PostgreSQL · Redis), ./gradlew bootRun (docs/server-run-guide.md)
 # 환경: 실행 시 http-client.env.json의 "local"을 고른다.
 # 위에서부터 순서대로 실행한다. 등록 응답의 토큰과 닉네임을 다음 요청이 이어받는다.
-# H2는 인메모리라 서버를 재시작하면 등록한 운전자가 사라진다.
+# 닉네임은 매번 새로 만들므로 로컬 DB에 데이터가 남아 있어도 다시 실행할 수 있다.
 
 ### 1. 등록 성공 → 201 + accessToken, refreshToken
 POST {{host}}/api/drivers

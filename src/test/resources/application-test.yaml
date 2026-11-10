@@ -6,6 +6,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  # 테스트는 H2 + ddl-auto로 스키마를 만든다. Flyway 마이그레이션은 PostgresSchemaTest가 PostgreSQL에서 확인한다.
+  flyway:
+    enabled: false
 
 jwt:
   secret: blinkerleague-test-secret-key-32bytes-or-more!

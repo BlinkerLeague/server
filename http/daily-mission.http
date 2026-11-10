@@ -1,5 +1,5 @@
 ### 오늘의 미션 API 로컬 수동 테스트 (IntelliJ HTTP Client)
-# 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
+# 준비: .env 설정(JWT_SECRET, DB_*), docker compose up -d (PostgreSQL · Redis), ./gradlew bootRun (docs/server-run-guide.md)
 # 환경: 고르지 않아도 된다. 0번 요청이 서버 주소(host)를 저장하고 다음 요청이 그 값을 쓴다.
 #       http-client.env.json의 "local"을 골라도 같은 주소라 그대로 동작한다.
 # 위에서부터 순서대로 실행한다. 0-A에서 받은 토큰과 오늘 · 어제 날짜를 다음 요청이 이어받는다.
@@ -13,7 +13,7 @@
 # 미션은 서버의 실제 오늘 날짜로 판정하므로, 운행 시각은 0-A 응답 스크립트가 계산한 오늘(today) 날짜를 쓴다.
 # 오늘 운행은 07:00 ~ 10:40에 끝나므로 한국 시간 10:45 이후에 실행한다(D17: 종료 시각이 지금보다 5분 넘게 미래인 운행은 400).
 # 운전자 A는 매번 새로 등록하므로 몇 번을 다시 실행해도 처음 상태(라운드 없음)에서 시작한다.
-# 저장 결과 확인: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa)
+# 저장 결과 확인: docker exec -it blinkerleague-postgres psql -U blinkerleague blinkerleague
 #   select * from mission;  select * from trip;  select * from trip_event;
 
 ### 0. 서버 주소 설정 + 서버 동작 확인 → 200 (환경을 고르지 않아도 다음 요청의 host가 채워지게 한다)
