@@ -20,7 +20,7 @@
 
 | # | 항목 | 선택지 | 제안 |
 | --- | --- | --- | --- |
-| D36 | 배포 위치 | A) 클라우드 VM 1대 + docker compose(앱 · PostgreSQL · Redis · 리버스 프록시) / B) 매니지드(예: AWS 서울 리전 ECS + RDS + ElastiCache + ALB, 또는 NCP 같은 구성) | **A로 시작**(12.2 PT까지 비용 · 작업량이 가장 작음). 사용자가 늘거나 가용성이 필요해지면 DB부터 매니지드(B)로 옮긴다. 앱은 이미지 하나라 옮기기 쉽다 |
+| D36 | 배포 위치 | A) 클라우드 VM 1대 + docker compose(앱 · PostgreSQL · Redis · 리버스 프록시) / B) 매니지드(예: AWS 서울 리전 ECS + RDS + ElastiCache + ALB, 또는 NCP 같은 구성) | **A로 시작**(12.2 PT까지 비용 · 작업량이 가장 작음). 공모전용 무료 후보는 8장: **Oracle Always Free VM + Cloudflare Tunnel** 권장. 사용자가 늘거나 가용성이 필요해지면 DB부터 매니지드(B)로 옮긴다. 앱은 이미지 하나라 옮기기 쉽다 |
 | D37 | 테스트 · `local` DB | A) H2 유지 + PostgreSQL 스키마 검증 테스트 하나 / B) 모든 테스트를 Testcontainers PostgreSQL로 | **A.** 빠른 테스트는 H2로 두고, Flyway 마이그레이션 + `ddl-auto: validate`가 PostgreSQL에서 통과하는지 확인하는 테스트를 Testcontainers로 하나 둔다. H2 모드는 `MODE=PostgreSQL`로 바꾼다 |
 | D38 | 운행 이벤트 보관 기간 | A) 무기한 / B) 원본 `trip_event`는 N개월 뒤 삭제(점수 · 지표는 `trip` · `trip_metric`에 남음) | **A로 시작하고 용량을 본다**(4.3 추정상 1년은 문제 없음). 단, `plays` · 배지 진행도가 `trip_event`를 읽으므로 B를 고르면 그 기능을 먼저 바꿔야 한다 |
 | D39 | 기준값 운영 변경 경로 | A) 관리자 API(별도 인증) / B) 운영 절차(SQL로 `app_config` 갱신 + 버전 +1 + 재시작) | **P1 동안은 B**, 관리자 인증 방식을 정할 때 A |
@@ -40,7 +40,7 @@
 ```
 
 - **앱은 1대**로 시작한다. 두 배치가 서버 1대를 전제하므로, 2대 이상이 되면 ShedLock(PostgreSQL 잠금 테이블)을 먼저 넣는다.
-- **TLS 종단은 프록시**에서 한다. D36 A라면 Caddy 또는 nginx + Let's Encrypt(공인 CA, 전체 체인), B라면 ALB + ACM. 프록시 설정은 TLS 1.2 · 1.3만 허용, TLS 1.2는 ECDHE + AEAD 스위트만. 앱은 `server.forward-headers-strategy: framework`로 원래 스킴을 안다.
+- **TLS 종단은 프록시**에서 한다. 8장 추천 조합이면 Cloudflare 엣지(Tunnel)에서 끝나고 최소 TLS 1.2로 설정한다. 직접 프록시를 둔다면 D36 A는 Caddy 또는 nginx + Let's Encrypt(공인 CA, 전체 체인), B라면 ALB + ACM. 프록시 설정은 TLS 1.2 · 1.3만 허용, TLS 1.2는 ECDHE + AEAD 스위트만. 앱은 `server.forward-headers-strategy: framework`로 원래 스킴을 안다.
 - **앱 포트는 외부에 열지 않는다.** PostgreSQL · Redis도 내부망만. bare IP로 API를 노출하지 않는다.
 - 확인: 배포 후 `testssl.sh api.<도메인>`(또는 `nmap --script ssl-enum-ciphers -p 443`)로 SSL · TLS 1.0/1.1이 꺼져 있는지 보고 결과를 `plan.md`에 남긴다.
 
@@ -157,3 +157,69 @@ server:
 | 4 | `feat/ops-runbook` | 백업 · 복구 절차, 기준값 변경 절차, TLS 점검 결과를 `plan.md`에 기록 | D38 · D39 · D40 |
 
 각 feat는 lead → tester(red) → developer(green) 흐름을 따른다(CLAUDE.md).
+
+## 8. 무료 배포 후보 (공모전용, 2026-11-10 조사)
+
+공모전 기간에 비용 없이 서버를 띄울 곳을 조사한 결과입니다(D36). 무료 범위는 대부분 제3자 자료에서 가져왔고 2026년에 바뀐 것이 많으므로, 가입 전에 각 공식 페이지에서 다시 확인합니다.
+
+### 8.1 이 서버가 요구하는 조건
+
+| 조건 | 이유 |
+| --- | --- |
+| 항상 켜져 있음 | 서버 안 배치(주간 리포트 월 04:00, 시즌 정산 매월 1일 00:10). 잠드는 서버면 배치가 돌지 않음 |
+| 메모리 1GB 이상(여유 있게 2GB+) | Spring Boot + PostgreSQL + Redis |
+| HTTPS · 공인 인증서 · 도메인 | Pleos 앱 보안 가이드. bare IP 노출 금지 |
+| PostgreSQL · Redis | D3, 리프레시 토큰(8장) |
+
+### 8.2 서버(컴퓨팅) 후보
+
+| 후보 | 무료 범위 | 장점 | 주의점 | 평가 |
+| --- | --- | --- | --- | --- |
+| **Oracle Cloud Always Free** | ARM VM 합계 2 OCPU · 12GB(2026년 4 OCPU · 24GB에서 축소), 기간 제한 없음 | 사양 충분. 3장 구성(VM 1대 + docker compose)이 코드 변경 없이 그대로 올라감 | 지역에 따라 자리가 없어 생성이 자주 실패. 30일 이상 유휴 계정은 회수될 수 있음. 가입 시 카드 필요. 홈 리전(춘천 · 서울)에서만 무료 | **1순위** |
+| **Google Compute Engine e2-micro** | VM 1대 · 1GB · 디스크 30GB, 기간 제한 없음 | 무료가 유지됨 | 미국 리전(us-west1 · us-central1 · us-east1)만 무료라 한국에서 지연. 1GB에 세 가지를 올리면 빠듯해 JVM 메모리를 줄여야 함(`-Xmx384m` 등) | 2순위(Oracle 실패 시) |
+| **Google Cloud Run** | 월 요청 200만 건 · vCPU 18만 초 · 메모리 36만 GiB초(미국 리전 기준) | 서버 관리 없음, HTTPS 자동 | 요청이 없으면 꺼져 **서버 안 배치가 돌지 않음** → 배치를 호출하는 엔드포인트 + Cloud Scheduler(무료 3개)로 바꾸는 코드 작업 필요. 첫 요청 때 JVM 기동 지연 | 비권장(코드 변경) |
+| **네이버 클라우드** | 신규 가입 크레딧 10만 원(3개월). 제휴 학교 재학생은 그린루키 20만 원(1년). Micro Server 1년 무료는 블로그 출처(미확인) | 서울 리전, 안정적. 공모전 기간을 덮음 | 크레딧이 끝나면 과금. 공모전 후 반드시 반납 | 대안(기간 한정) |
+| **AWS 무료 플랜** | 크레딧 $100 + 활동 시 최대 $100 | 서울 리전, 가입 시 지출 상한 설정 | 무료 플랜이 끝나면 계정이 닫히고 90일 안에 유료 전환하지 않으면 리소스 삭제 | 대안(기간 한정) |
+| **Render 무료 웹 서비스** | 웹 서비스 무료, 월 750 인스턴스 시간 | `*.onrender.com`에 HTTPS 자동 | 15분 요청이 없으면 잠들고 깨는 데 약 1분 → 배치 안 돎, 앱 업로드 타임아웃 위험. 무료 PostgreSQL은 30일 뒤 만료 | 비권장 |
+| **Koyeb** | 출처마다 다름(무료 인스턴스 512MB · 카드 필요 여부 상충) | — | 2026년 Mistral AI 인수, 무료 플랜 조건 불확실 | 제외 |
+| **Cloudflare Workers / Containers** | Workers 무료는 JS · Wasm만. Containers는 **월 $5 유료 플랜 필요** | — | Java 서버를 무료로 돌릴 수 없음 | 서버용으로는 제외 |
+
+### 8.3 DB · Redis 후보 (VM에 같이 띄우지 않을 때)
+
+| 후보 | 무료 범위 | 주의점 |
+| --- | --- | --- |
+| VM 안 docker compose(PostgreSQL · Redis) | VM 무료 범위 안 | 백업을 직접 해야 함(D40 B) |
+| Google Cloud SQL · Memorystore | **무료 없음** | — |
+| Neon (PostgreSQL) | 프로젝트당 저장 0.5GB · 월 100 CU-시간, 5분 유휴 시 꺼짐 | 첫 쿼리 지연. 4.4 추정상 0.5GB는 몇 주 분량 |
+| Upstash (Redis) | 256MB · 월 명령 50만 건 · DB 1개 | TLS 접속(`rediss://`) 설정 필요. 토큰 재발급만 쓰므로 명령 수는 여유 |
+| Render 무료 PostgreSQL | 1GB | 30일 뒤 만료 |
+
+### 8.4 HTTPS · 도메인 (앞단)
+
+| 후보 | 무료 범위 | 주의점 |
+| --- | --- | --- |
+| **Cloudflare Tunnel + 무료 DNS** | 터널 · DNS · 인증서 무료. 최소 TLS 버전 1.2 지정 가능 | **도메인 필요, DNS를 Cloudflare로 옮겨야 함**(DuckDNS 등 무료 서브도메인 불가, .com 1년 1~2만 원). 서버 포트를 열지 않아도 됨 |
+| Cloudflare Quick Tunnel(`trycloudflare.com`) | 무료, 도메인 불필요 | 재시작마다 주소가 바뀌어 앱에 넣을 수 없음(운영 부적합) |
+| Caddy · nginx + Let's Encrypt + DuckDNS | 모두 무료 | 443 포트를 열고 TLS 설정을 직접 관리. 무료 서브도메인이 앱 심사에 문제없는지 확인 필요 |
+
+### 8.5 추천 조합
+
+| 순위 | 조합 | 비용 | 코드 변경 |
+| --- | --- | --- | --- |
+| 1 | Oracle Always Free VM(앱 · PostgreSQL · Redis compose) + Cloudflare Tunnel | 도메인값만 | 없음 |
+| 2 | GCE e2-micro + Cloudflare Tunnel(메모리 부족 시 DB · Redis를 Neon · Upstash로) | 도메인값만 | 없음(JVM 옵션만) |
+| 3 | 네이버 클라우드 크레딧 VM + Cloudflare Tunnel | 기간 내 0원 | 없음 |
+| — | Cloud Run + Neon + Upstash | 0원 | 배치 호출 방식으로 변경 필요 |
+
+1 · 2 · 3 모두 TLS는 Cloudflare 엣지에서 끝나므로(3장 "TLS 종단"), 결정되면 3장과 `plan.md` 9.4에 종단 위치를 기록합니다.
+
+### 8.6 출처
+
+- Oracle: [InfoQ](https://infoq.com/news/2026/07/oracle-cloud-free-tier-limits/), [braindetox](https://braindetox.kr/en/posts/oracle_always_free_tier_reduced_2026.html), [space-node](https://space-node.net/blog/oracle-cloud-always-free-limits-2026)
+- Google: [Cloud Run 가격](https://goo.gle/3Inc1KA), [Cloud Scheduler 가격](https://cloud.google.com/scheduler/pricing), [GCP 무료 가이드(agentdeals)](https://agentdeals.dev/gcp-free-tier-2026), [cloudchipr](https://cloudchipr.com/blog/cloud-run-pricing)
+- 네이버 클라우드: [크레딧 이벤트](https://www.ncloud.com/main/creditEvent?tab=1), [학생 크레딧](https://www.ncloud.com/main/creditEvent?tab=2)
+- AWS: [Builder Center](https://builder.aws.com/content/3Kkt4kNiDSUnO3n6db2weSNubzE/the-dollar0-aws-account-in-2026-free-plan-credits-guardrails), [Help Net Security](https://helpnetsecurity.com/2026/09/17/aws-spend-limit-agent-set-permissions)
+- Render: [공식 문서](https://render.com/docs/free), [temps.sh](https://temps.sh/blog/render-pricing-2026), [swyftstack](https://swyftstack.com/blog/free-postgresql-hosting)
+- Koyeb: [agentdeals](https://agentdeals.dev/vendor/koyeb), [snapdeploy](https://snapdeploy.dev/state-of-free-hosting)
+- Cloudflare: [Containers 가격(공식)](https://developers.cloudflare.com/containers/pricing/), [Northflank](https://northflank.com/blog/top-cloudflare-containers-alternatives), [Tunnel 가이드](https://flaviocopes.com/cloudflare-tunnel.md), [DEV](https://dev.to/recca0120/cloudflare-tunnel-in-2026-expose-localhost-without-opening-ports-or-buying-an-ip-32l5)
+- Neon · Upstash: [Upstash 가격](https://upstash.com/pricing/redis), [DB 무료 비교(agentdeals)](https://agentdeals.dev/database-free-tier-comparison-2026)
