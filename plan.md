@@ -681,9 +681,9 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 3. ~~**4.4 `feat/region-league`**~~ → 완료(11.9, #48 · #49): 리그 권역 매핑표(D31), 달력 월 시즌(D29) · 소속 고정(D12), 리그 점수(D19), 순위 자격(D13) · 10명 미만 미공개, 조회 때 RDB 집계, 순위 점수에 시즌 포인트 합산(D34), 시즌 정산(우승 칭호 + `SEASON_CHAMPION` 배지, D30 · D34), `GET /api/leagues/current`, `PUT /api/drivers/me/league-visibility`
 4. **4.6 `feat/score-navi-metrics`** — **추후 개선(D35)**: 제한속도 · 단속 구간 · 보호 구간 · 내비 회전 항목. 실차에서 NaviHelper 이벤트가 오는지 확인한 뒤 착수(7장)
 5. ~~**5.1 `feat/reward-exchange`**~~ **보류(D33)**: 제휴처가 없어 개발하지 않음. 포인트는 리그 순위 점수에 더한다(D34)
-6. **다음 후보: 배포 준비(9.4)**. 남은 feat는 4.6(실차 확인 대기)과 5.1(보류)뿐이라, 이미 결정된 운영 DB(D3, PostgreSQL + Flyway)부터 착수하는 것을 권장
+6. **배포 준비(9.4): 보류(11.10, D36).** 운영 DB(D3)는 `feat/postgres-flyway`로 로컬까지 완료. 배포 위치 · 운영 프로필 · 인프라는 사용자가 다시 열 때 진행(`docs/deployment.md` 7 · 8장). 기존 메모: 남은 feat는 4.6(실차 확인 대기)과 5.1(보류)뿐이라, 이미 결정된 운영 DB(D3, PostgreSQL + Flyway)부터 착수하는 것을 권장
 
-### 9.4 배포 준비 (서버를 실제로 띄우기 전)
+### 9.4 배포 준비 (서버를 실제로 띄우기 전) — 보류(11.10)
 
 설계와 결정이 필요한 항목(D36 ~ D40, 제안)은 [`docs/deployment.md`](docs/deployment.md)에 정리했다.
 
