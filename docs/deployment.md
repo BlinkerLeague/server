@@ -20,7 +20,7 @@
 
 | # | 항목 | 선택지 | 제안 |
 | --- | --- | --- | --- |
-| D36 | 배포 위치 | A) 클라우드 VM 1대 + docker compose(앱 · PostgreSQL · Redis · 리버스 프록시) / B) 매니지드(예: AWS 서울 리전 ECS + RDS + ElastiCache + ALB, 또는 NCP 같은 구성) | **A로 시작**(12.2 PT까지 비용 · 작업량이 가장 작음). 공모전용 무료 후보는 8장: **Oracle Always Free VM + Cloudflare Tunnel** 권장. 사용자가 늘거나 가용성이 필요해지면 DB부터 매니지드(B)로 옮긴다. 앱은 이미지 하나라 옮기기 쉽다 |
+| D36 | 배포 위치 **(보류, 11.10 사용자 결정: 배포는 나중에)** | A) 클라우드 VM 1대 + docker compose(앱 · PostgreSQL · Redis · 리버스 프록시) / B) 매니지드(예: AWS 서울 리전 ECS + RDS + ElastiCache + ALB, 또는 NCP 같은 구성) | **A로 시작**(12.2 PT까지 비용 · 작업량이 가장 작음). 공모전용 무료 후보는 8장: **Oracle Always Free VM + Cloudflare Tunnel** 권장. 사용자가 늘거나 가용성이 필요해지면 DB부터 매니지드(B)로 옮긴다. 앱은 이미지 하나라 옮기기 쉽다 |
 | D37 | 테스트 · `local` DB | A) H2 유지 + PostgreSQL 스키마 검증 테스트 하나 / B) 모든 테스트를 Testcontainers PostgreSQL로 | **결정(11.10, 사용자): `local`도 Docker PostgreSQL(9장), 테스트는 A.** 빠른 테스트는 H2로 두고, Flyway 마이그레이션 + `ddl-auto: validate`가 PostgreSQL에서 통과하는지 확인하는 테스트를 Testcontainers로 하나 둔다 |
 | D38 | 운행 이벤트 보관 기간 | A) 무기한 / B) 원본 `trip_event`는 N개월 뒤 삭제(점수 · 지표는 `trip` · `trip_metric`에 남음) | **A로 시작하고 용량을 본다**(4.3 추정상 1년은 문제 없음). 단, `plays` · 배지 진행도가 `trip_event`를 읽으므로 B를 고르면 그 기능을 먼저 바꿔야 한다 |
 | D39 | 기준값 운영 변경 경로 | A) 관리자 API(별도 인증) / B) 운영 절차(SQL로 `app_config` 갱신 + 버전 +1 + 재시작) | **P1 동안은 B**, 관리자 인증 방식을 정할 때 A |
@@ -323,7 +323,7 @@ spring:
     enabled: true             # 기동할 때 db/migration을 적용
 ```
 
-- H2 콘솔 설정(`spring.h2.console`)은 지우고 H2는 `testRuntimeOnly`로 옮긴다. `SecurityConfig`의 `/h2-console/**` 허용 제거는 후속 작업(9.7 남은 것)이다.
+- H2 콘솔 설정(`spring.h2.console`)은 지우고 H2는 `testRuntimeOnly`로 옮긴다. `SecurityConfig`의 `/h2-console/**` 허용은 `fix/postgres-followups`에서 제거했다(9.7).
 - **DB가 꺼져 있으면 서버가 기동하지 않는다.** Redis는 연결이 지연돼 없이도 뜨지만, DataSource와 Flyway는 시작할 때 연결한다. 그래서 순서는 항상 `docker compose up -d` → `./gradlew bootRun`.
 - `DB_PASSWORD`가 없거나 `${...}`로 남으면 Spring의 연결 오류 대신 환경변수 이름을 말하는 메시지로 멈추게 한다(`JwtConfigTest`처럼 기동 검증 + red-green 테스트, CLAUDE.md "Validate at startup").
 
@@ -360,4 +360,4 @@ spring:
 - enum 컬럼에는 DB check 제약을 두지 않았다(`V1__init.sql` 머리말). 허용 값은 앱이 검증하므로(D21) 값을 늘릴 때 마이그레이션이 필요 없다.
 - H2 테스트 모드는 `MODE=MySQL` 그대로 두었다. 스키마 어긋남은 `PostgresSchemaTest`가 잡는다.
 - 수동 확인: 로컬 PostgreSQL로 `bootRun` → 등록 · 업로드(201 `SCORED`) · 재전송(200) · 점수 · 포인트 · 미션 · 배지 · 리그 조회가 정상, 재시작 뒤 데이터 유지와 `Schema "public" is up to date`, `DB_PASSWORD`가 비면 안내 메시지로 기동 실패.
-- **남은 것**: `EarnPointConcurrencyTest`(동시 적립 · `SELECT ... FOR UPDATE`)를 PostgreSQL에서 돌리는 확인(4.5), `SecurityConfig`의 `/h2-console/**` 허용 제거(H2가 런타임에서 빠져 콘솔은 더 이상 없음).
+- **후속(`fix/postgres-followups`, 11.10):** `EarnPointPostgresConcurrencyTest`가 같은 동시 적립 테스트를 PostgreSQL에서 돌린다(4.5). 처음부터 통과했고, `FOR UPDATE`를 잠시 빼면 `expected: 150 but was: 400`으로 실패해 잠금을 실제로 검증함을 확인했다. `SecurityConfig`의 `/h2-console/**` 공개 허용을 지웠다(red: `401` 기대, 실제 `404`). `frameOptions(sameOrigin)`은 H2 콘솔용이었지만 응답 헤더가 바뀌므로 그대로 두었다.

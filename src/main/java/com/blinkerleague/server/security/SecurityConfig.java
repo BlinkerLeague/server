@@ -34,7 +34,7 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		// H2 콘솔 서블릿이 함께 등록되면 문자열 매처가 MVC/비MVC를 구분하지 못하므로 Ant 매처를 명시한다.
+		// 다른 서블릿(예전 H2 콘솔 등)이 함께 등록되면 문자열 매처가 MVC/비MVC를 구분하지 못하므로 Ant 매처를 명시한다.
 		http
 			.csrf(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
@@ -46,7 +46,6 @@ public class SecurityConfig {
 				.requestMatchers(antMatcher(HttpMethod.POST, "/api/drivers")).permitAll()
 				.requestMatchers(antMatcher(HttpMethod.POST, "/api/auth/refresh")).permitAll()
 				.requestMatchers(antMatcher(HttpMethod.GET, "/api/config/**")).permitAll()
-				.requestMatchers(antMatcher("/h2-console/**")).permitAll()
 				// API 문서(springdoc). local 프로필에서만 켜지고, 꺼져 있으면 이 경로는 존재하지 않는다(404).
 				.requestMatchers(antMatcher(HttpMethod.GET, "/v3/api-docs/**")).permitAll()
 				.requestMatchers(antMatcher(HttpMethod.GET, "/swagger-ui/**")).permitAll()

@@ -67,6 +67,17 @@ class SecurityConfigTest {
 	}
 
 	@Test
+	void H2_콘솔_경로는_더_이상_공개하지_않아_인증없이_호출하면_401을_반환한다() throws Exception {
+		// given
+		// 로컬 · 운영 DB가 PostgreSQL이 되어 H2 콘솔이 없어졌다(D3, D37). 남은 공개 경로가 없어야 한다.
+
+		// when & then
+		mockMvc.perform(get("/h2-console/"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+	}
+
+	@Test
 	void 운전자_등록은_인증없이_통과한다() throws Exception {
 		// 토큰 없이 본문 없는 요청을 보내 401이 아니라 요청 검증(400)까지 도달하면 허용된 것이다.
 		mockMvc.perform(post("/api/drivers"))
