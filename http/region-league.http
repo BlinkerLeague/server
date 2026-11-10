@@ -1,5 +1,5 @@
 ### 지역 리그 API 로컬 수동 테스트 (IntelliJ HTTP Client)
-# 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
+# 준비: .env 설정(JWT_SECRET, DB_*), docker compose up -d (PostgreSQL · Redis), ./gradlew bootRun (docs/server-run-guide.md)
 # 환경: 고르지 않아도 된다. 0번 요청이 서버 주소(host)와 운행 시각을 저장한다.
 # 위에서부터 순서대로 실행한다.
 #
@@ -14,8 +14,8 @@
 #   - 시즌 보상(1위 권역 자격자에게 우승 칭호 + 시즌 우승 배지, D30 · D34)은 매월 1일 00:10 배치라 이 파일로는 확인하지 않는다
 #     (SettleSeasonServiceTest). 칭호가 없으면 me.championships는 빈 목록이다.
 #
-# H2는 인메모리라 서버를 재시작하면 데이터가 사라진다. 같은 서버에서 다시 실행하면 부산 리그 참여자가 늘어나지만
-# 확인 항목은 모두 그대로 통과한다.
+# 로컬 PostgreSQL은 재시작해도 데이터가 남는다. 다시 실행하면 부산 리그 참여자가 늘어나지만 확인 항목은 모두 그대로 통과한다.
+# 처음 상태로 돌리려면 DB만 초기화한다(docs/server-run-guide.md).
 # 매월 1일 01:00(한국 시간) 전에는 운행 시각이 지난달이 될 수 있으니 그 뒤에 실행한다.
 
 ### 0. 서버 주소 · 운행 시각 설정 + 서버 동작 확인 → 200

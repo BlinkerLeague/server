@@ -8,8 +8,8 @@
 
 | 항목 | 지금 | 근거 |
 | --- | --- | --- |
-| 운영 DB | **결정됨: PostgreSQL + Flyway**(D3). 코드는 아직 H2 인메모리(`MODE=MySQL`) + `ddl-auto: create`뿐 | `plan.md` D3, `application-local.yaml` |
-| 프로필 | `local`(기본) · `test`만 있음. 배포용 프로필 없음 | `src/main/resources` |
+| 운영 DB | **결정됨: PostgreSQL + Flyway**(D3). `local`은 Docker PostgreSQL + Flyway `V1` + `validate`(`feat/postgres-flyway`), 테스트는 H2 | `plan.md` D3, `application-local.yaml`, `db/migration` |
+| 프로필 | `local`(기본, PostgreSQL) · `test`(H2)만 있음. 배포용 프로필 없음 | `src/main/resources` |
 | Redis | 리프레시 토큰만 저장. docker-compose에 AOF 영구 저장으로 띄움 | `docker-compose.yml`, 8장 |
 | HTTPS | 규칙만 있음(TLS 1.2+, 공인 인증서, 도메인). 종단 위치 미정 | CLAUDE.md Pleos 보안 가이드 |
 | secret | `JWT_SECRET` 하나, 환경변수로 받고 없으면 기동 실패. Vault는 추후 | `JwtConfig` |
@@ -21,7 +21,7 @@
 | # | 항목 | 선택지 | 제안 |
 | --- | --- | --- | --- |
 | D36 | 배포 위치 | A) 클라우드 VM 1대 + docker compose(앱 · PostgreSQL · Redis · 리버스 프록시) / B) 매니지드(예: AWS 서울 리전 ECS + RDS + ElastiCache + ALB, 또는 NCP 같은 구성) | **A로 시작**(12.2 PT까지 비용 · 작업량이 가장 작음). 공모전용 무료 후보는 8장: **Oracle Always Free VM + Cloudflare Tunnel** 권장. 사용자가 늘거나 가용성이 필요해지면 DB부터 매니지드(B)로 옮긴다. 앱은 이미지 하나라 옮기기 쉽다 |
-| D37 | 테스트 · `local` DB | A) H2 유지 + PostgreSQL 스키마 검증 테스트 하나 / B) 모든 테스트를 Testcontainers PostgreSQL로 | **`local` 실행은 Docker PostgreSQL(9장, 사용자 요청 11.10), 테스트는 A.** 빠른 테스트는 H2(`MODE=PostgreSQL`)로 두고, Flyway 마이그레이션 + `ddl-auto: validate`가 PostgreSQL에서 통과하는지 확인하는 테스트를 Testcontainers로 하나 둔다 |
+| D37 | 테스트 · `local` DB | A) H2 유지 + PostgreSQL 스키마 검증 테스트 하나 / B) 모든 테스트를 Testcontainers PostgreSQL로 | **결정(11.10, 사용자): `local`도 Docker PostgreSQL(9장), 테스트는 A.** 빠른 테스트는 H2로 두고, Flyway 마이그레이션 + `ddl-auto: validate`가 PostgreSQL에서 통과하는지 확인하는 테스트를 Testcontainers로 하나 둔다 |
 | D38 | 운행 이벤트 보관 기간 | A) 무기한 / B) 원본 `trip_event`는 N개월 뒤 삭제(점수 · 지표는 `trip` · `trip_metric`에 남음) | **A로 시작하고 용량을 본다**(4.3 추정상 1년은 문제 없음). 단, `plays` · 배지 진행도가 `trip_event`를 읽으므로 B를 고르면 그 기능을 먼저 바꿔야 한다 |
 | D39 | 기준값 운영 변경 경로 | A) 관리자 API(별도 인증) / B) 운영 절차(SQL로 `app_config` 갱신 + 버전 +1 + 재시작) | **P1 동안은 B**, 관리자 인증 방식을 정할 때 A |
 | D40 | 백업 | A) 매니지드 자동 백업 + 시점 복구 / B) `pg_dump` 일 1회 + 외부 저장소 | D36이 A면 **B(보관 14일)**, B면 A. 어느 쪽이든 분기 1회 복원 연습 |
@@ -151,8 +151,8 @@ server:
 
 | 순서 | 브랜치 | 내용 | 결정 의존 |
 | --- | --- | --- | --- |
-| 1 | `feat/postgres-flyway` | PostgreSQL 드라이버 · Flyway 의존성, `V1__init.sql`(4.2 타입 · 4.3 인덱스), `@Lob` → `text`, H2 `MODE=PostgreSQL`, Testcontainers 스키마 검증 테스트 | D37 |
-| 2 | `feat/prod-profile` | `application-prod.yaml`, DB · Redis secret 기동 검증, `forward-headers-strategy`, Actuator 헬스 | — |
+| 1 | `feat/postgres-flyway` | **완료(11.10, 9.7).** PostgreSQL 드라이버 · Flyway 의존성, `V1__init.sql`(4.2 타입 · 4.3 인덱스), `@Lob` → `text`, Testcontainers 스키마 검증 테스트, `local` Docker PostgreSQL, `DB_PASSWORD` 기동 검증 | D37 |
+| 2 | `feat/prod-profile` | `application-prod.yaml`, Redis secret 기동 검증(DB는 1번에서 완료), `forward-headers-strategy`, Actuator 헬스 | — |
 | 3 | `feat/deploy-infra` | Dockerfile/이미지, 운영 compose 또는 매니지드 설정, 리버스 프록시 TLS 설정, GitHub Actions | D36 |
 | 4 | `feat/ops-runbook` | 백업 · 복구 절차, 기준값 변경 절차, TLS 점검 결과를 `plan.md`에 기록 | D38 · D39 · D40 |
 
@@ -228,7 +228,7 @@ server:
 
 ## 9. 로컬 Docker 개발 환경 (PostgreSQL + Redis)
 
-배포 전에 로컬에서 운영과 같은 DB로 개발하기 위한 설계입니다(사용자 요청 11.10). 지금은 Redis만 Docker로 띄우고 DB는 H2 인메모리라, 서버를 재시작하면 데이터가 사라지고 PostgreSQL에서만 나는 문제(4.2 타입, 4.5 트랜잭션 중단)를 로컬에서 볼 수 없습니다.
+배포 전에 로컬에서 운영과 같은 DB로 개발하기 위한 설계입니다(사용자 요청 11.10). `feat/postgres-flyway`로 구현했고 결과는 9.7입니다. 사용법은 [`docs/server-run-guide.md`](server-run-guide.md)가 기준입니다. 전에는 DB가 H2 인메모리라 재시작하면 데이터가 사라지고, PostgreSQL에서만 나는 문제(4.2 타입, 4.5 트랜잭션 중단)를 로컬에서 볼 수 없었습니다.
 
 ### 9.1 바뀌는 것 한눈에
 
@@ -238,7 +238,7 @@ server:
 | `local` 프로필 DB | H2 인메모리(`MODE=MySQL`), `ddl-auto: create` | Docker PostgreSQL, **Flyway 마이그레이션 + `ddl-auto: validate`** |
 | 데이터 수명 | 서버 재시작 시 사라짐 | Docker 볼륨에 남음(초기화는 9.5) |
 | H2 콘솔 | `/h2-console` | 쓰지 않음(IntelliJ Database 도구나 `psql`) |
-| 테스트(`test` 프로필) | H2 | H2 유지(`MODE=PostgreSQL`) + Testcontainers PostgreSQL 스키마 검증 테스트 1개 |
+| 테스트(`test` 프로필) | H2 | H2 유지(`MODE=MySQL` 그대로, Flyway 끔) + Testcontainers PostgreSQL 스키마 검증 테스트 1개 |
 | `.env` | `JWT_SECRET` | `JWT_SECRET` + `DB_NAME` · `DB_USERNAME` · `DB_PASSWORD` |
 | 의존성 | H2(`runtimeOnly`) | `org.postgresql:postgresql`(runtime), `flyway-core` + `flyway-database-postgresql`(Boot 3.3이 Flyway 10 버전 관리), H2는 `testRuntimeOnly`로, Testcontainers `postgresql` 모듈 추가 |
 
@@ -296,7 +296,7 @@ JWT_SECRET=
 # 로컬 PostgreSQL(docker compose와 Spring local 프로필이 같이 읽음)
 DB_NAME=blinkerleague
 DB_USERNAME=blinkerleague
-# 생성: openssl rand -base64 24
+# 생성: openssl rand -hex 24
 DB_PASSWORD=
 ```
 
@@ -323,7 +323,7 @@ spring:
     enabled: true             # 기동할 때 db/migration을 적용
 ```
 
-- H2 콘솔 설정(`spring.h2.console`)은 지운다. `SecurityConfig`의 `/h2-console/**` 허용과 H2 servlet 관련 `antMatcher` 메모(CLAUDE.md)는 테스트에서 콘솔을 쓰지 않으면 함께 정리한다.
+- H2 콘솔 설정(`spring.h2.console`)은 지우고 H2는 `testRuntimeOnly`로 옮긴다. `SecurityConfig`의 `/h2-console/**` 허용 제거는 후속 작업(9.7 남은 것)이다.
 - **DB가 꺼져 있으면 서버가 기동하지 않는다.** Redis는 연결이 지연돼 없이도 뜨지만, DataSource와 Flyway는 시작할 때 연결한다. 그래서 순서는 항상 `docker compose up -d` → `./gradlew bootRun`.
 - `DB_PASSWORD`가 없거나 `${...}`로 남으면 Spring의 연결 오류 대신 환경변수 이름을 말하는 메시지로 멈추게 한다(`JwtConfigTest`처럼 기동 검증 + red-green 테스트, CLAUDE.md "Validate at startup").
 
@@ -348,15 +348,16 @@ spring:
 - 엔티티를 바꾸면 `validate`가 기동을 막는다. 새 `V{n}__*.sql`을 먼저 쓴다. 이미 적용된 마이그레이션을 고쳐 체크섬 오류가 나면 로컬은 DB만 초기화한다(운영에서는 절대 고치지 않음, 4.1).
 - 시간 경계 테스트용으로 오래된 운행을 쌓아 두면 D17(과거 7일) 때문에 같은 요청을 다시 올릴 수 없다. 재현 데이터가 필요하면 `http/*.http` 시나리오를 다시 실행한다.
 
-### 9.7 구현 작업 (`feat/postgres-flyway`, 7장 1번에 포함)
+### 9.7 구현 결과 (`feat/postgres-flyway`, 2026-11-10)
 
-TDD 사이클 제안(red 원인은 실제로 확인한 뒤 PR에 적는다):
-
-| # | 동작(테스트) | 종류 | 예상 red |
+| # | 동작(테스트) | 종류 | 실제 red |
 | --- | --- | --- | --- |
-| 1 | PostgreSQL에서 Flyway 마이그레이션 뒤 엔티티 스키마 검증이 통과한다 | Testcontainers PostgreSQL + `@DataJpaTest`(`ddl-auto: validate`) | 마이그레이션 파일이 없어 테이블 없음 → 검증 실패 |
-| 2 | 운행 이벤트 payload를 `text`로 저장하고 다시 읽는다(`@Lob` 제거) | 같은 테스트 클래스 | `oid` 컬럼 타입 불일치 |
-| 3 | `DB_PASSWORD`가 없으면 환경변수 이름을 담은 메시지로 기동이 실패한다 | 설정 검증 단위 테스트 | 검증 없음 → 예외가 나지 않음 |
-| 4 | 같은 운전자 동시 적립이 PostgreSQL에서도 일일 상한을 넘지 않는다 | `EarnPointConcurrencyTest`를 PostgreSQL로 한 번 | (기존 동작 확인용, 통과하면 red 없음으로 기록) |
+| 1 | PostgreSQL에서 Flyway 마이그레이션 뒤 엔티티 스키마 검증을 통과한다(`PostgresSchemaTest`) | Testcontainers PostgreSQL + `@DataJpaTest`(`ddl-auto: validate`) | `Schema-validation: missing table [app_config]` |
+| 2 | PostgreSQL 비밀번호가 없으면 `DB_PASSWORD`를 안내하며 기동을 멈춘다(`DatabaseSecretValidatorTest`) | 단위 테스트(`EnvironmentPostProcessor`) | 예외가 나지 않음 |
+| 3 | 치환되지 않은 `${DB_PASSWORD}`도 미설정으로 본다 | 같은 클래스 | Spring의 `IllegalArgumentException: Could not resolve placeholder` |
 
-같이 할 것: `docker-compose.yml` · `.env.example` · `application-local.yaml` 변경, `build.gradle` 의존성, README "Docker 설정"과 실행 순서, CLAUDE.md의 Stack · Profiles · `local` 설명, `docs/policies.md` 9장(운영 DB), `plan.md` D3 비고("`local`은 Docker PostgreSQL").
+- `@Lob String`이 PostgreSQL에서 `oid`로 만들어지는 것을 Hibernate DDL로 확인했고(4.2), `@JdbcTypeCode(SqlTypes.LONG32VARCHAR)`(→ `text`)로 바꿨다. 사이클 1의 green에 포함된다.
+- enum 컬럼에는 DB check 제약을 두지 않았다(`V1__init.sql` 머리말). 허용 값은 앱이 검증하므로(D21) 값을 늘릴 때 마이그레이션이 필요 없다.
+- H2 테스트 모드는 `MODE=MySQL` 그대로 두었다. 스키마 어긋남은 `PostgresSchemaTest`가 잡는다.
+- 수동 확인: 로컬 PostgreSQL로 `bootRun` → 등록 · 업로드(201 `SCORED`) · 재전송(200) · 점수 · 포인트 · 미션 · 배지 · 리그 조회가 정상, 재시작 뒤 데이터 유지와 `Schema "public" is up to date`, `DB_PASSWORD`가 비면 안내 메시지로 기동 실패.
+- **남은 것**: `EarnPointConcurrencyTest`(동시 적립 · `SELECT ... FOR UPDATE`)를 PostgreSQL에서 돌리는 확인(4.5), `SecurityConfig`의 `/h2-console/**` 허용 제거(H2가 런타임에서 빠져 콘솔은 더 이상 없음).

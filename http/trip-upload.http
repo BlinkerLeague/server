@@ -1,14 +1,13 @@
 ### 운행 업로드 API 로컬 수동 테스트 (IntelliJ HTTP Client)
-# 준비: docker compose up -d (Redis), .env에 JWT_SECRET 설정, ./gradlew bootRun
+# 준비: .env 설정(JWT_SECRET, DB_*), docker compose up -d (PostgreSQL · Redis), ./gradlew bootRun (docs/server-run-guide.md)
 # 환경: 실행 시 http-client.env.json의 "local"을 고른다.
 # 위에서부터 순서대로 실행한다. 0-A, 0-B에서 받은 토큰 · 날짜와 1번의 tripId를 다음 요청이 이어받는다.
 # 응답의 mission은 운행이 끝난 날의 미션 결과다. 1 ~ 7번은 어제 운행이고 조건을 못 채워 FAILED가 정상이다.
 # 미션 FAILED · ACHIEVED는 M-0 ~ M-3(운전자 C)에서 확인한다.
 # 운행 날짜는 0-A가 계산한 어제 날짜다(D17: 7일보다 오래되거나 5분 넘게 미래인 운행은 400).
-# 저장 결과는 http://localhost:8080/h2-console 에서 확인한다.
-#   JDBC URL: jdbc:h2:mem:blinkerleague, 사용자: sa, 비밀번호 없음
+# 저장 결과 확인: docker exec -it blinkerleague-postgres psql -U blinkerleague blinkerleague
 #   select * from trip;  select * from trip_event;
-# H2는 인메모리라 서버를 재시작하면 데이터가 사라진다. 그때는 0번부터 다시 실행한다.
+# 로컬 DB는 재시작해도 남는다. 토큰이 만료되면(1시간) 0번부터 다시 실행한다.
 # tripId · eventId는 매번 새 UUID라 몇 번을 다시 실행해도 서로 겹치지 않는다.
 
 ### 0-A. 운전자 A 등록 → 201 (A의 accessToken 저장)

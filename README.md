@@ -6,7 +6,8 @@ BlinkerLeague 백엔드 서버입니다.
 
 - Java 17
 - Spring Boot 3.3.13 (Web, Validation, Data JPA, Data Redis, Security + OAuth2 Resource Server(JWT))
-- H2 (개발용 인메모리 DB)
+- PostgreSQL 16 (로컬은 Docker, 스키마는 Flyway) · Redis 7 (Refresh 토큰)
+- H2 (테스트 전용 인메모리 DB)
 - Gradle 7.6.4 (wrapper)
 - Lombok
 
@@ -22,19 +23,21 @@ JDK 17이 필요합니다. (IntelliJ: Settings → Build Tools → Gradle → Gr
 1. 로컬 secret 파일을 만듭니다. `.env`는 git에 올라가지 않습니다.
 
 ```bash
-cp .env.example .env
+cp .env.example .env && chmod 600 .env
 openssl rand -base64 48       # 출력값을 .env의 JWT_SECRET= 뒤에 붙여 넣기
+openssl rand -hex 24          # 출력값을 .env의 DB_PASSWORD= 뒤에 붙여 넣기
 ```
 
-2. Redis를 띄우고(아래 Docker 설정) 서버를 실행합니다.
+2. PostgreSQL과 Redis를 띄우고(아래 Docker 설정) 서버를 실행합니다. **DB가 꺼져 있으면 서버가 시작되지 않습니다.**
 
 ```bash
-./gradlew bootRun      # 서버 실행 (기본 포트 8080)
+docker compose up -d   # PostgreSQL + Redis
+./gradlew bootRun      # 서버 실행 (기본 포트 8080, Flyway가 스키마를 만든다)
 ./gradlew build        # 빌드 + 테스트 (Testcontainers 테스트가 있어 Docker 엔진이 실행 중이어야 함)
 ./gradlew test         # 테스트만 실행
 ```
 
-Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거나 32바이트보다 짧으면 서버가 시작되지 않습니다.
+Windows에서는 `gradlew.bat`을 사용해도 됩니다. `JWT_SECRET`이 없거나 32바이트보다 짧으면, `DB_PASSWORD`가 없으면 서버가 시작되지 않습니다. Gradle 7.6.4는 JDK 17에서 실행해야 합니다(`JAVA_HOME`을 17로, `docs/server-run-guide.md` 8.4).
 
 운영 secret은 저장소에 두지 않고 환경변수(추후 Vault)로 주입합니다.
 
@@ -78,12 +81,13 @@ git clone https://github.com/BlinkerLeague/server.git
 cd server
 cp .env.example .env
 openssl rand -base64 48       # 출력값을 .env의 JWT_SECRET= 뒤에 붙여 넣기
-docker compose up -d          # Redis (Docker 엔진이 켜져 있어야 함)
+openssl rand -hex 24          # 출력값을 .env의 DB_PASSWORD= 뒤에 붙여 넣기
+docker compose up -d          # PostgreSQL + Redis (Docker 엔진이 켜져 있어야 함)
 ```
 
 - JDK 17이 필요합니다.
 - Docker 설치는 아래 "Docker 설정"을 참고하세요.
-- Redis가 없어도 서버와 Swagger는 뜹니다. 다만 운전자 등록과 토큰 재발급이 실패해서 보호된 API를 호출할 수 없습니다.
+- PostgreSQL이 꺼져 있으면 서버가 뜨지 않습니다. Redis가 없으면 서버와 Swagger는 뜨지만, 운전자 등록과 토큰 재발급이 실패해서 보호된 API를 호출할 수 없습니다.
 
 **2. 서버 실행**
 
@@ -124,13 +128,14 @@ docker compose up -d          # Redis (Docker 엔진이 켜져 있어야 함)
 **6. 토큰이 만료되면**
 
 - Access 토큰은 1시간짜리입니다. 만료되면 `POST /api/auth/refresh`에 `{ "refreshToken": "..." }`를 보내 새 토큰을 받고, 다시 `Authorize`합니다.
-- 서버를 재시작하면 DB(H2 메모리)가 비워져서 등록한 운전자와 운행이 사라집니다. 이전 토큰은 서명상 유효해도 가리키는 운전자가 없으니, 4번부터 다시 등록하세요.
+- 로컬 DB(PostgreSQL)는 서버를 재시작해도 남습니다. DB를 초기화했거나 `.env`의 `JWT_SECRET`을 바꿨다면 4번부터 다시 등록하세요.
 
 **문제가 생기면**
 
 | 증상 | 원인 · 해결 |
 | --- | --- |
 | `/swagger-ui.html`이 401 `UNAUTHORIZED` 또는 404 | Swagger가 없는 코드로 서버가 떠 있습니다. `git pull`로 최신 `develop`을 받고 서버를 **완전히 재시작**하세요(IntelliJ devtools 자동 재시작으로는 새 라이브러리가 반영되지 않음). `local`이 아닌 프로필로 띄워도 꺼져 있습니다. |
+| 서버가 시작되지 않고 `DB_PASSWORD` 오류 또는 `Connection refused` | `.env`에 `DB_PASSWORD`가 없거나 PostgreSQL이 꺼져 있습니다. `.env`를 채우고 `docker compose up -d` 후 다시 실행하세요. |
 | 서버가 시작되지 않고 `JWT_SECRET` 오류 | `.env`가 없거나 `JWT_SECRET`이 비었거나 32바이트보다 짧습니다. 1번을 다시 하세요. |
 | `Port 8080 was already in use` | 이미 서버가 떠 있습니다. 기존 프로세스를 끄거나 `SERVER_PORT=8081 ./gradlew bootRun`으로 띄우고 주소의 포트를 바꾸세요. |
 | 등록 · 토큰 재발급이 500 `INTERNAL_ERROR` | Redis가 꺼져 있습니다. `docker compose up -d` 후 다시 시도하세요. |
@@ -162,21 +167,23 @@ API 명세는 **Swagger(OpenAPI)로 관리합니다.** 컨트롤러 코드의 �
   - `http/*.http`: 로컬 수동 테스트용입니다.
   - 형식이 서로 다르면 Swagger가 기준입니다.
 
-## Docker 설정 (Redis)
+## Docker 설정 (PostgreSQL · Redis)
+
+로컬 DB는 PostgreSQL 16 컨테이너입니다. 스키마는 서버가 시작할 때 Flyway가 `src/main/resources/db/migration`을 적용해 만들고, 데이터는 볼륨에 남습니다. 접속 정보(`DB_NAME` · `DB_USERNAME` · `DB_PASSWORD`)는 `.env` 하나를 docker compose와 서버가 같이 읽습니다.
 
 Redis는 Refresh 토큰(SHA-256 해시)만 저장합니다. 서버 세션은 쓰지 않습니다(JWT, stateless).
 Redis 연결은 처음 쓸 때 맺으므로 Redis 없이도 서버는 뜨지만, 운전자 등록(`POST /api/drivers`)과 토큰 재발급(`POST /api/auth/refresh`)은 실패합니다. 서버 실행 전에 Redis 컨테이너를 먼저 띄웁니다.
 설정은 프로젝트 루트의 `docker-compose.yml`에 있습니다.
 
-| 항목 | 값 |
-| --- | --- |
-| 이미지 | `redis:7-alpine` |
-| 컨테이너 이름 | `blinkerleague-redis` |
-| 포트 | `6379` (호스트 `localhost:6379`) |
-| 데이터 볼륨 | `redis-data` (컨테이너를 지워도 유지) |
-| 헬스체크 | `redis-cli ping` (5초 간격) |
+| 항목 | PostgreSQL | Redis |
+| --- | --- | --- |
+| 이미지 | `postgres:16-alpine` | `redis:7-alpine` |
+| 컨테이너 이름 | `blinkerleague-postgres` | `blinkerleague-redis` |
+| 포트 | `127.0.0.1:5432` (내 PC에서만) | `127.0.0.1:6379` (내 PC에서만) |
+| 데이터 볼륨 | `postgres-data` | `redis-data` (컨테이너를 지워도 유지) |
+| 헬스체크 | `pg_isready` (5초 간격) | `redis-cli ping` (5초 간격) |
 
-서버의 접속 설정은 `application.yaml`의 `spring.data.redis.host/port`(`localhost:6379`)이며 compose 설정과 일치합니다.
+서버의 접속 설정은 `application-local.yaml`의 `spring.datasource.*`(`localhost:5432`)와 `application.yaml`의 `spring.data.redis.host/port`(`localhost:6379`)이며 compose 설정과 일치합니다.
 
 ### Windows
 
@@ -186,8 +193,8 @@ Redis 연결은 처음 쓸 때 맺으므로 Redis 없이도 서버는 뜨지만,
 
 ```powershell
 docker --version              # 설치 확인
-docker compose up -d          # Redis 시작
-docker compose ps             # STATUS가 healthy인지 확인
+docker compose up -d          # PostgreSQL + Redis 시작
+docker compose ps             # STATUS가 둘 다 healthy인지 확인
 docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
 .\gradlew.bat bootRun         # 서버 실행
 ```
@@ -195,7 +202,7 @@ docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
 주의:
 
 - `docker` 명령이 `daemon is not running` 오류를 내면 Docker Desktop이 아직 실행되지 않은 것입니다.
-- 6379 포트를 이미 쓰는 프로세스(로컬에 설치한 Redis 등)가 있으면 컨테이너가 뜨지 않습니다. `netstat -ano | findstr :6379`로 확인하세요.
+- 5432 · 6379 포트를 이미 쓰는 프로세스(로컬에 설치한 PostgreSQL · Redis 등)가 있으면 컨테이너가 뜨지 않습니다. `netstat -ano | findstr :5432`로 확인하세요.
 
 ### macOS
 
@@ -205,7 +212,7 @@ docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
 brew install --cask docker    # Docker Desktop 설치
 ```
 
-Docker Desktop 대신 화면 없는 colima를 써도 됩니다.
+자세한 macOS 셋팅(Testcontainers 설정, JDK 17)은 [`docs/server-run-guide.md`](docs/server-run-guide.md) 8장에 있습니다. Docker Desktop 대신 화면 없는 colima를 써도 됩니다(둘을 함께 켜지 마세요).
 
 ```bash
 brew install colima docker docker-compose
@@ -221,16 +228,16 @@ colima start
 
 ```bash
 docker --version              # 설치 확인
-docker compose up -d          # Redis 시작
-docker compose ps             # STATUS가 healthy인지 확인
+docker compose up -d          # PostgreSQL + Redis 시작
+docker compose ps             # STATUS가 둘 다 healthy인지 확인
 docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
 ./gradlew bootRun             # 서버 실행
 ```
 
 주의:
 
-- `redis:7-alpine` 이미지는 Apple Silicon(arm64)과 Intel(amd64)을 모두 지원해 별도 설정이 필요 없습니다.
-- 6379 포트 사용 여부는 `lsof -i :6379`로 확인합니다. Homebrew로 설치한 Redis가 떠 있다면 `brew services stop redis`로 먼저 멈추세요.
+- `postgres:16-alpine` · `redis:7-alpine` 이미지는 Apple Silicon(arm64)과 Intel(amd64)을 모두 지원해 별도 설정이 필요 없습니다.
+- 포트 사용 여부는 `lsof -i :5432`, `lsof -i :6379`로 확인합니다. Homebrew로 설치한 PostgreSQL · Redis가 떠 있다면 `brew services stop postgresql@16`, `brew services stop redis`로 먼저 멈추세요.
 
 ### 자주 쓰는 명령 (공통)
 
@@ -238,9 +245,13 @@ docker exec blinkerleague-redis redis-cli ping   # PONG 이 나오면 정상
 docker compose up -d              # 시작 (백그라운드)
 docker compose stop               # 중지 (컨테이너 유지)
 docker compose down               # 중지 + 컨테이너 삭제 (볼륨 유지)
-docker compose down -v            # 컨테이너 + 데이터 볼륨까지 삭제
-docker compose logs -f redis      # 로그 보기
+docker compose down -v            # 컨테이너 + 데이터 볼륨까지 삭제(DB 데이터와 Refresh 토큰 모두)
+docker compose logs -f postgres   # 로그 보기(redis도 같음)
+docker exec -it blinkerleague-postgres psql -U blinkerleague blinkerleague   # DB 접속
 docker exec -it blinkerleague-redis redis-cli   # Redis CLI 접속
+
+# DB만 초기화(Redis 토큰은 유지). 볼륨 이름은 docker volume ls로 확인
+docker compose rm -sf postgres && docker volume rm server_postgres-data && docker compose up -d postgres
 ```
 
 ## 브랜치 규칙
