@@ -19,9 +19,21 @@ public class DatabaseSecretValidator implements EnvironmentPostProcessor {
 		if (!url.startsWith("jdbc:postgresql:")) {
 			return;
 		}
-		String password = environment.getProperty("spring.datasource.password");
-		if (password == null || password.isBlank()) {
+		if (isMissing(password(environment))) {
 			throw new IllegalStateException("DB 비밀번호가 없습니다. 환경변수 " + ENV_NAME + "를 설정하세요.");
 		}
+	}
+
+	private static String password(ConfigurableEnvironment environment) {
+		try {
+			return environment.getProperty("spring.datasource.password");
+		} catch (IllegalArgumentException unresolvedPlaceholder) {
+			// "${DB_PASSWORD}"를 풀 값이 없으면 Spring이 이 예외를 던진다. 미설정과 같다.
+			return null;
+		}
+	}
+
+	private static boolean isMissing(String password) {
+		return password == null || password.isBlank() || password.startsWith("${");
 	}
 }
