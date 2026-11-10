@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -18,7 +19,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /**
  * 운영 · local과 같은 PostgreSQL에서 Flyway 마이그레이션이 엔티티와 맞는지 확인한다(D3, D37).
  * 다른 테스트는 H2를 쓰므로, 스키마 어긋남은 이 테스트가 잡는다. Docker가 필요하다.
+ * .env 없이도(CI) 돌도록 test 프로필로 띄우고, 접속 정보와 Flyway만 아래에서 바꾼다.
  */
+@ActiveProfiles("test")
 @DataJpaTest(properties = {
 	"spring.jpa.hibernate.ddl-auto=validate",
 	"spring.flyway.enabled=true"
