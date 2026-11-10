@@ -179,7 +179,8 @@ server:
 | **Google Compute Engine e2-micro** | VM 1대 · 1GB · 디스크 30GB, 기간 제한 없음 | 무료가 유지됨 | 미국 리전(us-west1 · us-central1 · us-east1)만 무료라 한국에서 지연. 1GB에 세 가지를 올리면 빠듯해 JVM 메모리를 줄여야 함(`-Xmx384m` 등) | 2순위(Oracle 실패 시) |
 | **Google Cloud Run** | 월 요청 200만 건 · vCPU 18만 초 · 메모리 36만 GiB초(미국 리전 기준) | 서버 관리 없음, HTTPS 자동 | 요청이 없으면 꺼져 **서버 안 배치가 돌지 않음** → 배치를 호출하는 엔드포인트 + Cloud Scheduler(무료 3개)로 바꾸는 코드 작업 필요. 첫 요청 때 JVM 기동 지연 | 비권장(코드 변경) |
 | **네이버 클라우드** | 신규 가입 크레딧 10만 원(3개월). 제휴 학교 재학생은 그린루키 20만 원(1년). Micro Server 1년 무료는 블로그 출처(미확인) | 서울 리전, 안정적. 공모전 기간을 덮음 | 크레딧이 끝나면 과금. 공모전 후 반드시 반납 | 대안(기간 한정) |
-| **AWS 무료 플랜** | 크레딧 $100 + 활동 시 최대 $100 | 서울 리전, 가입 시 지출 상한 설정 | 무료 플랜이 끝나면 계정이 닫히고 90일 안에 유료 전환하지 않으면 리소스 삭제 | 대안(기간 한정) |
+| **AWS 무료 플랜**(2025-07-15 이후 가입) | 크레딧 $100 + 활동(RDS 생성 등) 시 최대 $100. **6개월 또는 크레딧 소진 중 먼저 오는 때까지.** EC2 `t4g.small`(2 vCPU · 2GB) · `t3.small` 등이 무료 플랜 대상이고 사용료는 크레딧에서 차감 | 서울 리전. 크레딧이 떨어지면 과금하지 않고 계정을 멈춤. `t4g.small` 1대에 앱 · PostgreSQL · Redis를 compose로 올리면 공모전 기간은 크레딧으로 충분 | 6개월 뒤 계정이 닫히고 90일 안에 유료로 바꾸지 않으면 리소스 삭제. 공인 IPv4 주소도 시간당 과금되어 크레딧을 씀. 크레딧 만료 시점이 출처마다 다름(콘솔 Billing에서 확인) | 대안(기간 한정, 공모전에는 충분) |
+| AWS Lightsail | 신규 계정 3개월 무료 체험(512MB급 요금제) | 고정 요금 VPS라 설정이 간단 | 512MB는 이 서버에 부족. 무료 범위 설명이 출처마다 다름 | 제외 |
 | **Render 무료 웹 서비스** | 웹 서비스 무료, 월 750 인스턴스 시간 | `*.onrender.com`에 HTTPS 자동 | 15분 요청이 없으면 잠들고 깨는 데 약 1분 → 배치 안 돎, 앱 업로드 타임아웃 위험. 무료 PostgreSQL은 30일 뒤 만료 | 비권장 |
 | **Koyeb** | 출처마다 다름(무료 인스턴스 512MB · 카드 필요 여부 상충) | — | 2026년 Mistral AI 인수, 무료 플랜 조건 불확실 | 제외 |
 | **Cloudflare Workers / Containers** | Workers 무료는 JS · Wasm만. Containers는 **월 $5 유료 플랜 필요** | — | Java 서버를 무료로 돌릴 수 없음 | 서버용으로는 제외 |
@@ -190,6 +191,7 @@ server:
 | --- | --- | --- |
 | VM 안 docker compose(PostgreSQL · Redis) | VM 무료 범위 안 | 백업을 직접 해야 함(D40 B) |
 | Google Cloud SQL · Memorystore | **무료 없음** | — |
+| AWS RDS(`db.t4g.micro`) · Aurora PostgreSQL 서버리스 | AWS 무료 플랜 크레딧 안에서 사용(Aurora PostgreSQL은 2026-03 무료 플랜 대상에 추가) | 크레딧 차감 · 6개월 제한은 무료 플랜과 같음. ElastiCache(Redis)는 크레딧을 빨리 쓰므로 Redis는 EC2 안 compose 권장 |
 | Neon (PostgreSQL) | 프로젝트당 저장 0.5GB · 월 100 CU-시간, 5분 유휴 시 꺼짐 | 첫 쿼리 지연. 4.4 추정상 0.5GB는 몇 주 분량 |
 | Upstash (Redis) | 256MB · 월 명령 50만 건 · DB 1개 | TLS 접속(`rediss://`) 설정 필요. 토큰 재발급만 쓰므로 명령 수는 여유 |
 | Render 무료 PostgreSQL | 1GB | 30일 뒤 만료 |
@@ -208,7 +210,7 @@ server:
 | --- | --- | --- | --- |
 | 1 | Oracle Always Free VM(앱 · PostgreSQL · Redis compose) + Cloudflare Tunnel | 도메인값만 | 없음 |
 | 2 | GCE e2-micro + Cloudflare Tunnel(메모리 부족 시 DB · Redis를 Neon · Upstash로) | 도메인값만 | 없음(JVM 옵션만) |
-| 3 | 네이버 클라우드 크레딧 VM + Cloudflare Tunnel | 기간 내 0원 | 없음 |
+| 3 | 네이버 클라우드 크레딧 VM 또는 AWS 무료 플랜 EC2 `t4g.small` + Cloudflare Tunnel | 기간 내 0원(최대 3 ~ 6개월) | 없음 |
 | — | Cloud Run + Neon + Upstash | 0원 | 배치 호출 방식으로 변경 필요 |
 
 1 · 2 · 3 모두 TLS는 Cloudflare 엣지에서 끝나므로(3장 "TLS 종단"), 결정되면 3장과 `plan.md` 9.4에 종단 위치를 기록합니다.
@@ -218,7 +220,7 @@ server:
 - Oracle: [InfoQ](https://infoq.com/news/2026/07/oracle-cloud-free-tier-limits/), [braindetox](https://braindetox.kr/en/posts/oracle_always_free_tier_reduced_2026.html), [space-node](https://space-node.net/blog/oracle-cloud-always-free-limits-2026)
 - Google: [Cloud Run 가격](https://goo.gle/3Inc1KA), [Cloud Scheduler 가격](https://cloud.google.com/scheduler/pricing), [GCP 무료 가이드(agentdeals)](https://agentdeals.dev/gcp-free-tier-2026), [cloudchipr](https://cloudchipr.com/blog/cloud-run-pricing)
 - 네이버 클라우드: [크레딧 이벤트](https://www.ncloud.com/main/creditEvent?tab=1), [학생 크레딧](https://www.ncloud.com/main/creditEvent?tab=2)
-- AWS: [Builder Center](https://builder.aws.com/content/3Kkt4kNiDSUnO3n6db2weSNubzE/the-dollar0-aws-account-in-2026-free-plan-credits-guardrails), [Help Net Security](https://helpnetsecurity.com/2026/09/17/aws-spend-limit-agent-set-permissions)
+- AWS: [무료 컴퓨팅(공식)](https://aws.amazon.com/free/compute), [Aurora PostgreSQL 무료 플랜(공식)](https://aws.amazon.com/about-aws/whats-new/2026/03/amazon-aurora-postgresql-aws-free-tier), [classmethod](https://dev.classmethod.jp/en/articles/try-new-aws-free-tier-2025/), [Builder Center](https://builder.aws.com/content/3Kkt4kNiDSUnO3n6db2weSNubzE/the-dollar0-aws-account-in-2026-free-plan-credits-guardrails), [Help Net Security](https://helpnetsecurity.com/2026/09/17/aws-spend-limit-agent-set-permissions)
 - Render: [공식 문서](https://render.com/docs/free), [temps.sh](https://temps.sh/blog/render-pricing-2026), [swyftstack](https://swyftstack.com/blog/free-postgresql-hosting)
 - Koyeb: [agentdeals](https://agentdeals.dev/vendor/koyeb), [snapdeploy](https://snapdeploy.dev/state-of-free-hosting)
 - Cloudflare: [Containers 가격(공식)](https://developers.cloudflare.com/containers/pricing/), [Northflank](https://northflank.com/blog/top-cloudflare-containers-alternatives), [Tunnel 가이드](https://flaviocopes.com/cloudflare-tunnel.md), [DEV](https://dev.to/recca0120/cloudflare-tunnel-in-2026-expose-localhost-without-opening-ports-or-buying-an-ip-32l5)
