@@ -12,7 +12,7 @@
 | 준비물 | 버전 · 확인 | 비고 |
 | --- | --- | --- |
 | JDK | **17** (`java -version`) | Gradle 툴체인이 17을 찾습니다. 다른 버전만 있으면 빌드가 실패하니 17을 설치하세요. IntelliJ는 Settings → Build Tools → Gradle → Gradle JVM을 17로 |
-| Docker | Docker Desktop(`docker --version`, `docker compose version`) | Redis와 Testcontainers 테스트에 필요. 설치는 README "Docker 설정" |
+| Docker | Docker Desktop(`docker --version`, `docker compose version`) | Redis(전환 후 PostgreSQL)와 Testcontainers 테스트에 필요. **설치 · Testcontainers 설정은 8장**(macOS), Windows는 README "Docker 설정" |
 | Git | — | — |
 | (선택) IntelliJ IDEA | 2021.3.1 기준 | `http/*.http` 수동 테스트 실행용. Gradle · Boot 버전을 올리지 마세요(CLAUDE.md) |
 | (선택) `jq` | `brew install jq` | 아래 curl 예시와 `openapi.json` 재생성에 사용 |
@@ -155,3 +155,90 @@ curl -s http://localhost:8080/v3/api-docs | jq -S 'del(.servers)' > docs/api/ope
 | 데이터 보기 | H2 콘솔 | `docker exec -it blinkerleague-postgres psql -U blinkerleague blinkerleague` 또는 IntelliJ Database(`localhost:5432`) |
 | DB만 초기화 | 서버 재시작 | `docker compose rm -sf postgres && docker volume rm server_postgres-data && docker compose up -d postgres` |
 | 시드 JSON 수정 반영 | 재시작하면 반영 | 기존 DB에는 반영 안 됨 → DB만 초기화 |
+
+## 8. macOS 개발 환경 셋팅 (Docker · JDK)
+
+새 Mac이나 Docker가 없는 Mac에서 처음 한 번 하는 설정입니다(Apple Silicon 기준, Intel도 같음). 2026-11-10 개발 Mac에 Docker가 없어 `feat/postgres-flyway`가 멈춘 일을 계기로 정리했습니다.
+
+### 8.1 먼저 확인
+
+```bash
+docker version                   # Client와 Server가 모두 나오면 8.2는 건너뜀
+ls ~/.docker/run/docker.sock     # Docker Desktop 소켓
+/usr/libexec/java_home -V        # 설치된 JDK 목록(17이 있어야 함)
+```
+
+| 결과 | 할 일 |
+| --- | --- |
+| `docker: command not found` | 8.2 설치 |
+| Client만 나오고 `Cannot connect to the Docker daemon` | Docker 앱이 꺼져 있음. 8.2의 2번(앱 실행) |
+| JDK 목록에 17이 없음 | 8.4 |
+
+### 8.2 Docker Desktop 설치
+
+1. Homebrew로 설치합니다(관리자 비밀번호를 물을 수 있음). Homebrew가 없으면 [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)에서 칩에 맞는 버전을 받아도 됩니다.
+
+   ```bash
+   brew install --cask docker
+   ```
+
+2. `응용 프로그램`의 **Docker** 앱을 한 번 실행하고 서비스 약관에 동의합니다. 로그인은 하지 않아도 됩니다.
+3. 메뉴바의 고래 아이콘이 움직임을 멈추면(엔진 실행 중) 확인합니다.
+
+   ```bash
+   docker version                # Server: Docker Engine ... 이 나와야 함
+   docker compose version
+   docker run --rm hello-world   # 이미지를 받아 실행되면 정상
+   ```
+
+4. (권장) Docker Desktop → Settings → General → **Start Docker Desktop when you sign in**을 켜 두면 재부팅 뒤에도 바로 쓸 수 있습니다.
+
+- colima도 설치할 수 있지만 **Docker Desktop과 함께 켜지 마세요**(소켓이 엇갈림). 이 프로젝트는 Docker Desktop을 기준으로 합니다(CLAUDE.md "Environment gotcha").
+
+### 8.3 Testcontainers 설정 (테스트용, 한 번만)
+
+`./gradlew build`의 Testcontainers 테스트(Redis, 전환 후 PostgreSQL)는 Docker 소켓을 찾아야 합니다. Docker Desktop의 소켓은 `~/.docker/run/docker.sock`이고, Mac에는 `/var/run/docker.sock`이 없을 수 있어서 홈 폴더에 설정 파일을 둡니다.
+
+```bash
+echo "docker.host=unix://$HOME/.docker/run/docker.sock" > ~/.testcontainers.properties
+cat ~/.testcontainers.properties
+```
+
+- 저장소에는 넣지 않는 개인 설정입니다(사용자 경로가 들어감).
+- 나머지 두 설정은 이미 `build.gradle`에 있어 따로 할 일이 없습니다.
+  - `api.version=1.44`: Docker Engine 29 이상이 오래된 API 버전(1.32)을 거부하기 때문
+  - `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`: Ryuk(정리용 컨테이너)가 Docker VM 안에서 쓸 소켓 경로
+- 확인: `./gradlew test --tests "*RedisRefreshTokenStoreTest"`가 통과하면 정상입니다.
+
+### 8.4 JDK 17
+
+Gradle 툴체인이 JDK 17을 찾아 쓰므로 기본 `java`가 다른 버전(예: 20)이어도 빌드는 됩니다. 17이 아예 없으면 설치합니다.
+
+```bash
+brew install --cask corretto@17
+/usr/libexec/java_home -v 17     # 경로가 나오면 정상
+```
+
+- 터미널 기본값도 17로 맞추려면 `~/.zshrc`에 `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`를 추가합니다(선택).
+- IntelliJ: Settings → Build Tools → Gradle → **Gradle JVM**을 17로, Project Structure → SDK도 17로.
+
+### 8.5 셋팅 후 전체 확인
+
+```bash
+cd server
+docker compose up -d && docker compose ps     # 모두 healthy
+./gradlew build                                # Testcontainers 포함 전체 통과
+./gradlew bootRun                              # Started ServerApplication
+```
+
+여기까지 되면 2 ~ 4장 순서로 사용하면 됩니다.
+
+### 8.6 자주 막히는 곳
+
+| 증상 | 원인 · 해결 |
+| --- | --- |
+| `Cannot connect to the Docker daemon at unix:///var/run/docker.sock` | Docker 앱이 꺼져 있음. 앱을 실행하고 고래 아이콘이 멈출 때까지 대기 |
+| 테스트에서 `Could not find a valid Docker environment` | `~/.testcontainers.properties`가 없거나 경로가 틀림(8.3). Docker 앱 실행 여부도 확인 |
+| 테스트에서 `client version 1.32 is too old` | `build.gradle`의 `api.version` 설정이 빠짐. 최신 `develop`을 받기 |
+| `docker compose up`에서 `port is already allocated` | 같은 포트를 다른 프로그램이 사용 중. Redis는 `brew services stop redis`, PostgreSQL은 `brew services stop postgresql@16` 등으로 끄기 |
+| `brew install --cask docker`가 권한 오류 | 관리자 계정으로 실행하거나 공식 사이트에서 dmg로 설치 |
