@@ -443,25 +443,21 @@ API: `GET /api/leagues/current`, `PUT /api/drivers/me/league-visibility`
 - 리그 점수(D19): 업로드 때 공통 항목(`league.commonItems`)만으로 재분배한 점수를 `trip.league_score`에 저장(`score.domain.LeagueScore`). 공통 항목을 하나도 측정하지 않으면 `null`이고 리그 집계에서 빠진다
 - 권역(D11 · D31): `leagues/league-regions.json` 매핑표(서울 생활권 5개 + 시 · 도 16개, 옛 · 새 특별자치도 코드). 시군구 목록이 먼저, 없으면 앞 2자리. 매핑표에 없는 코드는 리그 없음
 - 시즌(D29): 한국 시간 달력 월(`LeagueSeason`, id `2026-11`). 소속(D12): 시즌 첫 참여 운행(최소 거리 이상) 업로드 때 그때 등록 지역으로 `league_member`(운전자 · 시즌 유니크)에 고정
-- 순위 · 안전지수(`LeagueBoard`, 순수 계산): 순위 점수 = 리그 점수 거리 가중 평균(`averageScore`, 소수 첫째 자리) + 시즌 포인트(`points`, 그 시즌 안에 `earned_at`이 있는 원장 합, D34), 같은 점수는 같은 순위(1, 2, 2, 4). 순위 자격 D13, 리그 점수가 있는 참여자(순위 공개를 끈 운전자 포함) 10명 미만이면 비공개(D11), 순위 공개를 끈 운전자는 순위 · 안전지수 · 시즌 보상에서 제외(D8)(D8). 안전지수(D5) = 권역 리그 점수 거리 가중 평균(순위 자격과 무관, 포인트 미포함)
+- 순위 · 안전지수(`LeagueBoard`, 순수 계산): 순위 점수 = 리그 점수 거리 가중 평균(`averageScore`, 소수 첫째 자리) + 시즌 포인트(`points`, 그 시즌 안에 `earned_at`이 있는 원장 합, D34), 같은 점수는 같은 순위(1, 2, 2, 4). 순위 자격 D13, 리그 점수가 있는 참여자(순위 공개를 끈 운전자 포함) 10명 미만이면 비공개(D11), 순위 공개를 끈 운전자는 순위 · 안전지수 · 시즌 보상에서 제외(D8). 안전지수(D5) = 권역 리그 점수 거리 가중 평균(순위 자격과 무관, 포인트 미포함)
 - **Redis ZSET 대신 조회 때 RDB 집계(11.9):** 순위 공개 · 자격 · 비공개 제외 규칙을 한 곳(`LeagueBoard`)에서 계산하려고 `GET /api/leagues/current`가 시즌 기록을 JDBC로 한 번에 읽어 계산한다. 사용자가 늘어 느려지면 결과를 Redis에 캐시한다(9.5)
 - 시즌 정산(D30): 매월 1일 00:10(Asia/Seoul) `LeagueSeasonScheduler`가 지난 시즌의 순위 공개 권역 중 안전지수 1위 권역(같으면 모두)의 순위 자격자에게 우승 칭호를 남기고(`league_champion`: 시즌 · 운전자 · 권역, 시즌 · 운전자 유니크) 배지를 판정한다(`SEASON_CHAMPION`, 규칙 `SEASON_CHAMPIONS` 1회, D34). 우승 칭호는 `GET /api/leagues/current`의 `me.championships`. 권역 순위 등 나머지 시즌 결과는 저장하지 않는다(지난 시즌 조회 API가 생길 때 추가)
 - 순위 공개 설정(D8): `driver.league_visible`(기본 true), `PUT /api/drivers/me/league-visibility`
 - 기준값 `league`: `commonItems`, `minParticipants` 10, `minSeasonDistanceKm` 50, `minSeasonTrips` 10, `topN` 10(`seasonRewardPoint`는 D34로 없앰)
 
-- 시즌 4주. `league_season`: `season_id`, `region_code`, `starts_at`, `ends_at`, `safety_index`
-- 운행 점수 확정 시 Redis ZSET `league:{season}:{region}`에 운전자 시즌 점수 반영(`ZINCRBY` 또는 평균 계산용 합계 · 횟수 별도 키)
-- 순위 조회는 Redis에서(캐시 응답 요구사항). 응답에는 닉네임만, 내 순위 + 상위 N명
-- 시즌 종료 배치(`@Scheduled`): 순위 · 안전지수 RDB 확정, 상위 지역 참여자 100P, 새 시즌 생성
-- 지역 안전지수 계산식(D5), "같은 측정 항목 집단끼리 비교" 여부 착수 전 결정
-- **리그 비교 점수(D19, 제안)**: 순위 · 안전지수에는 운행 총점이 아니라 공통 항목(기준값 `league.commonItems`, 예: `TURN_SIGNAL`, `SMOOTH_DRIVING`, `TURN_SPEED`)만으로 재분배한 **리그 점수**를 쓴다. 점수 엔진(4.1)이 운행마다 총점과 리그 점수를 함께 계산해 `trip`(또는 `trip_metric`)에 저장하고, 리그 집계는 리그 점수를 읽는다. 공통 항목이 하나도 측정되지 않은 운행은 리그 집계에서 제외
-- **리그 권역(D11)**: `league_region_mapping`(`region_code` 시군구 → `league_region`) 매핑표로 묶는다. 위의 `region`은 시군구가 아니라 리그 권역이다. 초기 매핑(서울 생활권 5개 등)은 착수 시 확정
-- **소속(D12)**: 운전자의 등록 지역 기준. 시즌 중 지역 변경은 다음 시즌부터 반영(시즌 시작 시 소속 권역을 고정해 기록)
-- **순위 자격(D13)**: 시즌 누적 50km 이상 또는 운행 10회 이상인 운전자만 순위에 포함. 리그 참여자가 10명 미만이면 순위 비공개(D11). 두 값 모두 기준값 설정에 둔다
-- **응답에 시즌 내 지역별 안전지수 목록과 시즌 종료일**(SCR-04 월드맵, "D-12" 표시): `season: { seasonId, startsAt, endsAt }`, `regions: [{ regionCode, safetyIndex, rank }]`. 시즌 중에는 현재까지의 값(Redis 집계), 종료 후에는 확정값. D-day는 앱이 `endsAt`으로 계산
-- Redis가 이미 docker-compose에 있으므로 추가 인프라 없음
+처음 계획에서 바뀐 점(11.9 결정, 기록용):
 
-테스트: Testcontainers 또는 임베디드 Redis로 순위 계산, 시즌 확정 배치.
+- 시즌 4주 → 달력 월(D29). 시즌을 행으로 만들지 않고 `LeagueSeason`이 날짜로 계산한다(`league_season` 테이블 없음)
+- Redis ZSET 순위 → 조회 때 RDB 집계(위 설명). Redis는 여전히 Refresh 토큰만 저장한다
+- 시즌 종료 보상 "상위 지역 참여자 100P" → 안전지수 1위 권역 순위 자격자에게 우승 칭호 + `SEASON_CHAMPION` 배지(D30, D34). 원장 사유 `SEASON_LEAGUE`는 없앰
+- 리그 비교 점수(D19), 안전지수(D5), 권역 매핑(D11 · D31), 소속(D12), 순위 자격(D13), 순위 공개 설정(D8)은 위 "상태"대로 결정 · 구현됐다. 매핑은 `league_region_mapping` 테이블이 아니라 `leagues/league-regions.json`이다
+- 응답의 지역 목록은 `regions: [{ leagueCode, name, safetyIndex, rank }]`(시군구 `regionCode`가 아니라 리그 권역)
+
+테스트: 순수 계산은 `LeagueBoardTest` · `LeagueSeasonTest` · `LeagueRegionsTest`, 소속 고정은 `JoinSeasonServiceTest`, 시즌 정산은 `SettleSeasonServiceTest` · `LeagueSeasonSchedulerTest`, 저장 · 집계는 H2 어댑터 테스트(`LeagueRecordsAdapterTest` 등), API는 `LeagueControllerTest` · `LeagueVisibilityControllerTest`.
 
 ### 4.5 `feat/weekly-report` — 주간 리포트 (FR-14)
 
@@ -645,13 +641,14 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 
 ---
 
-## 9. 다음에 할 일 (2026-11-09 기준)
+## 9. 다음에 할 일 (2026-11-10 기준)
 
 ### 9.1 지금 상태
 
 - **P0(1차 제출 11.15)**: 6개 feat 모두 완료(#16 · #20 · #24 · #38 · #33, 공통 기반 #5, 계획에 없던 인증 #14 · Swagger #36). 남은 것은 차량 앱과의 연동 확인뿐이다. 릴리스(`develop` → `main`)는 하지 않는다
 - **P1(2차 PT 12.2)**: 5개 모두 완료 — 4.1 점수 항목 확장(#41), 4.2 포인트(#37 · #39), 4.3 연속 기록 · 배지(#40), 4.5 주간 리포트(#42), 4.4 지역 리그(#48, 포인트 순위 합산 · 우승 칭호 #49)
 - **차량 앱 요청**(android-app `docs/server-requests.md`): 1 · 7 · 8번 반영(#43), 3 · 6 · 9번 반영, 2번 철회, 10번(최소 거리 1km) 반영(#46). 업로드 제한(D16 · D17) 반영(#47)
+- **11.10**: 내비 점수 항목(4.6)을 추후 개선으로 결정(D35, #50). 앱 팀 전달용 변경 정리 `docs/app-team-changes-2026-11-10.md`(#51). 역할별 서브에이전트(`.claude/agents/`: lead · tester · developer · reviewer)와 테스트 given / when / then 규칙 추가
 - `develop` 테스트 364개 통과, 공개 API 13개(README API 표 · Swagger, `docs/api/openapi.json`과 실행 서버 명세 일치 확인 11.10)
 
 ### 9.2 결정 대기 항목 (11.9 정리)
@@ -676,14 +673,15 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 ### 9.3 개발할 것 (우선순위)
 
 1. ~~**앱 요청 10번 반영**~~ → 완료(#46). 운영 DB가 생긴 뒤라면 `ThresholdService.update`로 갱신
-2. **P0 마무리 · 차량 앱 연동 확인** (~11.15): 에뮬레이터 시나리오(좌회전 성공 → 우회전 실패 → 운행 종료 점수 · 미션 · 포인트). 앱 팀에 이번 변경을 함께 전달
+2. **P0 마무리 · 차량 앱 연동 확인** (~11.15): 에뮬레이터 시나리오(좌회전 성공 → 우회전 실패 → 운행 종료 점수 · 미션 · 포인트). 앱 팀에 전달할 변경은 `docs/app-team-changes-2026-11-10.md`로 정리함(#51), 아래는 그 요약
    - 응답 변경: `metrics`의 `status` · `reason` · `detail`, `plays`의 `direction`, `mission`, 기준값의 새 그룹(`signalCancel` · `seatBelt` · `rain` · `minSamples`) · `turn` 핸들 각도 값
    - 새 이벤트 · 항목 이름(`signalTiming`, `SIGNAL_LEFT_ON` · `SEAT_BELT` · `RAIN_SEGMENT`)은 서버 배포 후에만 보낸다(D21 A). 미션 · 배지는 지금도 `signalOn`을 쓰므로 계속 함께 보낸다
    - 새 API: `/api/points` · `/api/streak` · `/api/badges` · `/api/reports/weekly` · `/api/leagues/current` · `PUT /api/drivers/me/league-visibility`
    - 11.9 변경: 최소 거리 1km, 업로드 제한(이벤트 2,000개 · 본문 1MB → 400/413, 운행 시각 미래 5분 · 과거 7일 → 400), 리그 순위 점수에 포인트 합산(D34)
-3. ~~**4.4 `feat/region-league`**~~ → 완료(11.9). (9.2의 2 ~ 5 결정 후, 12.2 PT 전): 리그 권역 매핑표, 4주 시즌 · 소속 고정(D12), 리그 점수(D19), 순위 자격(D13) · 10명 미만 미공개, Redis ZSET 순위, 시즌 종료 배치(상위 지역 100P, 원장 사유 `SEASON_LEAGUE`), `GET /api/leagues/current`
+3. ~~**4.4 `feat/region-league`**~~ → 완료(11.9, #48 · #49): 리그 권역 매핑표(D31), 달력 월 시즌(D29) · 소속 고정(D12), 리그 점수(D19), 순위 자격(D13) · 10명 미만 미공개, 조회 때 RDB 집계, 순위 점수에 시즌 포인트 합산(D34), 시즌 정산(우승 칭호 + `SEASON_CHAMPION` 배지, D30 · D34), `GET /api/leagues/current`, `PUT /api/drivers/me/league-visibility`
 4. **4.6 `feat/score-navi-metrics`** — **추후 개선(D35)**: 제한속도 · 단속 구간 · 보호 구간 · 내비 회전 항목. 실차에서 NaviHelper 이벤트가 오는지 확인한 뒤 착수(7장)
 5. ~~**5.1 `feat/reward-exchange`**~~ **보류(D33)**: 제휴처가 없어 개발하지 않음. 포인트는 리그 순위 점수에 더한다(D34)
+6. **다음 후보: 배포 준비(9.4)**. 남은 feat는 4.6(실차 확인 대기)과 5.1(보류)뿐이라, 이미 결정된 운영 DB(D3, PostgreSQL + Flyway)부터 착수하는 것을 권장
 
 ### 9.4 배포 준비 (서버를 실제로 띄우기 전)
 
