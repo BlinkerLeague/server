@@ -21,7 +21,7 @@
 | # | 항목 | 선택지 | 제안 |
 | --- | --- | --- | --- |
 | D36 | 배포 위치 | A) 클라우드 VM 1대 + docker compose(앱 · PostgreSQL · Redis · 리버스 프록시) / B) 매니지드(예: AWS 서울 리전 ECS + RDS + ElastiCache + ALB, 또는 NCP 같은 구성) | **A로 시작**(12.2 PT까지 비용 · 작업량이 가장 작음). 공모전용 무료 후보는 8장: **Oracle Always Free VM + Cloudflare Tunnel** 권장. 사용자가 늘거나 가용성이 필요해지면 DB부터 매니지드(B)로 옮긴다. 앱은 이미지 하나라 옮기기 쉽다 |
-| D37 | 테스트 · `local` DB | A) H2 유지 + PostgreSQL 스키마 검증 테스트 하나 / B) 모든 테스트를 Testcontainers PostgreSQL로 | **A.** 빠른 테스트는 H2로 두고, Flyway 마이그레이션 + `ddl-auto: validate`가 PostgreSQL에서 통과하는지 확인하는 테스트를 Testcontainers로 하나 둔다. H2 모드는 `MODE=PostgreSQL`로 바꾼다 |
+| D37 | 테스트 · `local` DB | A) H2 유지 + PostgreSQL 스키마 검증 테스트 하나 / B) 모든 테스트를 Testcontainers PostgreSQL로 | **`local` 실행은 Docker PostgreSQL(9장, 사용자 요청 11.10), 테스트는 A.** 빠른 테스트는 H2(`MODE=PostgreSQL`)로 두고, Flyway 마이그레이션 + `ddl-auto: validate`가 PostgreSQL에서 통과하는지 확인하는 테스트를 Testcontainers로 하나 둔다 |
 | D38 | 운행 이벤트 보관 기간 | A) 무기한 / B) 원본 `trip_event`는 N개월 뒤 삭제(점수 · 지표는 `trip` · `trip_metric`에 남음) | **A로 시작하고 용량을 본다**(4.3 추정상 1년은 문제 없음). 단, `plays` · 배지 진행도가 `trip_event`를 읽으므로 B를 고르면 그 기능을 먼저 바꿔야 한다 |
 | D39 | 기준값 운영 변경 경로 | A) 관리자 API(별도 인증) / B) 운영 절차(SQL로 `app_config` 갱신 + 버전 +1 + 재시작) | **P1 동안은 B**, 관리자 인증 방식을 정할 때 A |
 | D40 | 백업 | A) 매니지드 자동 백업 + 시점 복구 / B) `pg_dump` 일 1회 + 외부 저장소 | D36이 A면 **B(보관 14일)**, B면 A. 어느 쪽이든 분기 1회 복원 연습 |
@@ -52,7 +52,7 @@
 - 배포 프로필은 `spring.jpa.hibernate.ddl-auto: validate`. 엔티티와 스키마가 다르면 기동이 실패한다.
 - 이후 스키마 변경은 `V2__...sql`처럼 새 파일로만 한다. **이미 적용된 마이그레이션 파일은 고치지 않는다**(체크섬 불일치로 기동 실패).
 - 컬럼 삭제 · 이름 변경은 두 번에 나눈다(새 컬럼 추가 · 코드 전환 배포 → 다음 배포에서 옛 컬럼 삭제). 앱 1대라도 롤백할 수 있게 한다.
-- `local`은 H2 + `ddl-auto: create`를 그대로 두되(D37 A), 스키마 검증 테스트가 Flyway와 엔티티의 어긋남을 잡는다.
+- `local`도 Docker PostgreSQL + Flyway + `validate`로 운영과 같게 돌린다(9장). 테스트는 H2 + `ddl-auto: create`를 두고(D37), 스키마 검증 테스트가 Flyway와 엔티티의 어긋남을 잡는다.
 
 ### 4.2 타입 매핑 (H2 → PostgreSQL에서 바뀌는 것)
 
@@ -225,3 +225,138 @@ server:
 - Koyeb: [agentdeals](https://agentdeals.dev/vendor/koyeb), [snapdeploy](https://snapdeploy.dev/state-of-free-hosting)
 - Cloudflare: [Containers 가격(공식)](https://developers.cloudflare.com/containers/pricing/), [Northflank](https://northflank.com/blog/top-cloudflare-containers-alternatives), [Tunnel 가이드](https://flaviocopes.com/cloudflare-tunnel.md), [DEV](https://dev.to/recca0120/cloudflare-tunnel-in-2026-expose-localhost-without-opening-ports-or-buying-an-ip-32l5)
 - Neon · Upstash: [Upstash 가격](https://upstash.com/pricing/redis), [DB 무료 비교(agentdeals)](https://agentdeals.dev/database-free-tier-comparison-2026)
+
+## 9. 로컬 Docker 개발 환경 (PostgreSQL + Redis)
+
+배포 전에 로컬에서 운영과 같은 DB로 개발하기 위한 설계입니다(사용자 요청 11.10). 지금은 Redis만 Docker로 띄우고 DB는 H2 인메모리라, 서버를 재시작하면 데이터가 사라지고 PostgreSQL에서만 나는 문제(4.2 타입, 4.5 트랜잭션 중단)를 로컬에서 볼 수 없습니다.
+
+### 9.1 바뀌는 것 한눈에
+
+| 대상 | 지금 | 바뀐 뒤 |
+| --- | --- | --- |
+| `docker-compose.yml` | Redis 하나 | **PostgreSQL 16 + Redis 7**. 둘 다 `127.0.0.1`에만 포트를 연다 |
+| `local` 프로필 DB | H2 인메모리(`MODE=MySQL`), `ddl-auto: create` | Docker PostgreSQL, **Flyway 마이그레이션 + `ddl-auto: validate`** |
+| 데이터 수명 | 서버 재시작 시 사라짐 | Docker 볼륨에 남음(초기화는 9.5) |
+| H2 콘솔 | `/h2-console` | 쓰지 않음(IntelliJ Database 도구나 `psql`) |
+| 테스트(`test` 프로필) | H2 | H2 유지(`MODE=PostgreSQL`) + Testcontainers PostgreSQL 스키마 검증 테스트 1개 |
+| `.env` | `JWT_SECRET` | `JWT_SECRET` + `DB_NAME` · `DB_USERNAME` · `DB_PASSWORD` |
+| 의존성 | H2(`runtimeOnly`) | `org.postgresql:postgresql`(runtime), `flyway-core` + `flyway-database-postgresql`(Boot 3.3이 Flyway 10 버전 관리), H2는 `testRuntimeOnly`로, Testcontainers `postgresql` 모듈 추가 |
+
+### 9.2 `docker-compose.yml`
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blinkerleague-postgres
+    environment:
+      # 값은 프로젝트 루트 .env에서 읽는다(docker compose가 자동으로 읽음). 없으면 compose가 바로 멈춘다.
+      POSTGRES_DB: ${DB_NAME:?DB_NAME을 .env에 설정하세요}
+      POSTGRES_USER: ${DB_USERNAME:?DB_USERNAME을 .env에 설정하세요}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD를 .env에 설정하세요}
+      TZ: Asia/Seoul
+    ports:
+      - "127.0.0.1:5432:5432"   # 내 PC에서만 접속. 같은 네트워크의 다른 기기에 열지 않는다
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: blinkerleague-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"   # 지금은 0.0.0.0에 열려 있음 → 내 PC로 좁힌다
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres-data:
+  redis-data:
+```
+
+- **`.env` 하나를 Spring과 docker compose가 같이 읽는다.** compose는 프로젝트 루트의 `.env`를 자동으로 읽고, Spring `local`은 이미 `optional:file:.env[.properties]`로 읽는다. 비밀번호를 두 군데에 적지 않는다.
+- 비밀값에 기본값을 두지 않는다(`${DB_PASSWORD:?...}`): 없으면 compose가 이유를 출력하고 멈춘다(CLAUDE.md 보안 규칙).
+- 이미지 버전은 운영(3장)과 같게 PostgreSQL 16 · Redis 7로 맞추고, Testcontainers도 같은 이미지를 쓴다.
+
+### 9.3 `.env.example`
+
+```properties
+# 생성: openssl rand -base64 48
+JWT_SECRET=
+# 로컬 PostgreSQL(docker compose와 Spring local 프로필이 같이 읽음)
+DB_NAME=blinkerleague
+DB_USERNAME=blinkerleague
+# 생성: openssl rand -base64 24
+DB_PASSWORD=
+```
+
+`DB_NAME` · `DB_USERNAME`은 비밀이 아니라 예시값을 적고, `DB_PASSWORD`는 빈 칸으로 둔다. 이름은 운영 `prod` 프로필(5장)과 같게 맞춘다(운영은 `DB_URL`을 따로 받는다).
+
+### 9.4 `application-local.yaml`
+
+```yaml
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate      # 스키마는 Flyway만 만든다(4.1)
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+  flyway:
+    enabled: true             # 기동할 때 db/migration을 적용
+```
+
+- H2 콘솔 설정(`spring.h2.console`)은 지운다. `SecurityConfig`의 `/h2-console/**` 허용과 H2 servlet 관련 `antMatcher` 메모(CLAUDE.md)는 테스트에서 콘솔을 쓰지 않으면 함께 정리한다.
+- **DB가 꺼져 있으면 서버가 기동하지 않는다.** Redis는 연결이 지연돼 없이도 뜨지만, DataSource와 Flyway는 시작할 때 연결한다. 그래서 순서는 항상 `docker compose up -d` → `./gradlew bootRun`.
+- `DB_PASSWORD`가 없거나 `${...}`로 남으면 Spring의 연결 오류 대신 환경변수 이름을 말하는 메시지로 멈추게 한다(`JwtConfigTest`처럼 기동 검증 + red-green 테스트, CLAUDE.md "Validate at startup").
+
+### 9.5 개발자 사용법 (README에 옮길 내용)
+
+| 할 일 | 명령 |
+| --- | --- |
+| 처음 한 번 | `cp .env.example .env && chmod 600 .env` 후 `JWT_SECRET` · `DB_PASSWORD` 채우기 |
+| DB · Redis 시작 | `docker compose up -d` → `docker compose ps`에서 둘 다 `healthy` 확인 |
+| 서버 실행 | `./gradlew bootRun` (Flyway가 스키마를 만들고, 시드가 기준값 · 미션 · 배지를 넣음) |
+| DB 접속 | `docker exec -it blinkerleague-postgres psql -U blinkerleague blinkerleague` 또는 IntelliJ Database(`localhost:5432`) |
+| 중지(데이터 유지) | `docker compose stop` |
+| **DB만 초기화** | `docker compose rm -sf postgres && docker volume rm server_postgres-data && docker compose up -d postgres` |
+| 전부 초기화 | `docker compose down -v` (**Redis의 리프레시 토큰도 지워져 앱에서 재등록 필요**) |
+| 5432 포트 충돌 | PC에 PostgreSQL이 이미 깔려 있으면(`brew services list`) 끄거나, compose 포트를 `127.0.0.1:15432:5432`로 바꾸고 URL도 맞춤 |
+
+볼륨 이름은 compose 프로젝트 이름(폴더 이름 `server`)이 앞에 붙는다. `docker volume ls`로 확인한다.
+
+### 9.6 데이터가 남게 되면서 생기는 것
+
+- **시드는 이미 반복 실행에 안전하다**: 기준값은 `seedIfAbsent`, 미션 · 배지는 비어 있을 때만 넣는다. 그래서 **시드 JSON을 고쳐도 기존 로컬 DB에는 반영되지 않는다.** 로컬에서는 DB만 초기화(9.5)하면 되고, 운영은 4.6 경로를 따른다.
+- 엔티티를 바꾸면 `validate`가 기동을 막는다. 새 `V{n}__*.sql`을 먼저 쓴다. 이미 적용된 마이그레이션을 고쳐 체크섬 오류가 나면 로컬은 DB만 초기화한다(운영에서는 절대 고치지 않음, 4.1).
+- 시간 경계 테스트용으로 오래된 운행을 쌓아 두면 D17(과거 7일) 때문에 같은 요청을 다시 올릴 수 없다. 재현 데이터가 필요하면 `http/*.http` 시나리오를 다시 실행한다.
+
+### 9.7 구현 작업 (`feat/postgres-flyway`, 7장 1번에 포함)
+
+TDD 사이클 제안(red 원인은 실제로 확인한 뒤 PR에 적는다):
+
+| # | 동작(테스트) | 종류 | 예상 red |
+| --- | --- | --- | --- |
+| 1 | PostgreSQL에서 Flyway 마이그레이션 뒤 엔티티 스키마 검증이 통과한다 | Testcontainers PostgreSQL + `@DataJpaTest`(`ddl-auto: validate`) | 마이그레이션 파일이 없어 테이블 없음 → 검증 실패 |
+| 2 | 운행 이벤트 payload를 `text`로 저장하고 다시 읽는다(`@Lob` 제거) | 같은 테스트 클래스 | `oid` 컬럼 타입 불일치 |
+| 3 | `DB_PASSWORD`가 없으면 환경변수 이름을 담은 메시지로 기동이 실패한다 | 설정 검증 단위 테스트 | 검증 없음 → 예외가 나지 않음 |
+| 4 | 같은 운전자 동시 적립이 PostgreSQL에서도 일일 상한을 넘지 않는다 | `EarnPointConcurrencyTest`를 PostgreSQL로 한 번 | (기존 동작 확인용, 통과하면 red 없음으로 기록) |
+
+같이 할 것: `docker-compose.yml` · `.env.example` · `application-local.yaml` 변경, `build.gradle` 의존성, README "Docker 설정"과 실행 순서, CLAUDE.md의 Stack · Profiles · `local` 설명, `docs/policies.md` 9장(운영 DB), `plan.md` D3 비고("`local`은 Docker PostgreSQL").
