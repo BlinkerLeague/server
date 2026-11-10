@@ -24,6 +24,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// 스키마 마이그레이션(D3). Boot 3.3이 Flyway 10을 관리하며, 10부터 PostgreSQL 지원이 별도 모듈이다.
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
 	// API 명세(OpenAPI). 2.6.x가 Boot 3.3 기준이다(2.7+는 Boot 3.4 / Spring 6.2 필요). swagger-ui 5.17.14 포함.
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 	compileOnly 'org.projectlombok:lombok'

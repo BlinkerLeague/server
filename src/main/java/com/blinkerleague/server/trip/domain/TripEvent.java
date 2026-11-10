@@ -9,9 +9,12 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,7 +41,8 @@ public class TripEvent {
 	@Column(name = "occurred_at", nullable = false)
 	private Instant occurredAt;
 
-	@Lob
+	// PostgreSQL에서 @Lob String은 대용량 객체(oid)가 되므로 text로 매핑한다(docs/deployment.md 4.2).
+	@JdbcTypeCode(SqlTypes.LONG32VARCHAR)
 	private String payload;
 
 	TripEvent(Trip trip, RecordedEvent event) {
