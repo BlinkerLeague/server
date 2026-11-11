@@ -125,4 +125,16 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly(path + " 값은 1 이상이어야 합니다.");
 	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"trip", "turn", "harsh", "safetyWarning", "signalCancel", "seatBelt", "rain", "weights",
+		"minSamples", "point", "league", "grades", "tips"})
+	void 그룹이_빠지면_위반이다(String group) {
+		// given
+		Thresholds thresholds = ThresholdsFixture.planExampleWith(group, null);
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly(group + " 값이 없습니다.");
+	}
 }
