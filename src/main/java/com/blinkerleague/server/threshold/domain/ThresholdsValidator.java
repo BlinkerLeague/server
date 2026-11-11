@@ -33,11 +33,14 @@ public final class ThresholdsValidator {
 	 * 나누므로 각 항목은 0보다 커야 한다(0인 항목만 측정되면 0으로 나누게 된다).
 	 */
 	private static void checkWeights(List<String> violations, Thresholds thresholds) {
-		thresholds.weights().forEach((item, weight) -> {
-			if (weight <= 0) {
+		for (ScoreItem item : ScoreItem.values()) {
+			Double weight = thresholds.weights().get(item);
+			if (weight == null) {
+				violations.add("weights." + item + " 값이 없습니다.");
+			} else if (weight <= 0) {
 				violations.add("weights." + item + " 값은 0보다 커야 합니다.");
 			}
-		});
+		}
 		thresholds.minSamples().forEach((item, minSamples) -> {
 			if (minSamples < 1) {
 				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
