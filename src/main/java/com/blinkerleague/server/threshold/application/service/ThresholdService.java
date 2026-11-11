@@ -26,12 +26,16 @@ public class ThresholdService implements ThresholdProvider {
 	private final SaveThresholdsPort saveThresholdsPort;
 	private final AtomicReference<VersionedThresholds> cache = new AtomicReference<>();
 
-	/** 저장된 기준값이 없으면 기본값을 version 1로 저장한다. */
+	/** 저장된 기준값이 없으면 기본값을 version 1로 저장한다. 그 기본값이 검증에 어긋나면 서버 시작을 멈춘다. */
 	public void seedIfAbsent(Thresholds defaults) {
 		Optional<VersionedThresholds> stored = loadThresholdsPort.load();
 		if (stored.isPresent()) {
 			cache.set(stored.get());
 			return;
+		}
+		List<String> violations = ThresholdsValidator.validate(defaults);
+		if (!violations.isEmpty()) {
+			throw new IllegalStateException(describe(violations));
 		}
 		save(new VersionedThresholds(1, defaults));
 	}
