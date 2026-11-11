@@ -1,12 +1,16 @@
 package com.blinkerleague.server.threshold.application.service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.application.port.in.ThresholdProvider;
 import com.blinkerleague.server.threshold.application.port.out.LoadThresholdsPort;
 import com.blinkerleague.server.threshold.application.port.out.SaveThresholdsPort;
 import com.blinkerleague.server.threshold.domain.Thresholds;
+import com.blinkerleague.server.threshold.domain.ThresholdsValidator;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
 
 import lombok.RequiredArgsConstructor;
@@ -32,8 +36,12 @@ public class ThresholdService implements ThresholdProvider {
 		save(new VersionedThresholds(1, defaults));
 	}
 
-	/** 기준값을 바꾸고 version을 1 올린다. 바뀐 값을 돌려준다. */
+	/** 기준값을 바꾸고 version을 1 올린다. 바뀐 값을 돌려준다. 검증에 어긋나면 저장하지 않고 INVALID_INPUT. */
 	public VersionedThresholds update(Thresholds thresholds) {
+		List<String> violations = ThresholdsValidator.validate(thresholds);
+		if (!violations.isEmpty()) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT, describe(violations));
+		}
 		VersionedThresholds updated = new VersionedThresholds(current().version() + 1, thresholds);
 		save(updated);
 		return updated;
@@ -42,6 +50,10 @@ public class ThresholdService implements ThresholdProvider {
 	@Override
 	public VersionedThresholds current() {
 		return cache.updateAndGet(cached -> cached != null ? cached : loadThresholdsPort.load().orElseThrow());
+	}
+
+	private static String describe(List<String> violations) {
+		return "기준값이 올바르지 않습니다: " + String.join(" ", violations);
 	}
 
 	private void save(VersionedThresholds thresholds) {
