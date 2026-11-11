@@ -1,9 +1,12 @@
 package com.blinkerleague.server.threshold.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
 import com.blinkerleague.server.threshold.ThresholdsFixture;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.threshold.domain.VersionedThresholds;
@@ -58,5 +61,22 @@ class ThresholdServiceTest {
 		service.current();
 
 		assertThat(store.loadCount()).isEqualTo(loadsAfterSeed);
+	}
+
+	@Test
+	void 검증에_어긋난_기준값으로_바꾸면_INVALID_INPUT이고_version과_현재값이_그대로다() {
+		// given
+		service.seedIfAbsent(ThresholdsFixture.planExample());
+		VersionedThresholds before = service.current();
+		Thresholds invalid = ThresholdsFixture.planExampleWith("weights.SMOOTH_DRIVING", -0.1);
+
+		// when & then
+		assertThatThrownBy(() -> service.update(invalid))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining("weights.SMOOTH_DRIVING 값은 0 이상이어야 합니다.")
+			.extracting(e -> ((BusinessException) e).getErrorCode())
+			.isEqualTo(ErrorCode.INVALID_INPUT);
+		assertThat(store.stored()).contains(before);
+		assertThat(service.current()).isEqualTo(before);
 	}
 }
