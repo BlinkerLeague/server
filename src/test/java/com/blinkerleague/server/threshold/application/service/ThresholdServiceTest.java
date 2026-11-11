@@ -79,4 +79,16 @@ class ThresholdServiceTest {
 		assertThat(store.stored()).contains(before);
 		assertThat(service.current()).isEqualTo(before);
 	}
+
+	@Test
+	void 저장된_기준값이_없을_때_기본값이_검증에_어긋나면_저장하지_않고_시작을_멈춘다() {
+		// given
+		Thresholds invalidDefaults = ThresholdsFixture.planExampleWith("point.streakRewardDays", 0);
+
+		// when & then
+		assertThatThrownBy(() -> service.seedIfAbsent(invalidDefaults))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("point.streakRewardDays 값은 1 이상이어야 합니다.");
+		assertThat(store.stored()).isEmpty();
+	}
 }
