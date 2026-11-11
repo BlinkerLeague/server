@@ -2,8 +2,10 @@ package com.blinkerleague.server.threshold.domain;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** 기준값을 저장하기 전에 확인하는 규칙. 위반 문구 목록을 돌려주고, 비어 있으면 저장해도 된다. */
@@ -13,7 +15,10 @@ public final class ThresholdsValidator {
 	}
 
 	public static List<String> validate(Thresholds thresholds) {
-		List<String> violations = new ArrayList<>();
+		List<String> violations = missingGroups(thresholds);
+		if (!violations.isEmpty()) {
+			return violations;
+		}
 		thresholds.weights().forEach((item, weight) -> {
 			if (weight < 0) {
 				violations.add("weights." + item + " 값은 0 이상이어야 합니다.");
@@ -59,6 +64,31 @@ public final class ThresholdsValidator {
 			violations.add("league.commonItems는 하나 이상이어야 합니다.");
 		}
 		return violations;
+	}
+
+	/** 그룹이 하나라도 빠지면 나머지 규칙은 볼 수 없으므로 빠진 그룹만 돌려준다. */
+	private static List<String> missingGroups(Thresholds thresholds) {
+		Map<String, Object> groups = new LinkedHashMap<>();
+		groups.put("trip", thresholds.trip());
+		groups.put("turn", thresholds.turn());
+		groups.put("harsh", thresholds.harsh());
+		groups.put("safetyWarning", thresholds.safetyWarning());
+		groups.put("signalCancel", thresholds.signalCancel());
+		groups.put("seatBelt", thresholds.seatBelt());
+		groups.put("rain", thresholds.rain());
+		groups.put("weights", thresholds.weights());
+		groups.put("minSamples", thresholds.minSamples());
+		groups.put("point", thresholds.point());
+		groups.put("league", thresholds.league());
+		groups.put("grades", thresholds.grades());
+		groups.put("tips", thresholds.tips());
+		List<String> missing = new ArrayList<>();
+		groups.forEach((name, value) -> {
+			if (value == null) {
+				missing.add(name + " 값이 없습니다.");
+			}
+		});
+		return missing;
 	}
 
 	private static void nonNegative(List<String> violations, String path, double value) {
