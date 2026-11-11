@@ -48,6 +48,11 @@ public final class ThresholdsValidator {
 		nonNegative(violations, "point.streakRewardPoint", thresholds.point().streakRewardPoint());
 		nonNegative(violations, "league.minSeasonDistanceKm", thresholds.league().minSeasonDistanceKm());
 		nonNegative(violations, "league.minSeasonTrips", thresholds.league().minSeasonTrips());
+		atLeastOne(violations, "trip.maxEvents", thresholds.trip().maxEvents());
+		atLeastOne(violations, "trip.maxPastDays", thresholds.trip().maxPastDays());
+		atLeastOne(violations, "point.streakRewardDays", thresholds.point().streakRewardDays());
+		atLeastOne(violations, "league.minParticipants", thresholds.league().minParticipants());
+		atLeastOne(violations, "league.topN", thresholds.league().topN());
 		ratio(violations, "turn.lateSignalScore", thresholds.turn().lateSignalScore());
 		ratio(violations, "rain.speedRatio", thresholds.rain().speedRatio());
 		if (thresholds.league().commonItems().isEmpty()) {
@@ -59,6 +64,12 @@ public final class ThresholdsValidator {
 	private static void nonNegative(List<String> violations, String path, double value) {
 		if (value < 0) {
 			violations.add(path + " 값은 0 이상이어야 합니다.");
+		}
+	}
+
+	private static void atLeastOne(List<String> violations, String path, int value) {
+		if (value < 1) {
+			violations.add(path + " 값은 1 이상이어야 합니다.");
 		}
 	}
 
