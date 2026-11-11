@@ -16,6 +16,9 @@ public final class ThresholdsValidator {
 				violations.add("weights." + item + " 값은 0 이상이어야 합니다.");
 			}
 		});
+		if (thresholds.weights().values().stream().mapToDouble(Double::doubleValue).sum() <= 0) {
+			violations.add("weights 합은 0보다 커야 합니다.");
+		}
 		return violations;
 	}
 }
