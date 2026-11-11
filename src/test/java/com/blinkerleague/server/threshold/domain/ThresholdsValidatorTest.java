@@ -2,6 +2,8 @@ package com.blinkerleague.server.threshold.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
 import com.blinkerleague.server.threshold.ThresholdsFixture;
@@ -22,5 +24,15 @@ class ThresholdsValidatorTest {
 		// when & then
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("weights.SMOOTH_DRIVING 값은 0 이상이어야 합니다.");
+	}
+
+	@Test
+	void 가중치_합이_0이면_위반이다() {
+		// given
+		Thresholds thresholds = ThresholdsFixture.planExampleWith("weights", Map.of(ScoreItem.TURN_SIGNAL, 0.0));
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("weights 합은 0보다 커야 합니다.");
 	}
 }
