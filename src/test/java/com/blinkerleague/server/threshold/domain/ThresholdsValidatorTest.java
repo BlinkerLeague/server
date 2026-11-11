@@ -2,6 +2,7 @@ package com.blinkerleague.server.threshold.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -152,5 +153,15 @@ class ThresholdsValidatorTest {
 		// when & then
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly(path + " 값이 없습니다.");
+	}
+
+	@Test
+	void 등급_목록에_null이_있으면_NPE_대신_위반이다() {
+		// given
+		Thresholds thresholds = ThresholdsFixture.validWith("grades", Arrays.asList(new GradeRule("S", 95), null));
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("grades 안에 빈 값이 있습니다.");
 	}
 }
