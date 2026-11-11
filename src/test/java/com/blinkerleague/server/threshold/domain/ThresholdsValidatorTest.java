@@ -99,4 +99,18 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly(path + " 값은 0~1 사이여야 합니다.");
 	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"trip.minDistanceKm", "trip.maxFutureMinutes", "harsh.penaltyPer10Km",
+		"safetyWarning.penaltyPer100Km", "signalCancel.penalty", "seatBelt.departurePenalty",
+		"seatBelt.perMinutePenalty", "point.tripMaxKm", "point.dailyCap", "point.streakRewardPoint",
+		"league.minSeasonDistanceKm", "league.minSeasonTrips"})
+	void 거리_포인트_감점_값이_음수면_위반이다(String path) {
+		// given
+		Thresholds thresholds = ThresholdsFixture.planExampleWith(path, -1);
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly(path + " 값은 0 이상이어야 합니다.");
+	}
 }
