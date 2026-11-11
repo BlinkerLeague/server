@@ -19,6 +19,11 @@ public final class ThresholdsValidator {
 		if (thresholds.weights().values().stream().mapToDouble(Double::doubleValue).sum() <= 0) {
 			violations.add("weights 합은 0보다 커야 합니다.");
 		}
+		thresholds.grades().forEach(rule -> {
+			if (rule.minScore() < 0 || rule.minScore() > 100) {
+				violations.add("grades." + rule.grade() + " 기준 점수는 0~100 사이여야 합니다.");
+			}
+		});
 		return violations;
 	}
 }
