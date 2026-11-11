@@ -52,4 +52,19 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("grades.S 기준 점수는 0~100 사이여야 합니다.");
 	}
+
+	@Test
+	void 등급_이름이나_기준_점수가_겹치면_위반이다() {
+		// given
+		// A가 두 번, 70점이 두 번 나온다
+		Thresholds thresholds = ThresholdsFixture.withGrades(List.of(
+			new GradeRule("S", 95),
+			new GradeRule("A", 85),
+			new GradeRule("A", 70),
+			new GradeRule("B", 70)));
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("grades 등급 이름이 겹칩니다: A", "grades 기준 점수가 겹칩니다: 70");
+	}
 }
