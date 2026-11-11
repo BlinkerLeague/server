@@ -182,7 +182,7 @@ API: `POST /api/drivers`
 
 앱 요청 1 · 7번 반영(11.9): 차량 앱은 회전을 핸들 각도로 감지한다(실차에서 FusedLocation 미지원). `turn`에 `steeringEnterDeg`(90, 이 각도 이상 꺾이면 회전) · `steeringExitDeg`(20, 이 각도를 넘은 때부터 다시 내려올 때까지가 한 번의 조향) · `mergeGapSec`(3, 이어진 같은 방향 조향을 하나로) · `steeringRightPositive`(false, 음수가 오른쪽. 실차 부호가 반대면 이 값만 바꿈)를 두었다. 서버 점수 계산에는 쓰지 않고 앱이 내려받아 쓴다. 진행 방향 감지용이던 `windowSec` · `minAngleDeg` · `uTurnAngleDeg`는 앱이 쓰지 않지만 호환을 위해 남겼다.
 
-상태: 완료. 기본값은 `src/main/resources/thresholds/default-thresholds.json`이고, 서버 시작 시 저장된 값이 없을 때만 version 1로 시드한다(재시작해도 바꾼 값을 덮어쓰지 않음). `app_config` 테이블의 `thresholds` 행에 JSON으로 저장하며, `value`가 H2 예약어라 컬럼 이름은 `config_value`다. 서버 내부는 `ThresholdProvider`(메모리 캐시, 변경 시 갱신)로 읽는다. 변경 값 검증은 완료(11.11, `feat/threshold-validation`): `ThresholdsValidator`가 빠진 그룹, 가중치(음수 금지 · 합 > 0, **합 1은 요구하지 않음** — 측정한 항목끼리 재분배하므로. 11.11 결정), 등급(0~100 · 이름과 기준 점수 중복 금지), 최소 표본 ≥ 1, 비율 0~1, 거리 · 포인트 · 감점 ≥ 0, 개수 · 기간 ≥ 1, 리그 공통 항목 1개 이상을 확인한다. `update`는 위반이면 저장하지 않고 `INVALID_INPUT`, `seedIfAbsent`는 기본값이 위반이면 시작을 멈춘다. 남은 항목: 값 변경용 관리자 API(지금은 `ThresholdService.update`만 있음, D39), 50점 미만 등급 표기(지금은 등급 없음), `TURN_SIGNAL` 외 팁 문구 확정, 서버를 여러 대로 늘릴 때 캐시 갱신 전파.
+상태: 완료. 기본값은 `src/main/resources/thresholds/default-thresholds.json`이고, 서버 시작 시 저장된 값이 없을 때만 version 1로 시드한다(재시작해도 바꾼 값을 덮어쓰지 않음). `app_config` 테이블의 `thresholds` 행에 JSON으로 저장하며, `value`가 H2 예약어라 컬럼 이름은 `config_value`다. 서버 내부는 `ThresholdProvider`(메모리 캐시, 변경 시 갱신)로 읽는다. 변경 값 검증은 완료(11.11, `feat/threshold-validation`): `ThresholdsValidator`가 빠진 그룹과 그룹 안의 null, 가중치(**점수 항목 8개 모두 0보다 커야 함, 합 1은 요구하지 않음** — 측정한 항목끼리 재분배하므로 합은 상관없지만, 가중치 0인 항목만 측정되면 0으로 나누게 된다. 11.11 결정), 등급(0~100 · 이름과 기준 점수 중복 금지), 최소 표본 ≥ 1, 비율 0~1, 거리 · 포인트 · 감점 ≥ 0, 개수 · 기간 ≥ 1, 리그 공통 항목 1개 이상을 확인한다. `update`는 위반이면 저장하지 않고 `INVALID_INPUT`, `seedIfAbsent`는 기본값이 위반이면 시작을 멈춘다. 기본값 파일에서 숫자 필드가 빠지면 0으로 채우지 않고 읽기에 실패한다(관리자 API를 만들 때도 같은 설정으로 읽는다). 남은 항목: 값 변경용 관리자 API(지금은 `ThresholdService.update`만 있음, D39), 50점 미만 등급 표기(지금은 등급 없음), `TURN_SIGNAL` 외 팁 문구 확정, 서버를 여러 대로 늘릴 때 캐시 갱신 전파.
 
 API: `GET /api/config/thresholds` (앱이 시작할 때 내려받음)
 
@@ -650,7 +650,7 @@ auth:refresh:used:{hash}         → driverId      TTL 남은 기간 # 이미 �
 - **차량 앱 요청**(android-app `docs/server-requests.md`): 1 · 7 · 8번 반영(#43), 3 · 6 · 9번 반영, 2번 철회, 10번(최소 거리 1km) 반영(#46). 업로드 제한(D16 · D17) 반영(#47)
 - **11.10**: 내비 점수 항목(4.6)을 추후 개선으로 결정(D35, #50). 앱 팀 전달용 변경 정리 `docs/app-team-changes-2026-11-10.md`(#51). 역할별 서브에이전트(`.claude/agents/`: lead · tester · developer · reviewer)와 테스트 given / when / then 규칙 추가
 - **11.11**: 기준값 변경 검증(`feat/threshold-validation`, 3.3)
-- `develop` 테스트 364개 통과, 공개 API 13개(README API 표 · Swagger, `docs/api/openapi.json`과 실행 서버 명세 일치 확인 11.10)
+- `develop` 테스트 364개 통과(11.10 기준), 공개 API 13개(README API 표 · Swagger, `docs/api/openapi.json`과 실행 서버 명세 일치 확인 11.10)
 
 ### 9.2 결정 대기 항목 (11.9 정리)
 
