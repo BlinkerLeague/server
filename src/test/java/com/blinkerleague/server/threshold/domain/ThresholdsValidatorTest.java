@@ -2,6 +2,7 @@ package com.blinkerleague.server.threshold.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,18 @@ class ThresholdsValidatorTest {
 		// when & then
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("weights.SMOOTH_DRIVING 값은 0보다 커야 합니다.");
+	}
+
+	@Test
+	void 가중치가_없는_점수_항목이_있으면_위반이다() {
+		// given
+		Map<ScoreItem, Double> weights = new EnumMap<>(ThresholdsFixture.allItemsWeighted().weights());
+		weights.remove(ScoreItem.SEAT_BELT);
+		Thresholds thresholds = ThresholdsFixture.validWith("weights", weights);
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("weights.SEAT_BELT 값이 없습니다.");
 	}
 
 	@ParameterizedTest(name = "기준 점수 {0}")
