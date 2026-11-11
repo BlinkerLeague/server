@@ -1,5 +1,6 @@
 package com.blinkerleague.server.threshold;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,12 +58,29 @@ public final class ThresholdsFixture {
 			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), base.minSamples(), base.point(), base.league(), base.grades(), base.tips());
 	}
 
+	/** plan.md 예시 값에 점수 항목 8개 모두의 가중치(D18 초안)를 넣은 값. 검증을 통과하는 기준값. */
+	public static Thresholds allItemsWeighted() {
+		Map<ScoreItem, Double> weights = new EnumMap<>(ScoreItem.class);
+		weights.put(ScoreItem.TURN_SIGNAL, 0.25);
+		weights.put(ScoreItem.SIGNAL_CANCEL, 0.05);
+		weights.put(ScoreItem.TURN_SPEED, 0.05);
+		weights.put(ScoreItem.SMOOTH_DRIVING, 0.15);
+		weights.put(ScoreItem.SEAT_BELT, 0.05);
+		weights.put(ScoreItem.SAFETY_WARNING, 0.05);
+		weights.put(ScoreItem.NIGHT_HEADLIGHT, 0.05);
+		weights.put(ScoreItem.RAIN_DRIVING, 0.05);
+		Thresholds base = planExample();
+		return new Thresholds(base.trip(), base.turn(), base.harsh(), base.safetyWarning(), base.signalCancel(),
+			base.seatBelt(), base.rain(), weights, base.minSamples(), base.point(), base.league(), base.grades(),
+			base.tips());
+	}
+
 	/**
-	 * plan.md 예시 값에서 점으로 구분한 경로(예: {@code "turn.lateSignalScore"}) 하나만 바꾼 값. 검증 테스트용.
+	 * 검증을 통과하는 기준값({@link #allItemsWeighted()})에서 점으로 구분한 경로(예: {@code "turn.lateSignalScore"}) 하나만 바꾼 값. 검증 테스트용.
 	 * value가 null이면 그 값을 비운다(JSON에서 그룹이 빠진 경우).
 	 */
-	public static Thresholds planExampleWith(String path, Object value) {
-		ObjectNode root = JSON.valueToTree(planExample());
+	public static Thresholds validWith(String path, Object value) {
+		ObjectNode root = JSON.valueToTree(allItemsWeighted());
 		String[] keys = path.split("\\.");
 		ObjectNode parent = root;
 		for (int i = 0; i < keys.length - 1; i++) {
