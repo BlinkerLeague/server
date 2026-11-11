@@ -19,6 +19,17 @@ public final class ThresholdsValidator {
 		if (!violations.isEmpty()) {
 			return violations;
 		}
+		checkWeights(violations, thresholds);
+		checkGrades(violations, thresholds.grades());
+		checkRanges(violations, thresholds);
+		if (thresholds.league().commonItems().isEmpty()) {
+			violations.add("league.commonItems는 하나 이상이어야 합니다.");
+		}
+		return violations;
+	}
+
+	/** 점수는 측정한 항목끼리 합이 1이 되도록 다시 나누므로 합 자체는 1이 아니어도 된다(음수 금지, 합 > 0). */
+	private static void checkWeights(List<String> violations, Thresholds thresholds) {
 		thresholds.weights().forEach((item, weight) -> {
 			if (weight < 0) {
 				violations.add("weights." + item + " 값은 0 이상이어야 합니다.");
@@ -27,20 +38,27 @@ public final class ThresholdsValidator {
 		if (thresholds.weights().values().stream().mapToDouble(Double::doubleValue).sum() <= 0) {
 			violations.add("weights 합은 0보다 커야 합니다.");
 		}
-		thresholds.grades().forEach(rule -> {
-			if (rule.minScore() < 0 || rule.minScore() > 100) {
-				violations.add("grades." + rule.grade() + " 기준 점수는 0~100 사이여야 합니다.");
-			}
-		});
-		duplicates(thresholds.grades().stream().map(Thresholds.GradeRule::grade).toList())
-			.forEach(grade -> violations.add("grades 등급 이름이 겹칩니다: " + grade));
-		duplicates(thresholds.grades().stream().map(Thresholds.GradeRule::minScore).toList())
-			.forEach(minScore -> violations.add("grades 기준 점수가 겹칩니다: " + minScore));
 		thresholds.minSamples().forEach((item, minSamples) -> {
 			if (minSamples < 1) {
 				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
 			}
 		});
+	}
+
+	private static void checkGrades(List<String> violations, List<Thresholds.GradeRule> grades) {
+		grades.forEach(rule -> {
+			if (rule.minScore() < 0 || rule.minScore() > 100) {
+				violations.add("grades." + rule.grade() + " 기준 점수는 0~100 사이여야 합니다.");
+			}
+		});
+		duplicates(grades.stream().map(Thresholds.GradeRule::grade).toList())
+			.forEach(grade -> violations.add("grades 등급 이름이 겹칩니다: " + grade));
+		duplicates(grades.stream().map(Thresholds.GradeRule::minScore).toList())
+			.forEach(minScore -> violations.add("grades 기준 점수가 겹칩니다: " + minScore));
+	}
+
+	/** 음수 감점은 점수를 올리고, 0인 연속 보상 주기는 나눗셈을 깨므로 범위를 확인한다. */
+	private static void checkRanges(List<String> violations, Thresholds thresholds) {
 		nonNegative(violations, "trip.minDistanceKm", thresholds.trip().minDistanceKm());
 		nonNegative(violations, "trip.maxFutureMinutes", thresholds.trip().maxFutureMinutes());
 		nonNegative(violations, "harsh.penaltyPer10Km", thresholds.harsh().penaltyPer10Km());
@@ -60,10 +78,6 @@ public final class ThresholdsValidator {
 		atLeastOne(violations, "league.topN", thresholds.league().topN());
 		ratio(violations, "turn.lateSignalScore", thresholds.turn().lateSignalScore());
 		ratio(violations, "rain.speedRatio", thresholds.rain().speedRatio());
-		if (thresholds.league().commonItems().isEmpty()) {
-			violations.add("league.commonItems는 하나 이상이어야 합니다.");
-		}
-		return violations;
 	}
 
 	/** 그룹이 하나라도 빠지면 나머지 규칙은 볼 수 없으므로 빠진 그룹만 돌려준다. */
