@@ -142,4 +142,15 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly(group + " 값이 없습니다.");
 	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"league.commonItems", "minSamples.TURN_SIGNAL"})
+	void 그룹_안의_값이_null이면_NPE_대신_위반이다(String path) {
+		// given
+		Thresholds thresholds = ThresholdsFixture.validWith(path, null);
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly(path + " 값이 없습니다.");
+	}
 }
