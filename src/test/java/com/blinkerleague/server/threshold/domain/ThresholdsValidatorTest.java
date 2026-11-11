@@ -2,11 +2,15 @@ package com.blinkerleague.server.threshold.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.blinkerleague.server.threshold.ThresholdsFixture;
+import com.blinkerleague.server.threshold.domain.Thresholds.GradeRule;
 
 class ThresholdsValidatorTest {
 
@@ -34,5 +38,18 @@ class ThresholdsValidatorTest {
 		// when & then
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("weights 합은 0보다 커야 합니다.");
+	}
+
+	@ParameterizedTest(name = "기준 점수 {0}")
+	@ValueSource(ints = {-1, 101})
+	void 등급_기준_점수가_0에서_100_밖이면_위반이다(int minScore) {
+		// given
+		Thresholds thresholds = ThresholdsFixture.withGrades(List.of(
+			new GradeRule("S", minScore),
+			new GradeRule("C", 50)));
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("grades.S 기준 점수는 0~100 사이여야 합니다.");
 	}
 }
