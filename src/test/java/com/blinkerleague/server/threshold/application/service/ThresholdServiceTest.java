@@ -68,12 +68,12 @@ class ThresholdServiceTest {
 		// given
 		service.seedIfAbsent(ThresholdsFixture.allItemsWeighted());
 		VersionedThresholds before = service.current();
-		Thresholds invalid = ThresholdsFixture.validWith("weights.SMOOTH_DRIVING", -0.1);
+		Thresholds invalid = ThresholdsFixture.validWith("rain.speedRatio", 1.5);
 
 		// when & then
 		assertThatThrownBy(() -> service.update(invalid))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining("weights.SMOOTH_DRIVING 값은 0 이상이어야 합니다.")
+			.hasMessageContaining("rain.speedRatio 값은 0~1 사이여야 합니다.")
 			.extracting(e -> ((BusinessException) e).getErrorCode())
 			.isEqualTo(ErrorCode.INVALID_INPUT);
 		assertThat(store.stored()).contains(before);

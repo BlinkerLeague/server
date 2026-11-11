@@ -21,24 +21,16 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(ThresholdsFixture.allItemsWeighted())).isEmpty();
 	}
 
-	@Test
-	void 가중치에_음수가_있으면_위반이다() {
+	@ParameterizedTest(name = "가중치 {0}")
+	@ValueSource(doubles = {-0.1, 0.0})
+	void 가중치가_0_이하면_위반이다(double weight) {
 		// given
-		Thresholds thresholds = ThresholdsFixture.validWith("weights.SMOOTH_DRIVING", -0.1);
+		// 재분배는 측정한 항목의 가중치 합으로 나누므로, 0인 항목만 측정되면 0으로 나누게 된다
+		Thresholds thresholds = ThresholdsFixture.validWith("weights.SMOOTH_DRIVING", weight);
 
 		// when & then
 		assertThat(ThresholdsValidator.validate(thresholds))
-			.containsExactly("weights.SMOOTH_DRIVING 값은 0 이상이어야 합니다.");
-	}
-
-	@Test
-	void 가중치_합이_0이면_위반이다() {
-		// given
-		Thresholds thresholds = ThresholdsFixture.validWith("weights", Map.of(ScoreItem.TURN_SIGNAL, 0.0));
-
-		// when & then
-		assertThat(ThresholdsValidator.validate(thresholds))
-			.containsExactly("weights 합은 0보다 커야 합니다.");
+			.containsExactly("weights.SMOOTH_DRIVING 값은 0보다 커야 합니다.");
 	}
 
 	@ParameterizedTest(name = "기준 점수 {0}")
