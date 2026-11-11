@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /** 기준값을 저장하기 전에 확인하는 규칙. 위반 문구 목록을 돌려주고, 비어 있으면 저장해도 된다. */
@@ -53,6 +54,11 @@ public final class ThresholdsValidator {
 	}
 
 	private static void checkGrades(List<String> violations, List<Thresholds.GradeRule> grades) {
+		// List.of 목록은 contains(null)에서 NPE를 던지므로 스트림으로 찾는다
+		if (grades.stream().anyMatch(Objects::isNull)) {
+			violations.add("grades 안에 빈 값이 있습니다.");
+			return;
+		}
 		grades.forEach(rule -> {
 			if (rule.minScore() < 0 || rule.minScore() > 100) {
 				violations.add("grades." + rule.grade() + " 기준 점수는 0~100 사이여야 합니다.");
