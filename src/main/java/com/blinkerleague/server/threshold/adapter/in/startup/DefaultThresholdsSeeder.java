@@ -28,14 +28,14 @@ public class DefaultThresholdsSeeder implements SmartInitializingSingleton {
 
 	@Override
 	public void afterSingletonsInstantiated() {
-		thresholdService.seedIfAbsent(readDefaults());
+		thresholdService.seedIfAbsent(readDefaults(DEFAULTS_PATH));
 	}
 
-	private Thresholds readDefaults() {
-		try (InputStream in = new ClassPathResource(DEFAULTS_PATH).getInputStream()) {
+	Thresholds readDefaults(String path) {
+		try (InputStream in = new ClassPathResource(path).getInputStream()) {
 			return objectMapper.readValue(in, Thresholds.class);
 		} catch (IOException e) {
-			throw new IllegalStateException("기본 기준값 파일을 읽지 못했습니다: " + DEFAULTS_PATH, e);
+			throw new IllegalStateException("기본 기준값 파일을 읽지 못했습니다: " + path, e);
 		}
 	}
 }
