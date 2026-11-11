@@ -28,16 +28,16 @@ public final class ThresholdsValidator {
 		return violations;
 	}
 
-	/** 점수는 측정한 항목끼리 합이 1이 되도록 다시 나누므로 합 자체는 1이 아니어도 된다(음수 금지, 합 > 0). */
+	/**
+	 * 점수는 측정한 항목끼리 합이 1이 되도록 다시 나누므로 합 자체는 1이 아니어도 된다. 다만 측정한 항목의 가중치 합으로
+	 * 나누므로 각 항목은 0보다 커야 한다(0인 항목만 측정되면 0으로 나누게 된다).
+	 */
 	private static void checkWeights(List<String> violations, Thresholds thresholds) {
 		thresholds.weights().forEach((item, weight) -> {
-			if (weight < 0) {
-				violations.add("weights." + item + " 값은 0 이상이어야 합니다.");
+			if (weight <= 0) {
+				violations.add("weights." + item + " 값은 0보다 커야 합니다.");
 			}
 		});
-		if (thresholds.weights().values().stream().mapToDouble(Double::doubleValue).sum() <= 0) {
-			violations.add("weights 합은 0보다 커야 합니다.");
-		}
 		thresholds.minSamples().forEach((item, minSamples) -> {
 			if (minSamples < 1) {
 				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
