@@ -36,10 +36,18 @@ public final class ThresholdsValidator {
 				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
 			}
 		});
+		ratio(violations, "turn.lateSignalScore", thresholds.turn().lateSignalScore());
+		ratio(violations, "rain.speedRatio", thresholds.rain().speedRatio());
 		if (thresholds.league().commonItems().isEmpty()) {
 			violations.add("league.commonItems는 하나 이상이어야 합니다.");
 		}
 		return violations;
+	}
+
+	private static void ratio(List<String> violations, String path, double value) {
+		if (value < 0 || value > 1) {
+			violations.add(path + " 값은 0~1 사이여야 합니다.");
+		}
 	}
 
 	private static <T> Set<T> duplicates(List<T> values) {
