@@ -77,4 +77,14 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("league.commonItems는 하나 이상이어야 합니다.");
 	}
+
+	@Test
+	void 최소_표본이_1보다_작으면_위반이다() {
+		// given
+		Thresholds thresholds = ThresholdsFixture.withMinSamples(Map.of(ScoreItem.TURN_SIGNAL, 0));
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("minSamples.TURN_SIGNAL 값은 1 이상이어야 합니다.");
+	}
 }
