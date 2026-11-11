@@ -22,7 +22,9 @@ public final class ThresholdsValidator {
 		checkWeights(violations, thresholds);
 		checkGrades(violations, thresholds.grades());
 		checkRanges(violations, thresholds);
-		if (thresholds.league().commonItems().isEmpty()) {
+		if (thresholds.league().commonItems() == null) {
+			violations.add("league.commonItems 값이 없습니다.");
+		} else if (thresholds.league().commonItems().isEmpty()) {
 			violations.add("league.commonItems는 하나 이상이어야 합니다.");
 		}
 		return violations;
@@ -42,7 +44,9 @@ public final class ThresholdsValidator {
 			}
 		}
 		thresholds.minSamples().forEach((item, minSamples) -> {
-			if (minSamples < 1) {
+			if (minSamples == null) {
+				violations.add("minSamples." + item + " 값이 없습니다.");
+			} else if (minSamples < 1) {
 				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
 			}
 		});
