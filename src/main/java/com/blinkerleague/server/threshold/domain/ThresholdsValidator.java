@@ -36,12 +36,30 @@ public final class ThresholdsValidator {
 				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
 			}
 		});
+		nonNegative(violations, "trip.minDistanceKm", thresholds.trip().minDistanceKm());
+		nonNegative(violations, "trip.maxFutureMinutes", thresholds.trip().maxFutureMinutes());
+		nonNegative(violations, "harsh.penaltyPer10Km", thresholds.harsh().penaltyPer10Km());
+		nonNegative(violations, "safetyWarning.penaltyPer100Km", thresholds.safetyWarning().penaltyPer100Km());
+		nonNegative(violations, "signalCancel.penalty", thresholds.signalCancel().penalty());
+		nonNegative(violations, "seatBelt.departurePenalty", thresholds.seatBelt().departurePenalty());
+		nonNegative(violations, "seatBelt.perMinutePenalty", thresholds.seatBelt().perMinutePenalty());
+		nonNegative(violations, "point.tripMaxKm", thresholds.point().tripMaxKm());
+		nonNegative(violations, "point.dailyCap", thresholds.point().dailyCap());
+		nonNegative(violations, "point.streakRewardPoint", thresholds.point().streakRewardPoint());
+		nonNegative(violations, "league.minSeasonDistanceKm", thresholds.league().minSeasonDistanceKm());
+		nonNegative(violations, "league.minSeasonTrips", thresholds.league().minSeasonTrips());
 		ratio(violations, "turn.lateSignalScore", thresholds.turn().lateSignalScore());
 		ratio(violations, "rain.speedRatio", thresholds.rain().speedRatio());
 		if (thresholds.league().commonItems().isEmpty()) {
 			violations.add("league.commonItems는 하나 이상이어야 합니다.");
 		}
 		return violations;
+	}
+
+	private static void nonNegative(List<String> violations, String path, double value) {
+		if (value < 0) {
+			violations.add(path + " 값은 0 이상이어야 합니다.");
+		}
 	}
 
 	private static void ratio(List<String> violations, String path, double value) {
