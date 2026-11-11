@@ -6,9 +6,14 @@ import java.util.Map;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
 import com.blinkerleague.server.threshold.domain.Thresholds;
 import com.blinkerleague.server.threshold.domain.Thresholds.GradeRule;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /** 테스트용 기준값. plan.md 3.3 예시 값을 쓴다. */
 public final class ThresholdsFixture {
+
+	private static final ObjectMapper JSON = new ObjectMapper();
 
 	public static final Thresholds.League LEAGUE = new Thresholds.League(
 		List.of(ScoreItem.TURN_SIGNAL, ScoreItem.SMOOTH_DRIVING, ScoreItem.TURN_SPEED), 10, 50, 10, 10);
@@ -50,6 +55,25 @@ public final class ThresholdsFixture {
 		Thresholds base = planExample();
 		return new Thresholds(new Thresholds.Trip(minDistanceKm, base.trip().parkEndMinutes(), base.trip().maxEvents(), base.trip().maxFutureMinutes(), base.trip().maxPastDays()), base.turn(),
 			base.harsh(), base.safetyWarning(), base.signalCancel(), base.seatBelt(), base.rain(), base.weights(), base.minSamples(), base.point(), base.league(), base.grades(), base.tips());
+	}
+
+	/**
+	 * plan.md 예시 값에서 점으로 구분한 경로(예: {@code "turn.lateSignalScore"}) 하나만 바꾼 값. 검증 테스트용.
+	 * value가 null이면 그 값을 비운다(JSON에서 그룹이 빠진 경우).
+	 */
+	public static Thresholds planExampleWith(String path, Object value) {
+		ObjectNode root = JSON.valueToTree(planExample());
+		String[] keys = path.split("\\.");
+		ObjectNode parent = root;
+		for (int i = 0; i < keys.length - 1; i++) {
+			parent = (ObjectNode) parent.get(keys[i]);
+		}
+		parent.set(keys[keys.length - 1], JSON.valueToTree(value));
+		try {
+			return JSON.treeToValue(root, Thresholds.class);
+		} catch (JsonProcessingException e) {
+			throw new IllegalArgumentException(path, e);
+		}
 	}
 
 	/** 같은 구조에서 항목별 최소 표본만 바꾼 값. */
