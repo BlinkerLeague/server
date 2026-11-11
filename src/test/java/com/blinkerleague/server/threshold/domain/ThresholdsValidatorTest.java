@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.blinkerleague.server.threshold.ThresholdsFixture;
@@ -86,5 +87,16 @@ class ThresholdsValidatorTest {
 		// when & then
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("minSamples.TURN_SIGNAL 값은 1 이상이어야 합니다.");
+	}
+
+	@ParameterizedTest(name = "{0} = {1}")
+	@CsvSource({"turn.lateSignalScore, -0.1", "turn.lateSignalScore, 1.1", "rain.speedRatio, -0.1", "rain.speedRatio, 1.1"})
+	void 비율_값이_0에서_1_밖이면_위반이다(String path, double value) {
+		// given
+		Thresholds thresholds = ThresholdsFixture.planExampleWith(path, value);
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly(path + " 값은 0~1 사이여야 합니다.");
 	}
 }
