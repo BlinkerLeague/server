@@ -67,4 +67,14 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly("grades 등급 이름이 겹칩니다: A", "grades 기준 점수가 겹칩니다: 70");
 	}
+
+	@Test
+	void 리그_공통_항목이_비어_있으면_위반이다() {
+		// given
+		Thresholds thresholds = ThresholdsFixture.planExampleWith("league.commonItems", List.of());
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly("league.commonItems는 하나 이상이어야 합니다.");
+	}
 }
