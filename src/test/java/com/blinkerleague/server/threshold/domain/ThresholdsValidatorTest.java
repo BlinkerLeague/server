@@ -113,4 +113,16 @@ class ThresholdsValidatorTest {
 		assertThat(ThresholdsValidator.validate(thresholds))
 			.containsExactly(path + " 값은 0 이상이어야 합니다.");
 	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = {"trip.maxEvents", "trip.maxPastDays", "point.streakRewardDays",
+		"league.minParticipants", "league.topN"})
+	void 개수_기간_값이_1보다_작으면_위반이다(String path) {
+		// given
+		Thresholds thresholds = ThresholdsFixture.planExampleWith(path, 0);
+
+		// when & then
+		assertThat(ThresholdsValidator.validate(thresholds))
+			.containsExactly(path + " 값은 1 이상이어야 합니다.");
+	}
 }
