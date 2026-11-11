@@ -31,6 +31,11 @@ public final class ThresholdsValidator {
 			.forEach(grade -> violations.add("grades 등급 이름이 겹칩니다: " + grade));
 		duplicates(thresholds.grades().stream().map(Thresholds.GradeRule::minScore).toList())
 			.forEach(minScore -> violations.add("grades 기준 점수가 겹칩니다: " + minScore));
+		thresholds.minSamples().forEach((item, minSamples) -> {
+			if (minSamples < 1) {
+				violations.add("minSamples." + item + " 값은 1 이상이어야 합니다.");
+			}
+		});
 		if (thresholds.league().commonItems().isEmpty()) {
 			violations.add("league.commonItems는 하나 이상이어야 합니다.");
 		}
