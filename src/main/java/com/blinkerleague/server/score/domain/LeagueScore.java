@@ -1,0 +1,32 @@
+package com.blinkerleague.server.score.domain;
+
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.blinkerleague.server.threshold.domain.ScoreItem;
+
+/**
+ * 리그 비교 점수(D19). 차마다 측정 항목이 달라도 같은 기준으로 겨루도록, 모든 차가 측정하는 공통 항목만으로
+ * 가중치를 다시 나눠 매긴다. 운행 점수 · 포인트는 계속 전체 항목 점수를 쓴다.
+ */
+public final class LeagueScore {
+
+	private LeagueScore() {
+	}
+
+	public static Integer of(List<MetricScore> metrics, Map<ScoreItem, Double> weights, Set<ScoreItem> commonItems) {
+		Map<ScoreItem, Integer> scored = new EnumMap<>(ScoreItem.class);
+		metrics.stream()
+			.filter(m -> m.status() == MetricStatus.SCORED && commonItems.contains(m.metric()))
+			.forEach(m -> scored.put(m.metric(), m.score()));
+		// 공통 항목을 하나도 측정하지 않은 운행은 리그 집계에서 빠진다.
+		if (scored.isEmpty()) {
+			return null;
+		}
+		Map<ScoreItem, Double> applied = WeightRedistribution.redistribute(weights, scored.keySet());
+		double total = applied.entrySet().stream().mapToDouble(e -> e.getValue() * scored.get(e.getKey())).sum();
+		return (int)Math.round(total);
+	}
+}

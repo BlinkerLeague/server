@@ -1,0 +1,10 @@
+[
+  { "metric": "TURN_SIGNAL", "title": "회전 깜빡이 주간 90점", "target": 90, "minDistanceKm": 30 },
+  { "metric": "SMOOTH_DRIVING", "title": "부드러운 운전 주간 90점", "target": 90, "minDistanceKm": 30 },
+  { "metric": "SAFETY_WARNING", "title": "안전 경고 없는 주", "target": 100, "minDistanceKm": 50 },
+  { "metric": "NIGHT_HEADLIGHT", "title": "밤에는 전조등 켜기", "target": 100, "minDistanceKm": 10 },
+  { "metric": "SIGNAL_CANCEL", "title": "깜빡이 끄기 잊지 않기", "target": 100, "minDistanceKm": 30 },
+  { "metric": "TURN_SPEED", "title": "회전은 천천히", "target": 90, "minDistanceKm": 30 },
+  { "metric": "SEAT_BELT", "title": "벨트 매고 출발하는 주", "target": 100, "minDistanceKm": 10 },
+  { "metric": "RAIN_DRIVING", "title": "비 오는 날 전조등 켜고 감속", "target": 90, "minDistanceKm": 10 }
+]

@@ -1,0 +1,1778 @@
+{
+  "components": {
+    "schemas": {
+      "BadgeResponse": {
+        "properties": {
+          "awardedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "earned": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChampionshipResponse": {
+        "description": "시즌 우승 칭호(D30 · D34): 그 시즌 안전지수 1위 권역의 순위 자격자",
+        "properties": {
+          "leagueCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "seasonId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ConditionProgress": {
+        "properties": {
+          "current": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "target": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "TURN_COUNT",
+              "SIGNAL_RATE"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CurrentLeagueResponse": {
+        "properties": {
+          "league": {
+            "$ref": "#/components/schemas/LeagueResponse"
+          },
+          "me": {
+            "$ref": "#/components/schemas/MeResponse"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/RegionResponse"
+            },
+            "type": "array"
+          },
+          "season": {
+            "$ref": "#/components/schemas/SeasonResponse"
+          }
+        },
+        "type": "object"
+      },
+      "Description": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "EntryResponse": {
+        "properties": {
+          "amount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "$ref": "#/components/schemas/Description"
+          },
+          "reason": {
+            "enum": [
+              "TRIP",
+              "DAILY_MISSION",
+              "STREAK_7"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EventRequest": {
+        "properties": {
+          "eventId": {
+            "maxLength": 36,
+            "minLength": 0,
+            "type": "string"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "payload": {
+            "description": "이벤트 타입별 추가 정보(선택). 서버는 JSON 그대로 저장하고 점수에 쓰는 값만 읽는다(plan.md 4.1). TURN: { direction: LEFT|RIGHT, signalOn, signalTiming: ON_TIME|LATE|WRONG_DIRECTION|NONE, leadDistanceM, maxSpeedKmh } (signalTiming이 있으면 4단계, 없으면 signalOn으로 2단계 판정) / SIGNAL_LEFT_ON: { durationSec } / SEAT_BELT(운행당 1건): { buckledAtDeparture, unbuckledMovingSec } / NIGHT_SEGMENT: { durationSec, headlightOffSec } / RAIN_SEGMENT: { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec } / HARSH_ACCEL · HARSH_BRAKE · SAFETY_WARNING · LANE_CHANGE: 형식 없음(횟수만 셈). 원시 위치 좌표는 넣지 않는다.",
+            "example": {
+              "direction": "LEFT",
+              "signalOn": true
+            },
+            "type": "object"
+          },
+          "type": {
+            "enum": [
+              "TURN",
+              "LANE_CHANGE",
+              "HARSH_ACCEL",
+              "HARSH_BRAKE",
+              "SAFETY_WARNING",
+              "NIGHT_SEGMENT",
+              "SIGNAL_LEFT_ON",
+              "SEAT_BELT",
+              "RAIN_SEGMENT"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "occurredAt",
+          "type"
+        ],
+        "type": "object"
+      },
+      "GradeRule": {
+        "properties": {
+          "grade": {
+            "type": "string"
+          },
+          "minScore": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Harsh": {
+        "properties": {
+          "deltaKmhPerSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "penaltyPer10Km": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "League": {
+        "properties": {
+          "commonItems": {
+            "items": {
+              "enum": [
+                "TURN_SIGNAL",
+                "SMOOTH_DRIVING",
+                "SAFETY_WARNING",
+                "NIGHT_HEADLIGHT",
+                "SIGNAL_CANCEL",
+                "TURN_SPEED",
+                "SEAT_BELT",
+                "RAIN_DRIVING"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "minParticipants": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minSeasonDistanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "minSeasonTrips": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "topN": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "LeagueResponse": {
+        "description": "내 리그 권역. rankings는 순위가 공개됐을 때만 상위 N명(기준값 league.topN)",
+        "properties": {
+          "leagueCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "participants": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rankingPublished": {
+            "type": "boolean"
+          },
+          "rankings": {
+            "items": {
+              "$ref": "#/components/schemas/RankingResponse"
+            },
+            "type": "array"
+          },
+          "safetyIndex": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "LeagueVisibilityRequest": {
+        "properties": {
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "visible"
+        ],
+        "type": "object"
+      },
+      "LeagueVisibilityResponse": {
+        "properties": {
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "MeResponse": {
+        "description": "내 시즌 기록. score = averageScore + points(D34), 리그 점수가 없으면 averageScore · score는 null. rank는 순위가 공개되고 자격(D13)이 있고 순위 공개를 켰을 때만 있다. championships는 지난 시즌 우승 칭호(오래된 시즌부터)",
+        "properties": {
+          "averageScore": {
+            "format": "double",
+            "type": "number"
+          },
+          "championships": {
+            "items": {
+              "$ref": "#/components/schemas/ChampionshipResponse"
+            },
+            "type": "array"
+          },
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "points": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          },
+          "trips": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "MetricChange": {
+        "properties": {
+          "change": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "lastWeek": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "metric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "thisWeek": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MetricResult": {
+        "properties": {
+          "detail": {
+            "additionalProperties": {
+              "type": "object"
+            },
+            "type": "object"
+          },
+          "metric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "value": {
+            "format": "double",
+            "type": "number"
+          },
+          "weight": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "MissionResult": {
+        "properties": {
+          "missionId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MissionView": {
+        "properties": {
+          "metric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "minDistanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "ASSIGNED",
+              "ACHIEVED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "target": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "week": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PlayItem": {
+        "properties": {
+          "direction": {
+            "enum": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "type": "string"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "GOAL",
+              "CONCEDED"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "TURN",
+              "LANE_CHANGE",
+              "HARSH_ACCEL",
+              "HARSH_BRAKE",
+              "SAFETY_WARNING",
+              "NIGHT_SEGMENT",
+              "SIGNAL_LEFT_ON",
+              "SEAT_BELT",
+              "RAIN_SEGMENT"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Point": {
+        "properties": {
+          "dailyCap": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "streakRewardDays": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "streakRewardPoint": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tripMaxKm": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PointsResponse": {
+        "properties": {
+          "balance": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "dailyCap": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EntryResponse"
+            },
+            "type": "array"
+          },
+          "todayEarned": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Progress": {
+        "properties": {
+          "requiredTurns": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "successTurns": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "turns": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Rain": {
+        "properties": {
+          "minWiperSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "speedRatio": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "RankingResponse": {
+        "description": "순위 한 줄. score = averageScore(리그 점수 거리 가중 평균) + points(시즌 포인트)",
+        "properties": {
+          "averageScore": {
+            "format": "double",
+            "type": "number"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "points": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "RecentTripResult": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "endedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "grade": {
+            "type": "string"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "UPLOADED",
+              "SCORED",
+              "NO_TURN",
+              "EXCLUDED_SHORT"
+            ],
+            "type": "string"
+          },
+          "tripId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "RegionResponse": {
+        "description": "월드맵용 권역별 지역 안전지수(D5)와 권역 순위. 리그 점수가 없는 권역은 null",
+        "properties": {
+          "leagueCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rank": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "safetyIndex": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "RegisterDriverRequest": {
+        "properties": {
+          "nickname": {
+            "maxLength": 12,
+            "minLength": 2,
+            "type": "string"
+          },
+          "regionCode": {
+            "pattern": "\\d{5}",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nickname",
+          "regionCode"
+        ],
+        "type": "object"
+      },
+      "RegisterDriverResponse": {
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "driverId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "regionCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SafetyWarning": {
+        "properties": {
+          "mergeWindowSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "penaltyPer100Km": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "SeasonResponse": {
+        "properties": {
+          "endsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "seasonId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SeatBelt": {
+        "properties": {
+          "departurePenalty": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "perMinutePenalty": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SignalCancel": {
+        "properties": {
+          "forgetSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minSpeedKmh": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "penalty": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "StreakView": {
+        "properties": {
+          "streakDays": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "todayAchieved": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "SummaryResult": {
+        "properties": {
+          "conceded": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "fouls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "goals": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ThresholdsResponse": {
+        "properties": {
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/GradeRule"
+            },
+            "type": "array"
+          },
+          "harsh": {
+            "$ref": "#/components/schemas/Harsh"
+          },
+          "league": {
+            "$ref": "#/components/schemas/League"
+          },
+          "minSamples": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "point": {
+            "$ref": "#/components/schemas/Point"
+          },
+          "rain": {
+            "$ref": "#/components/schemas/Rain"
+          },
+          "safetyWarning": {
+            "$ref": "#/components/schemas/SafetyWarning"
+          },
+          "seatBelt": {
+            "$ref": "#/components/schemas/SeatBelt"
+          },
+          "signalCancel": {
+            "$ref": "#/components/schemas/SignalCancel"
+          },
+          "tips": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "trip": {
+            "$ref": "#/components/schemas/Trip"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/Turn"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "weights": {
+            "additionalProperties": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "TodayMissionResponse": {
+        "properties": {
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionProgress"
+            },
+            "type": "array"
+          },
+          "missionId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "periodKey": {
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          },
+          "rewardPoint": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "IN_PROGRESS",
+              "ACHIEVED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TokenResponse": {
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Trip": {
+        "properties": {
+          "maxEvents": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "maxFutureMinutes": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "maxPastDays": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minDistanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "parkEndMinutes": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "TripResult": {
+        "properties": {
+          "grade": {
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricResult"
+            },
+            "type": "array"
+          },
+          "mission": {
+            "$ref": "#/components/schemas/MissionResult"
+          },
+          "plays": {
+            "items": {
+              "$ref": "#/components/schemas/PlayItem"
+            },
+            "type": "array"
+          },
+          "score": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "UPLOADED",
+              "SCORED",
+              "NO_TURN",
+              "EXCLUDED_SHORT"
+            ],
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SummaryResult"
+          },
+          "tripId": {
+            "type": "string"
+          },
+          "turns": {
+            "$ref": "#/components/schemas/TurnsResult"
+          }
+        },
+        "type": "object"
+      },
+      "Turn": {
+        "properties": {
+          "lateSignalScore": {
+            "format": "double",
+            "type": "number"
+          },
+          "mergeGapSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minAngleDeg": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "minSpeedKmh": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "signalLeadDistanceM": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "signalLeadSec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "steeringEnterDeg": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "steeringExitDeg": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "steeringRightPositive": {
+            "type": "boolean"
+          },
+          "turnSpeedKmh": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "uTurnAngleDeg": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "windowSec": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "TurnsResult": {
+        "properties": {
+          "success": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "UploadTripRequest": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "endedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventRequest"
+            },
+            "type": "array"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "supported": {
+            "items": {
+              "enum": [
+                "TURN_SIGNAL",
+                "SMOOTH_DRIVING",
+                "SAFETY_WARNING",
+                "NIGHT_HEADLIGHT",
+                "SIGNAL_CANCEL",
+                "TURN_SPEED",
+                "SEAT_BELT",
+                "RAIN_DRIVING"
+              ],
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "tripId": {
+            "maxLength": 36,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "distanceKm",
+          "endedAt",
+          "events",
+          "startedAt",
+          "supported",
+          "tripId"
+        ],
+        "type": "object"
+      },
+      "WeeklyReportView": {
+        "properties": {
+          "distanceKm": {
+            "format": "double",
+            "type": "number"
+          },
+          "lastMission": {
+            "$ref": "#/components/schemas/MissionView"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricChange"
+            },
+            "type": "array"
+          },
+          "nextMission": {
+            "$ref": "#/components/schemas/MissionView"
+          },
+          "trips": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "weakestMetric": {
+            "enum": [
+              "TURN_SIGNAL",
+              "SMOOTH_DRIVING",
+              "SAFETY_WARNING",
+              "NIGHT_HEADLIGHT",
+              "SIGNAL_CANCEL",
+              "TURN_SPEED",
+              "SEAT_BELT",
+              "RAIN_DRIVING"
+            ],
+            "type": "string"
+          },
+          "week": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "깜빡이리그(BlinkerLeague) 차량 앱의 백엔드 API.\n\n- 인증: 보호된 API는 `Authorization: Bearer <accessToken>` 헤더가 필요하다.   토큰은 `POST /api/drivers`(등록)에서 처음 받고, Access 토큰(1시간)이 만료되면 `POST /api/auth/refresh`로 다시 받는다.\n- 토큰이 없으면 401 `UNAUTHORIZED`, 위조 · 만료된 토큰은 401 `INVALID_TOKEN`.\n- 오류 응답은 모두 `{ \"code\", \"message\" }` 형식이다. 앱은 `code`로 분기하고 `message`는 사용자 안내용이다.\n- 시각은 ISO-8601(오프셋 포함, 예: `2026-11-03T08:00:00+09:00`), 일 단위 집계는 Asia/Seoul 기준.\n",
+    "title": "깜빡이리그 서버 API",
+    "version": "P0"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/api/auth/refresh": {
+      "post": {
+        "description": "Refresh 토큰을 본문으로 보내 새 Access · Refresh 토큰을 받는다. 보낸 Refresh 토큰은 무효가 되므로 응답의 새 토큰으로 바꿔 저장한다.",
+        "operationId": "refresh",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "새 Access · Refresh 토큰. 사용한 Refresh 토큰은 무효가 된다"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: refreshToken 누락"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_TOKEN: 없거나 만료 · 사용된 Refresh 토큰. 사용된 토큰을 다시 쓰면 그 운전자의 토큰 전체가 무효가 된다"
+          }
+        },
+        "security": [],
+        "summary": "토큰 재발급",
+        "tags": [
+          "인증"
+        ]
+      }
+    },
+    "/api/badges": {
+      "get": {
+        "description": "전체 배지 카탈로그를 진열 순서로 돌려주고, 받은 배지는 earned=true와 받은 시각을 담는다(plan.md 4.3, SCR-05). 배지는 운행을 올릴 때 누적 기록(점수가 난 운행 수, 미션 최장 연속 달성 일수, 깜빡이를 켠 회전 수)으로 판정한다.",
+        "operationId": "badges",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BadgeResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "전체 배지(code, name, condition, earned, awardedAt)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "배지 진열장 조회",
+        "tags": [
+          "배지"
+        ]
+      }
+    },
+    "/api/config/thresholds": {
+      "get": {
+        "description": "회전 · 급가감속 판정 기준, 점수 가중치, 포인트 규칙, 등급 기준, 항목별 팁 문구. 앱은 시작할 때 내려받고 version이 바뀐 경우에만 갱신한다.",
+        "operationId": "thresholds",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThresholdsResponse"
+                }
+              }
+            },
+            "description": "현재 기준값과 version"
+          }
+        },
+        "security": [],
+        "summary": "판정 기준값 조회",
+        "tags": [
+          "설정"
+        ]
+      }
+    },
+    "/api/drivers": {
+      "post": {
+        "description": "닉네임과 거주 지역(시군구 5자리 코드)으로 운전자를 등록하고 Access · Refresh 토큰을 발급한다. 로그인 API는 없으며, 토큰을 잃으면 다시 등록한다(P0).",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDriverRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterDriverResponse"
+                }
+              }
+            },
+            "description": "등록 완료. Access · Refresh 토큰을 함께 발급한다"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: 닉네임 2~12자, 지역 코드는 시군구 5자리 숫자"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: 이미 사용 중인 닉네임"
+          }
+        },
+        "security": [],
+        "summary": "운전자 등록",
+        "tags": [
+          "운전자"
+        ]
+      }
+    },
+    "/api/drivers/me/league-visibility": {
+      "put": {
+        "description": "내 리그 순위 공개를 켜고 끈다(D8, SCR-08). 기본은 공개다. 끄면 순위 목록 · 지역 안전지수 · 시즌 보상에서 빠지고 내 순위도 보이지 않는다. 순위 공개 기준 인원(10명)에는 남아 다른 운전자의 순위는 계속 공개된다.",
+        "operationId": "changeLeagueVisibility",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeagueVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueVisibilityResponse"
+                }
+              }
+            },
+            "description": "바뀐 설정"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: visible 누락"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 토큰의 운전자가 없음"
+          }
+        },
+        "summary": "리그 순위 공개 설정",
+        "tags": [
+          "운전자"
+        ]
+      }
+    },
+    "/api/leagues/current": {
+      "get": {
+        "description": "이번 시즌(한국 시간 달력 월, D29)의 내 리그 권역 순위, 내 순위, 모든 권역의 지역 안전지수를 돌려준다(SCR-04). 순위 점수(score)는 공통 항목만으로 매긴 리그 점수(D19)의 거리 가중 평균(averageScore)에 시즌 안에 적립한 포인트(points)를 더한 값이다(D34). 지역 안전지수는 포인트 없이 리그 점수만으로 계산한다. 순위에는 시즌 누적 50km 또는 운행 10회 이상인 운전자만 오르고(D13), 리그 점수가 있는 참여자(순위 공개를 끈 운전자 포함)가 10명 미만인 권역은 순위를 공개하지 않는다(D11). 순위 공개를 끈 운전자는 순위 목록 · 안전지수에서 빠지고 나머지 운전자끼리 순위를 매긴다(D8). 시즌 1위 권역의 순위 자격자는 포인트 대신 우승 칭호(me.championships)와 시즌 우승 배지를 받는다(D30 · D34). 응답에는 닉네임만 담는다.",
+        "operationId": "current",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentLeagueResponse"
+                }
+              }
+            },
+            "description": "이번 시즌 리그 현황. 등록 지역이 매핑표에 없으면 league는 null"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "이번 시즌 내 리그 조회",
+        "tags": [
+          "지역 리그"
+        ]
+      }
+    },
+    "/api/missions/today": {
+      "get": {
+        "description": "오늘(Asia/Seoul) 운영 중인 일일 미션과 내 진행도. 운행 1건이 1라운드이고, 그날 라운드 중 하나라도 조건을 채우면 ACHIEVED로 확정된다. progress는 달성했으면 달성한 라운드, 아니면 가장 최근 라운드의 회전 수다. 최소 거리 미만 운행은 세지 않는다. 그날이 끝날 때까지 달성하지 못하면 FAILED이고, 오늘 첫 운행 전에는 마지막 미션 날의 최종 상태(ACHIEVED · FAILED)를 그 날의 periodKey로 보여 준다(D25).",
+        "operationId": "today",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayMissionResponse"
+                }
+              }
+            },
+            "description": "오늘의 미션과 진행도(status: IN_PROGRESS · ACHIEVED · FAILED). 오늘 운행 전이면 마지막 미션 날의 최종 상태"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 오늘 운영 중인 미션이 없음"
+          }
+        },
+        "summary": "오늘의 미션 조회",
+        "tags": [
+          "미션"
+        ]
+      }
+    },
+    "/api/points": {
+      "get": {
+        "description": "잔액(전체 적립 합계), 오늘(Asia/Seoul) 적립 합계와 일일 상한, 최근 원장 20건(최근 것부터). 운행 적립은 적립 당시의 거리 · 점수를 description에 담는다.",
+        "operationId": "points",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointsResponse"
+                }
+              }
+            },
+            "description": "잔액 · 오늘 적립 · 일일 상한 · 최근 원장"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "내 포인트 조회",
+        "tags": [
+          "포인트"
+        ]
+      }
+    },
+    "/api/reports/weekly": {
+      "get": {
+        "description": "한 주(ISO 주, 월요일 시작, Asia/Seoul) 동안의 운전을 지난주와 비교한다(plan.md 4.5, SCR-07). metrics는 항목별 거리 가중 평균 점수(0~100)와 지난주 대비 변화, weakestMetric은 이번 주 가장 약한 항목이다. lastMission은 이 주에 수행한 맞춤 미션의 판정, nextMission은 가장 약한 항목으로 다음 주에 자동 등록한 맞춤 미션이다(수락 단계 없음, D7 B). 매주 월요일 04:00에 미리 만들어 두고, 없으면 조회할 때 만든다. 한 번 만든 리포트는 저장본을 그대로 돌려준다.",
+        "operationId": "weekly",
+        "parameters": [
+          {
+            "description": "ISO 주(예: 2026-W45). 없으면 지난주",
+            "in": "query",
+            "name": "week",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportView"
+                }
+              }
+            },
+            "description": "주간 리포트"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: week 형식이 2026-W45가 아니거나 아직 끝나지 않은 주"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "주간 리포트 조회",
+        "tags": [
+          "리포트"
+        ]
+      }
+    },
+    "/api/streak": {
+      "get": {
+        "description": "일일 미션을 연속으로 달성한 일수(plan.md 4.3). 오늘 달성했으면 오늘부터, 아직이면 어제부터 거꾸로 센다(오늘 진행 중인 것은 끊김이 아님). 날짜는 Asia/Seoul 기준.",
+        "operationId": "streak",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreakView"
+                }
+              }
+            },
+            "description": "streakDays(연속 달성 일수), todayAchieved(오늘 달성 여부)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "연속 달성 조회",
+        "tags": [
+          "미션"
+        ]
+      }
+    },
+    "/api/trips": {
+      "get": {
+        "description": "내 운행을 종료 시각 최신순으로 돌려준다(SCR-01). limit은 기본 10, 최대 50이며 50을 넘으면 50건으로 자른다(D24). 점수가 없는 운행은 score · grade가 null이다.",
+        "operationId": "recent",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentTripResult"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "내 운행 목록(최신순)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: limit이 1 미만이거나 숫자가 아님"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          }
+        },
+        "summary": "최근 경기 목록",
+        "tags": [
+          "운행"
+        ]
+      },
+      "post": {
+        "description": "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.",
+        "operationId": "upload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadTripRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripResult"
+                }
+              }
+            },
+            "description": "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripResult"
+                }
+              }
+            },
+            "description": "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 측정할 수 있는 항목이 하나도 없으면 NO_TURN(score=null, D28), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null, 이벤트가 trip.maxEvents(기본 2,000)개 초과(D16), endedAt이 서버 시각 + trip.maxFutureMinutes(5분)보다 뒤이거나 startedAt이 서버 시각 − trip.maxPastDays(7일)보다 앞(D17). 상한과 시각 범위는 새 운행에만 적용하며, 이미 저장된 tripId의 재전송은 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: 다른 운전자가 이미 사용한 tripId"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: 요청 본문이 1MB(app.request.max-body-size)를 넘음(D16)"
+          }
+        },
+        "summary": "운행 · 이벤트 업로드",
+        "tags": [
+          "운행"
+        ]
+      }
+    },
+    "/api/trips/{tripId}/score": {
+      "get": {
+        "description": "업로드 응답과 같은 TripResult(총점 · 등급 · 항목별 점수 · 회전 수 · 경기 요약 · 시각순 경기 기록). mission은 오늘의 미션 연결 전까지 null이다.",
+        "operationId": "score",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripResult"
+                }
+              }
+            },
+            "description": "운행 결과"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: 없는 운행이거나 다른 운전자의 운행"
+          }
+        },
+        "summary": "운행 점수 조회",
+        "tags": [
+          "운행"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Access · Refresh 토큰",
+      "name": "인증"
+    },
+    {
+      "description": "주간 리포트",
+      "name": "리포트"
+    },
+    {
+      "description": "판정 기준값 · 점수 가중치 · 등급",
+      "name": "설정"
+    },
+    {
+      "description": "운전자 등록 · 리그 순위 공개 설정",
+      "name": "운전자"
+    },
+    {
+      "description": "시즌(달력 월) 지역 리그 순위와 지역 안전지수",
+      "name": "지역 리그"
+    },
+    {
+      "description": "운행(라운드) · 이벤트 업로드",
+      "name": "운행"
+    },
+    {
+      "description": "배지 진열장",
+      "name": "배지"
+    },
+    {
+      "description": "오늘의 미션",
+      "name": "미션"
+    },
+    {
+      "description": "포인트 잔액 · 적립 원장",
+      "name": "포인트"
+    }
+  ]
+}

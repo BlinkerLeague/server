@@ -1,0 +1,120 @@
+package com.blinkerleague.server.mission.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+
+import com.blinkerleague.server.common.error.BusinessException;
+import com.blinkerleague.server.common.error.ErrorCode;
+import com.blinkerleague.server.mission.application.port.out.LoadDailyRoundsPort;
+import com.blinkerleague.server.mission.application.service.GetTodayMissionService.TodayMission;
+import com.blinkerleague.server.mission.domain.ConditionProgress;
+import com.blinkerleague.server.mission.domain.DriverMission;
+import com.blinkerleague.server.mission.domain.ConditionProgress.ConditionType;
+import com.blinkerleague.server.mission.domain.RoundTurns;
+import com.blinkerleague.server.mission.domain.Mission;
+import com.blinkerleague.server.mission.domain.MissionStatus;
+import com.blinkerleague.server.mission.domain.TurnSignalCondition;
+
+class GetTodayMissionServiceTest {
+
+	// 2026-11-03 12:00 KST
+	private final Clock clock = Clock.fixed(Instant.parse("2026-11-03T03:00:00Z"), ZoneId.of("Asia/Seoul"));
+
+	private final Mission seed = Mission.daily("회전 깜빡이 완벽", new TurnSignalCondition(3, 100), 20,
+		LocalDate.of(2026, 1, 1), LocalDate.of(2099, 12, 31));
+
+	private final RecordingTurns turns = new RecordingTurns(List.of(new RoundTurns(2, 2)));
+
+	private final InMemoryDriverMissionStore records = new InMemoryDriverMissionStore();
+
+	private final GetTodayMissionService service = new GetTodayMissionService(
+		date -> Optional.of(seed), turns, records, clock);
+
+	@Test
+	void 한국_날짜로_오늘_운행의_회전을_모아_미션_진행도를_돌려준다() {
+		TodayMission today = service.today(1L);
+
+		assertThat(today.title()).isEqualTo("회전 깜빡이 완벽");
+		assertThat(today.periodKey()).isEqualTo("2026-11-03");
+		assertThat(today.status()).isEqualTo(MissionStatus.IN_PROGRESS);
+		assertThat(today.rewardPoint()).isEqualTo(20);
+		assertThat(today.shownRound()).isEqualTo(new RoundTurns(2, 2));
+		assertThat(today.requiredTurns()).isEqualTo(3);
+		assertThat(today.conditions()).containsExactly(
+			new ConditionProgress(ConditionType.TURN_COUNT, 2, 3),
+			new ConditionProgress(ConditionType.SIGNAL_RATE, 100, 100));
+		assertThat(turns.driverId).isEqualTo(1L);
+		assertThat(turns.from).isEqualTo(Instant.parse("2026-11-02T15:00:00Z"));
+		assertThat(turns.to).isEqualTo(Instant.parse("2026-11-03T15:00:00Z"));
+	}
+
+	@Test
+	void 오늘_운영_중인_미션이_없으면_NOT_FOUND다() {
+		GetTodayMissionService noMission = new GetTodayMissionService(date -> Optional.empty(), turns, records, clock);
+
+		assertThatThrownBy(() -> noMission.today(1L))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
+	}
+
+	@Test
+	void 실패한_라운드_뒤에_달성한_라운드가_있으면_ACHIEVED이고_진행도는_달성한_라운드다() {
+		GetTodayMissionService service = new GetTodayMissionService(date -> Optional.of(seed),
+			new RecordingTurns(List.of(new RoundTurns(1, 0), new RoundTurns(3, 3))), records, clock);
+
+		TodayMission today = service.today(1L);
+
+		assertThat(today.status()).isEqualTo(MissionStatus.ACHIEVED);
+		assertThat(today.shownRound()).isEqualTo(new RoundTurns(3, 3));
+	}
+
+	/** 요청 받은 운전자와 기간을 기록하는 가짜 포트. */
+	@Test
+	void 오늘_운행이_아직_없으면_마지막_미션_날의_최종_상태를_보여_준다() {
+		// 어제(11-02) 회전 2회로 끝나 달성하지 못했고, 오늘(11-03)은 아직 운행이 없다.
+		records.save(DriverMission.start(1L, seed.getId(), "2026-11-02"));
+		Instant yesterdayStart = Instant.parse("2026-11-01T15:00:00Z");
+		GetTodayMissionService byDay = new GetTodayMissionService(date -> Optional.of(seed),
+			(driverId, from, to) -> from.equals(yesterdayStart) ? List.of(new RoundTurns(2, 2)) : List.of(),
+			records, clock);
+
+		TodayMission shown = byDay.today(1L);
+
+		assertThat(shown.periodKey()).isEqualTo("2026-11-02");
+		assertThat(shown.status()).isEqualTo(MissionStatus.FAILED);
+		assertThat(shown.shownRound()).isEqualTo(new RoundTurns(2, 2));
+	}
+
+	private static final class RecordingTurns implements LoadDailyRoundsPort {
+
+		private final List<RoundTurns> rounds;
+		private Long driverId;
+		private Instant from;
+		private Instant to;
+
+		RecordingTurns(List<RoundTurns> rounds) {
+			this.rounds = rounds;
+		}
+
+		@Override
+		public List<RoundTurns> load(Long driverId, Instant from, Instant to) {
+			record(driverId, from, to);
+			return rounds;
+		}
+
+		private void record(Long driverId, Instant from, Instant to) {
+			this.driverId = driverId;
+			this.from = from;
+			this.to = to;
+		}
+	}
+}

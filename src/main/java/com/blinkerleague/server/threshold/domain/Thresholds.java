@@ -14,8 +14,13 @@ public record Thresholds(
 	Turn turn,
 	Harsh harsh,
 	SafetyWarning safetyWarning,
+	SignalCancel signalCancel,
+	SeatBelt seatBelt,
+	Rain rain,
 	Map<ScoreItem, Double> weights,
+	Map<ScoreItem, Integer> minSamples,
 	Point point,
+	League league,
 	List<GradeRule> grades,
 	Map<ScoreItem, String> tips) {
 
@@ -28,19 +33,53 @@ public record Thresholds(
 			.findFirst();
 	}
 
-	public record Trip(double minDistanceKm, int parkEndMinutes) {
+	/** 운행 참여 최소 거리(D10), 앱의 주차 판정 시간, 한 운행의 이벤트 상한(D16), 서버 시각 기준 허용 범위(종료는 maxFutureMinutes분 뒤까지, 시작은 maxPastDays일 전까지, D17). */
+	public record Trip(double minDistanceKm, int parkEndMinutes, int maxEvents, int maxFutureMinutes,
+		int maxPastDays) {
 	}
 
-	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec) {
+	/**
+	 * 회전 판정 기준. 앱이 쓰는 값: 핸들 각도로 회전 감지(steeringExitDeg를 넘은 때부터 다시 내려올 때까지 한 번의 조향,
+	 * 그 사이 steeringEnterDeg 이상이면 회전, mergeGapSec 안에 이어진 같은 방향 조향은 하나로 합침, 앱 요청 1번),
+	 * 조향각 부호(steeringRightPositive: false면 음수가 오른쪽, 실차가 반대면 이 값만 바꾼다, 앱 요청 7번),
+	 * 제때 깜빡이 거리(signalLeadDistanceM). windowSec · minAngleDeg · uTurnAngleDeg는 진행 방향 감지용이었고 앱은 쓰지 않는다.
+	 * 서버가 쓰는 값: 늦은 깜빡이 점수(lateSignalScore, 제때 1.0 대비), 회전 속도 기준(turnSpeedKmh).
+	 */
+	public record Turn(int minSpeedKmh, int windowSec, int minAngleDeg, int uTurnAngleDeg, int signalLeadSec,
+		double lateSignalScore, int turnSpeedKmh, int signalLeadDistanceM, int steeringEnterDeg, int steeringExitDeg,
+		int mergeGapSec, boolean steeringRightPositive) {
 	}
 
-	public record Harsh(int deltaKmhPerSec) {
+	/** 앱의 급가감속 판정 기준(deltaKmhPerSec)과 서버의 감점 폭(10km당 1회마다 penaltyPer10Km점). */
+	public record Harsh(int deltaKmhPerSec, double penaltyPer10Km) {
 	}
 
-	public record SafetyWarning(int mergeWindowSec) {
+	/** 같은 경고를 1회로 묶는 시간(mergeWindowSec)과 감점 폭(100km당 1회마다 penaltyPer100Km점). */
+	public record SafetyWarning(int mergeWindowSec, double penaltyPer100Km) {
 	}
 
-	public record Point(int tripMaxKm, int dailyCap) {
+	/** 운행 적립 최대 거리, 일일 상한, 연속 달성 보상(streakRewardDays일마다 streakRewardPoint, plan.md 4.3). */
+	/** 앱의 깜빡이 끄기 판정(forgetSec 넘게, minSpeedKmh 이상)과 서버의 1회당 감점(penalty). */
+	public record SignalCancel(int forgetSec, int minSpeedKmh, int penalty) {
+	}
+
+	/** 안전벨트 감점: 출발 시 미착용(departurePenalty), 주행 중 미착용 1분마다(perMinutePenalty). */
+	public record SeatBelt(int departurePenalty, int perMinutePenalty) {
+	}
+
+	/** 앱의 우천 판정: 와이퍼가 minWiperSec 넘게 켜진 구간, 제한속도의 speedRatio 이하를 감속 준수로 본다. */
+	public record Rain(int minWiperSec, double speedRatio) {
+	}
+
+	public record Point(int tripMaxKm, int dailyCap, int streakRewardDays, int streakRewardPoint) {
+	}
+
+	/**
+	 * 지역 리그(plan.md 4.4). 리그 점수에 쓰는 공통 항목(D19), 순위 공개 최소 참여자(D11), 순위 자격(D13: 시즌 누적
+	 * minSeasonDistanceKm 이상 또는 minSeasonTrips회 이상), 순위 목록 길이. 시즌 1위 권역 보상은 포인트가 아니라 우승 칭호 · 배지다(D30 · D34).
+	 */
+	public record League(List<ScoreItem> commonItems, int minParticipants, double minSeasonDistanceKm,
+		int minSeasonTrips, int topN) {
 	}
 
 	public record GradeRule(String grade, int minScore) {

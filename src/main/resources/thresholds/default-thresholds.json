@@ -1,20 +1,51 @@
 {
-  "trip": { "minDistanceKm": 3.0, "parkEndMinutes": 3 },
-  "turn": { "minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5 },
-  "harsh": { "deltaKmhPerSec": 10 },
-  "safetyWarning": { "mergeWindowSec": 10 },
-  "weights": { "TURN_SIGNAL": 0.4, "SMOOTH_DRIVING": 0.3, "SAFETY_WARNING": 0.2, "NIGHT_HEADLIGHT": 0.1 },
-  "point": { "tripMaxKm": 50, "dailyCap": 150 },
+  "trip": {"minDistanceKm": 1.0, "parkEndMinutes": 3, "maxEvents": 2000, "maxFutureMinutes": 5, "maxPastDays": 7},
+  "turn": {"minSpeedKmh": 5, "windowSec": 10, "minAngleDeg": 60, "uTurnAngleDeg": 150, "signalLeadSec": 5, "lateSignalScore": 0.5, "turnSpeedKmh": 30, "signalLeadDistanceM": 30, "steeringEnterDeg": 90, "steeringExitDeg": 20, "mergeGapSec": 3, "steeringRightPositive": false},
+  "harsh": {"deltaKmhPerSec": 10, "penaltyPer10Km": 10},
+  "safetyWarning": {"mergeWindowSec": 10, "penaltyPer100Km": 20},
+  "signalCancel": {"forgetSec": 20, "minSpeedKmh": 30, "penalty": 25},
+  "seatBelt": {"departurePenalty": 50, "perMinutePenalty": 10},
+  "rain": {"minWiperSec": 30, "speedRatio": 0.8},
+  "weights": {
+    "TURN_SIGNAL": 0.25,
+    "SIGNAL_CANCEL": 0.05,
+    "TURN_SPEED": 0.05,
+    "SMOOTH_DRIVING": 0.15,
+    "SEAT_BELT": 0.05,
+    "SAFETY_WARNING": 0.05,
+    "NIGHT_HEADLIGHT": 0.05,
+    "RAIN_DRIVING": 0.05
+  },
+  "minSamples": {"TURN_SIGNAL": 1},
+  "point": {"tripMaxKm": 50, "dailyCap": 150, "streakRewardDays": 7, "streakRewardPoint": 50},
+  "league": {"commonItems": ["TURN_SIGNAL", "SMOOTH_DRIVING", "TURN_SPEED"], "minParticipants": 10,
+    "minSeasonDistanceKm": 50, "minSeasonTrips": 10, "topN": 10},
   "grades": [
-    { "grade": "S", "minScore": 95 },
-    { "grade": "A", "minScore": 85 },
-    { "grade": "B", "minScore": 70 },
-    { "grade": "C", "minScore": 50 }
+    {
+      "grade": "S",
+      "minScore": 95
+    },
+    {
+      "grade": "A",
+      "minScore": 85
+    },
+    {
+      "grade": "B",
+      "minScore": 70
+    },
+    {
+      "grade": "C",
+      "minScore": 50
+    }
   ],
   "tips": {
-    "TURN_SIGNAL": "회전 5초 전에 깜빡이를 켜 보세요.",
+    "TURN_SIGNAL": "회전 30m 전에 깜빡이를 켜 보세요.",
+    "SIGNAL_CANCEL": "회전이 끝나면 깜빡이가 꺼졌는지 확인해 주세요.",
+    "TURN_SPEED": "회전할 때는 시속 30km 이하로 천천히 돌아 주세요.",
     "SMOOTH_DRIVING": "출발은 부드럽게, 정지는 미리 천천히 해 보세요.",
+    "SEAT_BELT": "출발 전에 안전벨트를 매 주세요.",
     "SAFETY_WARNING": "앞차와 거리를 넉넉히 두고 주변을 살펴 보세요.",
-    "NIGHT_HEADLIGHT": "해가 지면 전조등을 꼭 켜 주세요."
+    "NIGHT_HEADLIGHT": "해가 지면 전조등을 꼭 켜 주세요.",
+    "RAIN_DRIVING": "비가 오면 전조등을 켜고 평소보다 20% 천천히 달려 주세요."
   }
 }

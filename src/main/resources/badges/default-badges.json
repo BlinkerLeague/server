@@ -1,0 +1,6 @@
+[
+  { "code": "FIRST_TRIP", "name": "첫 경기", "condition": "점수가 난 첫 운행", "rule": "SCORED_TRIPS", "target": 1, "sortOrder": 1 },
+  { "code": "STREAK_7", "name": "7일 연속", "condition": "오늘의 미션 7일 연속 달성", "rule": "STREAK_DAYS", "target": 7, "sortOrder": 2 },
+  { "code": "SIGNAL_100", "name": "깜빡이 100회", "condition": "깜빡이를 켠 회전 누적 100회", "rule": "SIGNAL_ON_TURNS", "target": 100, "sortOrder": 3 },
+  { "code": "SEASON_CHAMPION", "name": "시즌 우승", "condition": "지역 리그 시즌 1위 권역의 순위 자격자", "rule": "SEASON_CHAMPIONS", "target": 1, "sortOrder": 4 }
+]

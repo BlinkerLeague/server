@@ -2,23 +2,40 @@ package com.blinkerleague.server.trip.adapter.in.web;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.blinkerleague.server.auth.adapter.in.web.CurrentDriver;
+import com.blinkerleague.server.common.error.ErrorResponse;
+import com.blinkerleague.server.common.time.TimeConfig;
+import com.blinkerleague.server.score.domain.PlayResult;
+import com.blinkerleague.server.score.domain.TurnDirection;
 import com.blinkerleague.server.threshold.domain.ScoreItem;
+import com.blinkerleague.server.trip.application.port.out.TripMissionPort;
+import com.blinkerleague.server.trip.application.service.GetTripScoreService;
+import com.blinkerleague.server.trip.application.service.ListRecentTripsService;
+import com.blinkerleague.server.trip.application.service.TripScoreView;
 import com.blinkerleague.server.trip.application.service.UploadTripService;
 import com.blinkerleague.server.trip.domain.RecordedEvent;
 import com.blinkerleague.server.trip.domain.TripEventType;
 import com.blinkerleague.server.trip.domain.TripStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,20 +43,61 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "운행", description = "운행(라운드) · 이벤트 업로드")
 @RestController
 @RequestMapping("/api/trips")
 @RequiredArgsConstructor
 public class TripController {
 
 	private final UploadTripService uploadTripService;
+	private final GetTripScoreService getTripScoreService;
+	private final ListRecentTripsService listRecentTripsService;
 
 	/** 새로 저장하면 201, 이미 업로드된 운행을 다시 받으면 저장하지 않고 처음 결과를 200으로 돌려준다. */
+	@Operation(summary = "운행 · 이벤트 업로드",
+		description = "시동을 켜고 끄기까지의 운행 1건과 운행 중 이벤트를 올린다. tripId · eventId는 앱이 만든 UUID이며, 같은 tripId를 다시 보내도 한 번만 저장한다(재전송 안전). 원시 위치 좌표는 받지 않는다. payload는 해석하지 않고 JSON 그대로 저장한다.")
+	@ApiResponse(responseCode = "201", description = "새로 저장하고 점수를 매김. 최소 거리 미만이면 status=EXCLUDED_SHORT(점수 없음), 측정할 수 있는 항목이 하나도 없으면 NO_TURN(score=null, D28), 아니면 SCORED. 응답은 점수 조회와 같은 TripResult")
+	@ApiResponse(responseCode = "200", description = "같은 tripId 재전송. 저장하지 않고 처음 저장한 결과를 돌려준다")
+	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: 필수 값 누락, 음수 거리, ID 36자 초과, 알 수 없는 type, endedAt <= startedAt, 운행 구간 밖 이벤트, 중복 eventId, supported 안의 null, 이벤트가 trip.maxEvents(기본 2,000)개 초과(D16), endedAt이 서버 시각 + trip.maxFutureMinutes(5분)보다 뒤이거나 startedAt이 서버 시각 − trip.maxPastDays(7일)보다 앞(D17). 상한과 시각 범위는 새 운행에만 적용하며, 이미 저장된 tripId의 재전송은 200",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "CONFLICT: 다른 운전자가 이미 사용한 tripId",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "413", description = "PAYLOAD_TOO_LARGE: 요청 본문이 1MB(app.request.max-body-size)를 넘음(D16)",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	@PostMapping
 	public ResponseEntity<TripResult> upload(@CurrentDriver Long driverId,
 		@Valid @RequestBody UploadTripRequest request) {
 		UploadTripService.Result result = uploadTripService.upload(driverId, request.toCommand());
 		return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
-			.body(new TripResult(result.tripId(), result.status()));
+			.body(TripResult.from(result.trip()));
+	}
+
+	/** 최근 경기 목록(SCR-01). 종료 시각 최신순. */
+	@Operation(summary = "최근 경기 목록",
+		description = "내 운행을 종료 시각 최신순으로 돌려준다(SCR-01). limit은 기본 10, 최대 50이며 50을 넘으면 50건으로 자른다(D24). 점수가 없는 운행은 score · grade가 null이다.")
+	@ApiResponse(responseCode = "200", description = "내 운행 목록(최신순)")
+	@ApiResponse(responseCode = "400", description = "INVALID_INPUT: limit이 1 미만이거나 숫자가 아님",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@GetMapping
+	public List<RecentTripResult> recent(@CurrentDriver Long driverId,
+		@RequestParam(required = false) Integer limit) {
+		return listRecentTripsService.list(driverId, limit).stream().map(RecentTripResult::from).toList();
+	}
+
+	@Operation(summary = "운행 점수 조회",
+		description = "업로드 응답과 같은 TripResult(총점 · 등급 · 항목별 점수 · 회전 수 · 경기 요약 · 시각순 경기 기록). mission은 오늘의 미션 연결 전까지 null이다.")
+	@ApiResponse(responseCode = "200", description = "운행 결과")
+	@ApiResponse(responseCode = "401", description = "UNAUTHORIZED: 토큰 없음 / INVALID_TOKEN: 위조 · 만료된 토큰",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "NOT_FOUND: 없는 운행이거나 다른 운전자의 운행",
+		content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+	@GetMapping("/{tripId}/score")
+	public TripResult score(@CurrentDriver Long driverId, @PathVariable String tripId) {
+		return TripResult.from(getTripScoreService.get(driverId, tripId));
 	}
 
 	/** 원시 위치 좌표 필드는 두지 않는다(개인정보 요구사항). */
@@ -63,6 +121,14 @@ public class TripController {
 		@NotBlank @Size(max = 36) String eventId,
 		@NotNull TripEventType type,
 		@NotNull OffsetDateTime occurredAt,
+		@Schema(implementation = Object.class, description = "이벤트 타입별 추가 정보(선택). 서버는 JSON 그대로 저장하고 점수에 쓰는 값만 읽는다(plan.md 4.1). "
+			+ "TURN: { direction: LEFT|RIGHT, signalOn, signalTiming: ON_TIME|LATE|WRONG_DIRECTION|NONE, leadDistanceM, maxSpeedKmh } "
+			+ "(signalTiming이 있으면 4단계, 없으면 signalOn으로 2단계 판정) / "
+			+ "SIGNAL_LEFT_ON: { durationSec } / SEAT_BELT(운행당 1건): { buckledAtDeparture, unbuckledMovingSec } / "
+			+ "NIGHT_SEGMENT: { durationSec, headlightOffSec } / "
+			+ "RAIN_SEGMENT: { durationSec, headlightOffSec, knownLimitSec, overRainLimitSec } / "
+			+ "HARSH_ACCEL · HARSH_BRAKE · SAFETY_WARNING · LANE_CHANGE: 형식 없음(횟수만 셈). 원시 위치 좌표는 넣지 않는다.",
+			example = "{\"direction\": \"LEFT\", \"signalOn\": true}")
 		JsonNode payload) {
 
 		RecordedEvent toRecordedEvent() {
@@ -70,7 +136,59 @@ public class TripController {
 		}
 	}
 
-	/** 점수 응답(plan.md 3.5)과 같은 구조. 점수 · 미션 필드는 feat/trip-score, feat/daily-mission에서 채운다. */
-	public record TripResult(String tripId, TripStatus status) {
+	/** 업로드 응답과 점수 조회가 같은 구조(plan.md 3.5). mission은 그날 운영 중인 미션이 없으면 null이다. */
+	public record TripResult(String tripId, TripStatus status, Integer score, String grade,
+		List<MetricResult> metrics, TurnsResult turns, SummaryResult summary, List<PlayItem> plays,
+		MissionResult mission) {
+
+		static TripResult from(TripScoreView view) {
+			List<MetricResult> metrics = view.metrics().stream()
+				.map(m -> new MetricResult(m.metric(), m.status(), m.reason(), m.value(), m.score(), m.weight(), m.detail()))
+				.toList();
+			List<PlayItem> plays = view.plays().stream()
+				.map(p -> new PlayItem(OffsetDateTime.ofInstant(p.occurredAt(), TimeConfig.ZONE), p.type(),
+					p.direction(), p.result()))
+				.toList();
+			return new TripResult(view.tripId(), view.status(), view.score(), view.grade(), metrics,
+				new TurnsResult(view.turns().total(), view.turns().success()),
+				new SummaryResult(view.summary().goals(), view.summary().conceded(), view.summary().fouls()),
+				plays, MissionResult.from(view.mission()));
+		}
+	}
+
+	/** 이 운행을 반영한 그날 미션 판정. status는 IN_PROGRESS · ACHIEVED · FAILED(끝난 날의 미달성, D25). */
+	public record MissionResult(Long missionId, String status) {
+
+		static MissionResult from(TripMissionPort.TripMission mission) {
+			return mission == null ? null : new MissionResult(mission.missionId(), mission.status());
+		}
+	}
+
+	public record RecentTripResult(String tripId, OffsetDateTime endedAt, double distanceKm, TripStatus status,
+		Integer score, String grade) {
+
+		static RecentTripResult from(ListRecentTripsService.RecentTrip trip) {
+			return new RecentTripResult(trip.tripId(), OffsetDateTime.ofInstant(trip.endedAt(), TimeConfig.ZONE),
+				trip.distanceKm(), trip.status(), trip.score(), trip.grade());
+		}
+	}
+
+	/**
+	 * 항목별 결과(plan.md 4.1). status는 SCORED · UNSUPPORTED(차량 미지원) · NOT_APPLICABLE(측정할 상황 없음 · 표본 부족).
+	 * 측정하지 못한 항목은 reason이 있고 value · score · weight는 null이다. detail은 화면 문구용 근거 수치다.
+	 */
+	public record MetricResult(ScoreItem metric, String status, String reason, Double value, Integer score,
+		Double weight, Map<String, Object> detail) {
+	}
+
+	public record TurnsResult(int total, int success) {
+	}
+
+	/** 득점 = 깜빡이를 켠 회전, 실점 = 켜지 않은 회전, 반칙 = 급가감속 · 안전 경고(P0은 0, D22). */
+	public record SummaryResult(int goals, int conceded, int fouls) {
+	}
+
+	/** 회전 방향(direction)은 앱이 보낸 TURN payload의 값이다(앱 요청 8번). TURN이 아닌 이벤트는 direction · result가 null이다(D22). */
+	public record PlayItem(OffsetDateTime occurredAt, TripEventType type, TurnDirection direction, PlayResult result) {
 	}
 }

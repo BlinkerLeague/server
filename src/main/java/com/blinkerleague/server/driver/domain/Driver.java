@@ -1,5 +1,7 @@
 package com.blinkerleague.server.driver.domain;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import com.blinkerleague.server.common.jpa.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -30,6 +32,11 @@ public class Driver extends BaseTimeEntity {
 	@Column(name = "region_code", nullable = false, length = 5)
 	private String regionCode;
 
+	/** 리그 순위 공개(D8). 기본 공개이고, 끄면 리그(순위 · 안전지수 · 참여자 수 · 시즌 보상)에서 빠진다. */
+	@ColumnDefault("true")
+	@Column(name = "league_visible", nullable = false)
+	private boolean leagueVisible = true;
+
 	private Driver(String nickname, String regionCode) {
 		this.nickname = nickname;
 		this.regionCode = regionCode;
@@ -37,5 +44,9 @@ public class Driver extends BaseTimeEntity {
 
 	public static Driver register(String nickname, String regionCode) {
 		return new Driver(nickname, regionCode);
+	}
+
+	public void changeLeagueVisibility(boolean visible) {
+		this.leagueVisible = visible;
 	}
 }
